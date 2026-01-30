@@ -1,0 +1,144 @@
+﻿> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:mergeDebugShaders UP-TO-DATE
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:hiltAggregateDepsDebug UP-TO-DATE
+
+> Task :app:hiltJavaCompileDebug FAILED
+.\gradlew : E:\Projects\test\M3UValidator\app\build\g
+enerated\hilt\component_sources\debug\com\example\m3u
+validator\M3UValidatorApp_HiltComponents.java:143: 
+error: [Dagger/MissingBinding] 
+com.example.m3uvalidator.data.parser.M3UParser 
+cannot be provided without an @Provides-annotated 
+method.
+At line:1 char:1
++ .\gradlew assembleDebug 2>&1 | Out-File -FilePath 
+full_build.log -Enc ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (E:\Proj 
+   ects\tes...notated method.:String) [], RemoteExc  
+  eption
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  public abstract static class SingletonC implements 
+M3UValidatorApp_GeneratedInjector,
+                         ^
+  
+  Missing binding usage:
+      com.example.m3uvalidator.data.parser.M3UParser 
+is injected at
+          com.example.m3uvalidator.data.repository.Pl
+aylistRepositoryImpl(à, parser, à)
+      com.example.m3uvalidator.data.repository.Playli
+stRepositoryImpl is injected at
+          com.example.m3uvalidator.di.RepositoryModul
+e.bindPlaylistRepository(playlistRepositoryImpl)
+      com.example.m3uvalidator.domain.repository.Play
+listRepository is injected at
+          com.example.m3uvalidator.ui.validator.Valid
+atorViewModel(repository)
+      com.example.m3uvalidator.ui.validator.Validator
+ViewModel is injected at
+          com.example.m3uvalidator.ui.validator.Valid
+atorViewModel_HiltModules.BindsModule.binds(vm)
+      @dagger.hilt.android.internal.lifecycle.HiltVie
+wModelMap java.util.Map<java.lang.String,javax.inject
+.Provider<androidx.lifecycle.ViewModel>> is 
+requested at
+
+          dagger.hilt.android.internal.lifecycle.Hilt
+ViewModelFactory.ViewModelFactoriesEntryPoint.getHilt
+ViewModelMap() [com.example.m3uvalidator.M3UValidator
+App_HiltComponents.SingletonC ? com.example.m3uvalida
+tor.M3UValidatorApp_HiltComponents.ActivityRetainedC 
+? com.example.m3uvalidator.M3UValidatorApp_HiltCompon
+ents.ViewModelC]
+1 error
+[Incubating] Problems report is available at: file:///E:/Projects/test/M3UValidator/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task 
+':app:hiltJavaCompileDebug'.
+> Compilation failed; see the compiler output below.
+  E:\Projects\test\M3UValidator\app\build\generated\h
+ilt\component_sources\debug\com\example\m3uvalidator\
+M3UValidatorApp_HiltComponents.java:143: error: 
+[Dagger/MissingBinding] 
+com.example.m3uvalidator.data.parser.M3UParser 
+cannot be provided without an @Provides-annotated 
+method.
+    public abstract static class SingletonC 
+implements M3UValidatorApp_GeneratedInjector,
+                           ^
+    
+    Missing binding usage:
+        
+com.example.m3uvalidator.data.parser.M3UParser is 
+injected at
+            com.example.m3uvalidator.data.repository.
+PlaylistRepositoryImpl(à, parser, à)
+        com.example.m3uvalidator.data.repository.Play
+listRepositoryImpl is injected at
+            com.example.m3uvalidator.di.RepositoryMod
+ule.bindPlaylistRepository(playlistRepositoryImpl)
+        com.example.m3uvalidator.domain.repository.Pl
+aylistRepository is injected at
+            com.example.m3uvalidator.ui.validator.Val
+idatorViewModel(repository)
+        com.example.m3uvalidator.ui.validator.Validat
+orViewModel is injected at
+            com.example.m3uvalidator.ui.validator.Val
+idatorViewModel_HiltModules.BindsModule.binds(vm)
+        @dagger.hilt.android.internal.lifecycle.HiltV
+iewModelMap java.util.Map<java.lang.String,javax.inje
+ct.Provider<androidx.lifecycle.ViewModel>> is 
+requested at
+            dagger.hilt.android.internal.lifecycle.Hi
+ltViewModelFactory.ViewModelFactoriesEntryPoint.getHi
+ltViewModelMap() [com.example.m3uvalidator.M3UValidat
+orApp_HiltComponents.SingletonC ? com.example.m3uvali
+dator.M3UValidatorApp_HiltComponents.ActivityRetained
+C ? com.example.m3uvalidator.M3UValidatorApp_HiltComp
+onents.ViewModelC]
+  1 error
+
+* Try:
+> Check your code and dependencies to fix the 
+compilation error(s)
+
+> Run with --scan to get full insights.
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.0-milestone-1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 3s
+25 actionable tasks: 1 executed, 24 up-to-date
