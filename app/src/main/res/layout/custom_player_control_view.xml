@@ -159,8 +159,8 @@
                 android:layout_height="32dp"
                 android:layout_marginStart="24dp"
                 android:background="?android:attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Rotate"
-                android:src="@drawable/ic_rotate"
+                android:contentDescription="Fullscreen"
+                android:src="@drawable/ic_fullscreen"
                 android:tint="@android:color/white" />
 
         </LinearLayout>

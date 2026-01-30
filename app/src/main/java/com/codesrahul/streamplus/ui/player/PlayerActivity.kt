@@ -179,7 +179,10 @@ fun PlayerScreen(
         val okHttpClient = if (settingsState.skipSslVerification) {
             getUnsafeOkHttpClient()
         } else {
-            okHttpClientProvider.get()
+            okHttpClientProvider.get().newBuilder()
+                .followRedirects(true)
+                .followSslRedirects(true)
+                .build()
         }
 
         val okHttpDataSourceFactory = OkHttpDataSource.Factory(okHttpClient).apply {
@@ -194,6 +197,10 @@ fun PlayerScreen(
             
             if (!finalHeaders.containsKey("Accept")) finalHeaders["Accept"] = "*/*"
             if (!finalHeaders.containsKey("Connection")) finalHeaders["Connection"] = "keep-alive"
+            // Ensure User-Agent is set if not already
+            if (!finalHeaders.containsKey("User-Agent") && userAgent.isNotBlank()) {
+                finalHeaders["User-Agent"] = userAgent
+            }
             
             setDefaultRequestProperties(finalHeaders)
         }
@@ -225,6 +232,17 @@ fun PlayerScreen(
                 addListener(object : androidx.media3.common.Player.Listener {
                     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                         Log.e("PlayerScreen", "Playback Error: ${error.message}", error)
+                        val cause = error.cause
+                        val message = when {
+                            cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException -> {
+                                "Error: ${cause.responseCode} ${cause.message}"
+                            }
+                            cause is androidx.media3.datasource.HttpDataSource.HttpDataSourceException -> {
+                                "Network Error: ${cause.message}"
+                            }
+                            else -> "Playback Error: ${error.errorCodeName}"
+                        }
+                        android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
                     }
                 })
             }
