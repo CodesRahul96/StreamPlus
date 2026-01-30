@@ -35,8 +35,7 @@ class SplashActivity : ComponentActivity() {
                     scale.animateTo(
                         targetValue = 1f,
                         animationSpec = tween(
-                            durationMillis = 800,
-                            easing = { androidx.compose.animation.core.OvershootInterpolator(2f).getInterpolation(it) }
+                            easing = { android.view.animation.OvershootInterpolator(2f).getInterpolation(it) }
                         )
                     )
                     delay(1200L)
@@ -58,10 +57,9 @@ class SplashActivity : ComponentActivity() {
                         )
                 ) {
                     // Using the app logo drawable we just set up
-                    // We assume R.drawable.app_logo exists or use ic_launcher_foreground if not, but we saved app_logo.png
-                    // Since R class isn't generated in my context, I'll refer to it by name in code assuming valid build
+                    // We assume R.drawable.app_logo exists or use ic_launcher_foreground if not if build fails on resources
                     Image(
-                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                        painter = painterResource(id = R.drawable.app_logo),
                         contentDescription = "Logo",
                         modifier = Modifier
                             .size(150.dp)
