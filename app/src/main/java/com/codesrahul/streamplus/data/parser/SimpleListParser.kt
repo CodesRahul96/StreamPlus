@@ -28,26 +28,36 @@ class SimpleListParser @Inject constructor() {
             var finalUrl: String? = null
             var finalName: String? = null
 
-            // Pattern 1: Direct URL
+            // Pattern 1: Direct URL or Name followed by URL
             if (trimmed.startsWith("http")) {
-                // Check if it's Name|URL or Name,URL or Name:URL
-                val delimiters = listOf("|", ",", " ")
+                finalUrl = trimmed
+                finalName = lastText // Use preceding line as name if available
+            } else if (trimmed.contains("://")) {
+                // Check for delimiters like " ", "|", ",", ":", "-"
+                val delimiters = listOf("|", ",", " - ", " : ", " ", ":")
                 var foundComplex = false
                 for (delim in delimiters) {
-                    if (trimmed.indexOf(delim) > 10) { // Likely a name before URL
-                        val parts = trimmed.split(delim, limit = 2)
-                        if (parts.size == 2 && parts[1].trim().startsWith("http")) {
-                            finalName = parts[0].trim()
-                            finalUrl = parts[1].trim()
+                    val index = trimmed.lastIndexOf(delim)
+                    if (index > 2) {
+                        val part2 = trimmed.substring(index + delim.length).trim()
+                        if (part2.startsWith("http")) {
+                            finalName = trimmed.substring(0, index).trim()
+                            finalUrl = part2
                             foundComplex = true
                             break
                         }
                     }
                 }
-
+                
                 if (!foundComplex) {
-                    finalUrl = trimmed
-                    finalName = lastText // Use preceding line as name if available
+                    // Fallback to searching for the first "http" in the string
+                    val httpIndex = trimmed.indexOf("http")
+                    if (httpIndex > 0) {
+                        finalName = trimmed.substring(0, httpIndex).trim().trimEnd('-', ':', '|')
+                        finalUrl = trimmed.substring(httpIndex).trim()
+                    } else if (httpIndex == 0) {
+                        finalUrl = trimmed
+                    }
                 }
             } else {
                 // Not a URL, store as potential name for the next line

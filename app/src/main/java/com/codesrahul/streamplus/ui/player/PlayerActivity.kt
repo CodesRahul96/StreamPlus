@@ -308,6 +308,10 @@ fun PlayerScreen(
                 userAgent.let { drmHeaders["User-Agent"] = it }
                 referer?.let { if (it.isNotBlank()) drmHeaders["Referer"] = it }
                 cookie?.let { if (it.isNotBlank()) drmHeaders["Cookie"] = it }
+                origin?.let { if (it.isNotBlank()) drmHeaders["Origin"] = it }
+
+                Log.d("PlayerScreen", "DRM Config: Scheme=$scheme, LicenseUrl=$drmLicenseUrl, Headers=$drmHeaders")
+                
                 drmBuilder.setLicenseRequestHeaders(drmHeaders)
                 mediaItemBuilder.setDrmConfiguration(drmBuilder.build())
             }
@@ -327,6 +331,7 @@ fun PlayerScreen(
                 val view = android.view.LayoutInflater.from(ctx).inflate(com.codesrahul.streamplus.R.layout.player_view_wrapper, null)
                 val playerView = view.findViewById<androidx.media3.ui.PlayerView>(com.codesrahul.streamplus.R.id.player_view)
                 playerView.player = exoPlayer
+                playerView.keepScreenOn = true
                 
                 // Add Gesture Listener
                 val detector = android.view.GestureDetector(ctx, object : android.view.GestureDetector.SimpleOnGestureListener() {

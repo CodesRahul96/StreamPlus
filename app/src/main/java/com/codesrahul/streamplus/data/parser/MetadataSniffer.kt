@@ -37,8 +37,11 @@ object MetadataSniffer {
         // 2. Sniff DRM
         if (lowerUrl.contains("clearkey") || lowerUrl.contains("ck=")) {
             drmScheme = "clearkey"
-        } else if (lowerUrl.contains("widevine") || lowerUrl.contains("wv=")) {
-            drmScheme = "widevine"
+        } else if (lowerUrl.contains("widevine") || lowerUrl.contains("wv=") || lowerUrl.contains("sony") || lowerUrl.contains("zee5")) {
+            // Sony and Zee5 usually use Widevine if it's protected
+            if (lowerUrl.contains(".mpd") || lowerUrl.contains("license") || lowerUrl.contains("sony") || lowerUrl.contains("zee5")) {
+                 drmScheme = "widevine"
+            }
         }
 
         // 3. Sniff Group from URL

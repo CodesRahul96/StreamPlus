@@ -1,7 +1,23 @@
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:drawable="@mipmap/ic_launcher_foreground"
-        android:gravity="center"
-        android:width="108dp"
-        android:height="108dp" />
-</layer-list>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillType="evenOdd"
+        android:pathData="M32,25L32,83L78,54L32,25Z">
+        <gradient
+            android:centerX="55"
+            android:centerY="54"
+            android:gradientRadius="40"
+            android:type="radial">
+            <item
+                android:color="#FF00B0FF"
+                android:offset="0" />
+            <item
+                android:color="#FF0081CB"
+                android:offset="1" />
+        </gradient>
+    </path>
+</vector>
