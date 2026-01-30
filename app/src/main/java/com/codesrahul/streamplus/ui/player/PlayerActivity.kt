@@ -194,20 +194,23 @@ fun PlayerScreen(
             .setAdtsExtractorFlags(androidx.media3.extractor.ts.AdtsExtractor.FLAG_ENABLE_CONSTANT_BITRATE_SEEKING)
 
         val renderersFactory = androidx.media3.exoplayer.DefaultRenderersFactory(context).apply {
-            setExtensionRendererMode(if (settingsState.preferSoftwareDecoder) 
-                androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER 
-                else androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+            setExtensionRendererMode(when(settingsState.decoderPriority) {
+                1 -> androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
+                2 -> androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
+                else -> androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
+            })
+             // setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
             setEnableDecoderFallback(true)
-             if (settingsState.enableTunneling) {
-                 // Try to enable tunneling if requested
-                 setEnableAudioTrackPlaybackParams(true) 
-             }
+            if (settingsState.enableTunneling) {
+                setEnableAudioTrackPlaybackParams(true)
+            }
         }
 
         ExoPlayer.Builder(context, renderersFactory)
             .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory, extractorsFactory))
             .build().apply {
                 playWhenReady = true
+
                 addListener(object : androidx.media3.common.Player.Listener {
                     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                         Log.e("PlayerScreen", "Playback Error: ${error.message}", error)

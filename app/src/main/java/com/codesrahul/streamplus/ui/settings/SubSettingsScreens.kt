@@ -11,9 +11,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.codesrahul.streamplus.data.settings.ThemeMode
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.VideoSettings
+import androidx.compose.material.icons.filled.Sync
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -156,7 +161,7 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Playlist and Channel") },
+                title = { Text("Playlist & Channel Management") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -167,14 +172,14 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
             SwitchPreference(
-                title = "Hide playlist URI",
-                subtitle = "To prevent showing the url",
+                title = "Mask Playlist URI",
+                subtitle = "Hide the full playlist URL for privacy",
                 checked = settingsState.hidePlaylistUri,
                 onCheckedChange = { viewModel.setHidePlaylistUri(it) }
             )
             SwitchPreference(
-                title = "Hide channel image",
-                subtitle = "To prevent the image from being loaded",
+                title = "Disable Channel Logos",
+                subtitle = "Prevent channel icons from loading to save data",
                 checked = settingsState.hideChannelImage,
                 onCheckedChange = { viewModel.setHideChannelImage(it) }
             )
@@ -209,20 +214,20 @@ fun GeneralSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
         
         Column(modifier = Modifier.padding(padding).verticalScroll(rememberScrollState()).padding(16.dp)) {
              SwitchPreference(
-                title = "Allow non-HTTPS (Cleartext)",
-                subtitle = "Enable playback for unencrypted streams",
+                title = "Allow Insecure Streams (Cleartext)",
+                subtitle = "Enable playback for non-HTTPS sources",
                 checked = settingsState.allowCleartext,
                 onCheckedChange = { viewModel.setAllowCleartext(it) }
             )
              SwitchPreference(
                 title = "Skip SSL Verification",
-                subtitle = "Bypass certificate errors (Use with caution)",
+                subtitle = "Bypass certificate validation errors (Caution)",
                 checked = settingsState.skipSslVerification,
                 onCheckedChange = { viewModel.setSkipSslVerification(it) }
             )
              SwitchPreference(
-                title = "Videos are always played in landscape mode",
-                subtitle = "Directly launch the player in landscape mode",
+                title = "Force Landscape Mode",
+                subtitle = "Always launch player in landscape orientation",
                 checked = settingsState.forceLandscape,
                 onCheckedChange = { viewModel.setForceLandscape(it) }
             )
@@ -300,10 +305,13 @@ fun GeneralSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
+    val settingsState by viewModel.settings.collectAsState(initial = com.codesrahul.streamplus.data.settings.AppSettings())
+    var showDecoderDialog by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Advance Video & render options") },
+                title = { Text("Playback & Rendering") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -312,21 +320,91 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             )
         }
     ) { padding ->
-        val settingsState by viewModel.settings.collectAsState(initial = com.codesrahul.streamplus.data.settings.AppSettings())
-        Column(modifier = Modifier.padding(padding)) {
+        Column(modifier = Modifier.padding(padding).verticalScroll(rememberScrollState())) {
+            
+            ListItem(
+                 headlineContent = { Text("Core Playback Configuration") },
+                 colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            )
+
+            ListItem(
+                headlineContent = { Text("Decoder Backend") },
+                supportingContent = { 
+                    Text(when(settingsState.decoderPriority) {
+                        1 -> "Application (Software)"
+                        2 -> "Hardware Only (Strict)"
+                        else -> "System Default (Hardware)"
+                    }) 
+                },
+                leadingContent = { Icon(Icons.Default.Memory, contentDescription = null) },
+                modifier = Modifier.clickable { showDecoderDialog = true }
+            )
+
             SwitchPreference(
-                title = "Enable tunneling",
-                subtitle = "Use hardware acceleration for supported devices",
+                title = "Audio Tunneling",
+                subtitle = "Improve A/V sync on supported devices (4K/HDR)",
                 checked = settingsState.enableTunneling,
                 onCheckedChange = { viewModel.setEnableTunneling(it) }
             )
-             SwitchPreference(
-                title = "Prefer Software Decoder",
-                subtitle = "Forces AV decoding in software (fixes some crashes)",
-                checked = settingsState.preferSoftwareDecoder,
-                onCheckedChange = { viewModel.setPreferSoftwareDecoder(it) }
+
+            SwitchPreference(
+                title = "Dolby Vision Support",
+                subtitle = "Enable Profile 7 compatibility mode",
+                checked = settingsState.dolbyVision,
+                onCheckedChange = { viewModel.setDolbyVision(it) }
+            )
+
+            SwitchPreference(
+                title = "Frame Rate Matching",
+                subtitle = "Sync display refresh rate to content (ignore check)",
+                checked = settingsState.disableFrameRateCheck,
+                onCheckedChange = { viewModel.setDisableFrameRateCheck(it) }
             )
         }
+    }
+
+    if (showDecoderDialog) {
+        AlertDialog(
+            onDismissRequest = { showDecoderDialog = false },
+            title = { Text("Decoder Backend") },
+            text = {
+                Column {
+                    val options = listOf(
+                        0 to "System Default (Hardware)",
+                        1 to "Application (Software)",
+                        2 to "Hardware Only (Strict)"
+                    )
+                    options.forEach { (value, label) ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = (value == settingsState.decoderPriority),
+                                    onClick = {
+                                        viewModel.setDecoderPriority(value)
+                                        showDecoderDialog = false
+                                    }
+                                )
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (value == settingsState.decoderPriority),
+                                onClick = null
+                            )
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 16.dp)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDecoderDialog = false }) { Text("Cancel") }
+            }
+        )
     }
 }
 
@@ -347,7 +425,7 @@ fun ShortcutsSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
             ListItem(
-                 headlineContent = { Text("Captioning preferences") },
+                 headlineContent = { Text("Captioning Preferences") },
                  modifier = Modifier.clickable { }
             )
         }
@@ -359,11 +437,13 @@ fun SwitchPreference(
     title: String,
     subtitle: String? = null,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    icon: ImageVector? = null
 ) {
     ListItem(
         headlineContent = { Text(title) },
         supportingContent = subtitle?.let { { Text(it) } },
+        leadingContent = icon?.let { { Icon(it, contentDescription = null) } },
         trailingContent = {
             Switch(
                 checked = checked,

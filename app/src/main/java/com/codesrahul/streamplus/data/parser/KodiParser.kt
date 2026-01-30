@@ -141,7 +141,16 @@ class KodiParser @Inject constructor() {
                             "inputstream.adaptive.stream_headers" -> {
                                 value.split("&").forEach { pair ->
                                     val kv = pair.split("=", limit = 2)
-                                    if (kv.size == 2) currentHeaders[kv[0]] = kv[1]
+                                    if (kv.size == 2) {
+                                        val normKey = when(kv[0].lowercase()) {
+                                            "user-agent" -> "User-Agent"
+                                            "referer" -> "Referer"
+                                            "cookie" -> "Cookie"
+                                            "origin" -> "Origin"
+                                            else -> kv[0]
+                                        }
+                                        currentHeaders[normKey] = kv[1]
+                                    }
                                 }
                             }
                         }

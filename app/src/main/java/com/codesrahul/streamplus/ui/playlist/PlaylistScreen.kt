@@ -65,16 +65,48 @@ fun PlaylistScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier.padding(padding).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(playlists) { playlist ->
-                PlaylistItem(
-                    playlist = playlist,
-                    onClick = { onPlaylistClick(playlist.id) },
-                    onEdit = { showEditDialog = playlist }
-                )
+        if (playlists.isEmpty()) {
+            Box(
+                modifier = Modifier.padding(padding).fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "No playlist found",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Add a playlist to get started",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(onClick = { showAddDialog = true }) {
+                        Text("Add Playlist")
+                    }
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.padding(padding).padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(playlists) { playlist ->
+                    PlaylistItem(
+                        playlist = playlist,
+                        onClick = { onPlaylistClick(playlist.id) },
+                        onEdit = { showEditDialog = playlist }
+                    )
+                }
             }
         }
     }

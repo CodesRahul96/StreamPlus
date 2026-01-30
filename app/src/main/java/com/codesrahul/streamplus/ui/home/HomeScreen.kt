@@ -75,8 +75,8 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
 
                 val cardItems = listOf(
                     Triple("My Playlists", "Browse and watch remote M3U lists", "playlist"),
-                    Triple("Local Media", "Play videos from your device", "local"),
-                    Triple("Direct Play", "Play URL with custom headers", "direct_play")
+                    Triple("Local Files", "Play videos from your device storage", "local"),
+                    Triple("Network Stream", "Stream directly from URL with headers", "direct_play")
                 )
 
                 cardItems.forEachIndexed { index, (title, sub, route) ->
@@ -187,7 +187,7 @@ fun DirectPlayScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Direct Play") },
+                title = { Text("Network Stream") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(androidx.compose.material.icons.Icons.Default.ArrowBack, contentDescription = "Back")

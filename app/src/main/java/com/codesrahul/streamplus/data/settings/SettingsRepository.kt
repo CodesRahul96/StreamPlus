@@ -40,7 +40,10 @@ data class AppSettings(
     val brightnessGestures: Boolean = true,
     val resumePlaying: Boolean = false,
     val playlistCache: Boolean = false,
-    val lastResizeMode: Int = 0 // 0=Fit,1=Fill,2=Zoom
+    val lastResizeMode: Int = 0, // 0=Fit,1=Fill,2=Zoom
+    val decoderPriority: Int = 0, // 0=Device, 1=App, 2=DeviceOnly
+    val dolbyVision: Boolean = false,
+    val disableFrameRateCheck: Boolean = false
 )
 
 @Singleton
@@ -64,6 +67,9 @@ class SettingsRepository @Inject constructor(
         val RESUME_PLAYING = booleanPreferencesKey("resume_playing")
         val PLAYLIST_CACHE = booleanPreferencesKey("playlist_cache")
         val LAST_RESIZE_MODE = intPreferencesKey("last_resize_mode")
+        val DECODER_PRIORITY = intPreferencesKey("decoder_priority")
+        val DOLBY_VISION = booleanPreferencesKey("dolby_vision")
+        val DISABLE_FRAME_RATE_CHECK = booleanPreferencesKey("disable_frame_rate_check")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -87,7 +93,10 @@ class SettingsRepository @Inject constructor(
             brightnessGestures = prefs[Keys.BRIGHTNESS_GESTURES] ?: true,
             resumePlaying = prefs[Keys.RESUME_PLAYING] ?: false,
             playlistCache = prefs[Keys.PLAYLIST_CACHE] ?: false,
-            lastResizeMode = prefs[Keys.LAST_RESIZE_MODE] ?: 0
+            lastResizeMode = prefs[Keys.LAST_RESIZE_MODE] ?: 0,
+            decoderPriority = prefs[Keys.DECODER_PRIORITY] ?: 0,
+            dolbyVision = prefs[Keys.DOLBY_VISION] ?: false,
+            disableFrameRateCheck = prefs[Keys.DISABLE_FRAME_RATE_CHECK] ?: false
         )
     }
 
@@ -149,6 +158,18 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setLastResizeMode(mode: Int) {
         context.dataStore.edit { it[Keys.LAST_RESIZE_MODE] = mode }
+    }
+
+    suspend fun setDecoderPriority(priority: Int) {
+        context.dataStore.edit { it[Keys.DECODER_PRIORITY] = priority }
+    }
+
+    suspend fun setDolbyVision(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.DOLBY_VISION] = enabled }
+    }
+
+    suspend fun setDisableFrameRateCheck(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.DISABLE_FRAME_RATE_CHECK] = enabled }
     }
 
     suspend fun factoryReset() {

@@ -83,4 +83,16 @@ class SettingsViewModel @Inject constructor(
     fun factoryReset() {
         viewModelScope.launch { settingsRepository.factoryReset() }
     }
+
+    fun setDecoderPriority(priority: Int) {
+        viewModelScope.launch { settingsRepository.setDecoderPriority(priority) }
+    }
+
+    fun setDolbyVision(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setDolbyVision(enabled) }
+    }
+
+    fun setDisableFrameRateCheck(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setDisableFrameRateCheck(enabled) }
+    }
 }

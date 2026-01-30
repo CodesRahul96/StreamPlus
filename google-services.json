@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "861723500804",
+    "project_id": "device-streaming-f8b66ddc",
+    "storage_bucket": "device-streaming-f8b66ddc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:861723500804:android:d169e5b48b8fc828a37051",
+        "android_client_info": {
+          "package_name": "com.codesrahul.streamplus"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyChKXUQW7vx2XLzNUOSgNRSw6KvoxJxbU8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
