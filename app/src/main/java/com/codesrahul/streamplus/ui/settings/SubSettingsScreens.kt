@@ -12,6 +12,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.codesrahul.streamplus.data.settings.ThemeMode
@@ -424,9 +426,17 @@ fun ShortcutsSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
+            val context = LocalContext.current
             ListItem(
                  headlineContent = { Text("Captioning Preferences") },
-                 modifier = Modifier.clickable { }
+                 modifier = Modifier.clickable { 
+                     try {
+                        val intent = android.content.Intent(android.provider.Settings.ACTION_CAPTIONING_SETTINGS)
+                        context.startActivity(intent)
+                     } catch (e: Exception) {
+                         android.widget.Toast.makeText(context, "Cannot open captioning settings", android.widget.Toast.LENGTH_SHORT).show()
+                     }
+                 }
             )
         }
     }

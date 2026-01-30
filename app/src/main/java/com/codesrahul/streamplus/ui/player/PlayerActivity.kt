@@ -78,13 +78,12 @@ class PlayerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Force landscape if enabled
-        val isForceLandscape = kotlinx.coroutines.runBlocking { settingsRepository.settings.first().forceLandscape }
-        if (isForceLandscape) {
-            requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-            // Hide system UI if we are forced to landscape/fullscreen
-            hideSystemUI(this)
-        }
+        // Orientation is handled in specific screens via LaunchedEffect or similar
+        // val isForceLandscape = kotlinx.coroutines.runBlocking { settingsRepository.settings.first().forceLandscape }
+        // if (isForceLandscape) {
+        //    requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        //    hideSystemUI(this)
+        // }
 
         val streamUrl = intent.getStringExtra(EXTRA_STREAM_URL) ?: ""
         val streamTitle = intent.getStringExtra(EXTRA_STREAM_TITLE) ?: "Unknown Stream"
@@ -160,6 +159,18 @@ fun PlayerScreen(
         if (showGestureOverlay) {
             kotlinx.coroutines.delay(2000)
             showGestureOverlay = false
+        }
+    }
+
+    // Handle Orientation based on settings
+    val activity = context as? android.app.Activity
+    LaunchedEffect(settingsState.forceLandscape) {
+        if (settingsState.forceLandscape) {
+            activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            activity?.let { hideSystemUI(it) }
+        } else {
+             // Optional: reset to unspecified or sensor, or leave as is
+             // activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
 

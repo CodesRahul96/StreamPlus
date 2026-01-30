@@ -112,9 +112,40 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
             SettingsCategoryItem(
                 title = "Shortcuts",
                 subtitle = "Access captioning settings",
-                icon = Icons.Default.ShortText,
                 onClick = { onNavigate("shortcuts") }
             )
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            val context = androidx.compose.ui.platform.LocalContext.current
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        try {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/CodesRahul96"))
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    },
+                contentAlignment = androidx.compose.ui.Alignment.Center
+            ) {
+                Text(
+                    text = "Developed by CodesRahul",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) // Highlighted color to indicate link
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                Text(
+                    text = "v1.0.0",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                )
+            }
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
