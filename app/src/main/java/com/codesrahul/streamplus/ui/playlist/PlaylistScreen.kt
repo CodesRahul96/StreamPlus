@@ -209,6 +209,8 @@ fun PlaylistDialog(
 
     var name by remember { mutableStateOf(initialName) }
     var url by remember { mutableStateOf(initialUrl) }
+    var isNameModified by remember { mutableStateOf(initialName.isNotEmpty()) }
+
     // Store the display value for the dropdown, but we will pass the mapped value on confirm
     var userAgentDisplay by remember { mutableStateOf(
         when (initialUserAgent) {
@@ -267,14 +269,45 @@ fun PlaylistDialog(
             Column {
                 OutlinedTextField(
                     value = name,
-                    onValueChange = { name = it },
+                    onValueChange = { 
+                        name = it
+                        isNameModified = true
+                    },
                     label = { Text("Enter playlist name") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = url,
-                    onValueChange = { url = it },
+                    onValueChange = { newUrl -> 
+                        url = newUrl
+                        if (!isNameModified && newUrl.isNotEmpty()) {
+                            try {
+                                val uri = android.net.Uri.parse(newUrl)
+                                val lastSegment = uri.lastPathSegment
+                                if (!lastSegment.isNullOrEmpty()) {
+                                    var fileName = lastSegment
+                                    val dotIndex = fileName.lastIndexOf('.')
+                                    if (dotIndex != -1) {
+                                        fileName = fileName.substring(0, dotIndex)
+                                    }
+                                    // Formatting: replace separators with spaces and capitalize
+                                    fileName = fileName.replace(Regex("[_\\-]"), " ")
+                                        .split(" ")
+                                        .joinToString(" ") { word -> 
+                                            word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.ROOT) else it.toString() } 
+                                        }
+                                        .trim()
+                                    
+                                    if (fileName.isNotEmpty()) {
+                                        name = fileName
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                // Ignore parsing errors
+                            }
+                        }
+                    },
                     label = { Text("Enter playlist url") },
                     modifier = Modifier.fillMaxWidth()
                 )
