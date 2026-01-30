@@ -17,8 +17,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.codesrahul.streamplus.ui.theme.StreamPlusTheme
@@ -47,14 +45,8 @@ class SplashActivity : ComponentActivity() {
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color(0xFF0F172A), // Slate 900
-                                    Color(0xFF1E293B)  // Slate 800
-                                )
-                            )
-                        )
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
                 ) {
                     // Using the app logo drawable we just set up
                     // We assume R.drawable.app_logo exists or use ic_launcher_foreground if not if build fails on resources
