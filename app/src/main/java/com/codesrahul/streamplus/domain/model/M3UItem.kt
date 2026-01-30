@@ -8,7 +8,8 @@ data class M3UItem(
     var status: StreamStatus = StreamStatus.UNKNOWN,
     val headers: Map<String, String> = emptyMap(),
     val licenseUrl: String? = null,
-    val drmScheme: String? = null
+    val drmScheme: String? = null,
+    val isPlaylist: Boolean = false
 )
 
 enum class StreamStatus {

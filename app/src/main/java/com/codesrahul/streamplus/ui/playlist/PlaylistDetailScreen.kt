@@ -123,11 +123,11 @@ fun PlaylistDetailScreen(
                     items(filteredChannels) { channel ->
                         ChannelItem(channel) {
                             val lowerUrl = channel.url.lowercase()
-                            val isPlaylist = lowerUrl.endsWith(".m3u") || 
-                                            lowerUrl.endsWith(".m3u8") || 
+                            val isPlaylist = channel.isPlaylist || 
+                                            lowerUrl.endsWith(".m3u") || 
                                             lowerUrl.endsWith(".json") ||
                                             channel.url.contains("m3u=1") ||
-                                            (channel.url.contains("cloudplay.pages.dev") && !lowerUrl.contains(".mpd"))
+                                            (channel.url.contains("cloudplay.pages.dev") && !lowerUrl.contains(".mpd") && !lowerUrl.contains(".m3u8"))
 
                             if (isPlaylist) {
                                 val encodedUrl = java.net.URLEncoder.encode(channel.url, "UTF-8")

@@ -16,20 +16,60 @@ class SimpleListParser @Inject constructor() {
         val list = mutableListOf<M3UItem>()
         val reader = BufferedReader(StringReader(content))
         var line: String? = reader.readLine()
-        var count = 0
+        var lastText: String? = null
 
         while (line != null) {
             val trimmed = line.trim()
-            if (trimmed.isNotEmpty() && (trimmed.startsWith("http://") || trimmed.startsWith("https://"))) {
+            if (trimmed.isEmpty()) {
+                line = reader.readLine()
+                continue
+            }
+
+            var finalUrl: String? = null
+            var finalName: String? = null
+
+            // Pattern 1: Direct URL
+            if (trimmed.startsWith("http")) {
+                // Check if it's Name|URL or Name,URL or Name:URL
+                val delimiters = listOf("|", ",", " ")
+                var foundComplex = false
+                for (delim in delimiters) {
+                    if (trimmed.indexOf(delim) > 10) { // Likely a name before URL
+                        val parts = trimmed.split(delim, limit = 2)
+                        if (parts.size == 2 && parts[1].trim().startsWith("http")) {
+                            finalName = parts[0].trim()
+                            finalUrl = parts[1].trim()
+                            foundComplex = true
+                            break
+                        }
+                    }
+                }
+
+                if (!foundComplex) {
+                    finalUrl = trimmed
+                    finalName = lastText // Use preceding line as name if available
+                }
+            } else {
+                // Not a URL, store as potential name for the next line
+                lastText = trimmed
+            }
+
+            if (finalUrl != null) {
+                val snifferResult = MetadataSniffer.sniffMetadata(finalUrl, finalName)
                 list.add(
                     M3UItem(
-                        name = "Channel ${count + 1}",
-                        url = trimmed,
-                        group = "Uncategorized"
+                        name = snifferResult.name ?: "Channel ${list.size + 1}",
+                        url = finalUrl,
+                        logoUrl = snifferResult.logo ?: "",
+                        group = snifferResult.group ?: "Uncategorized",
+                        drmScheme = snifferResult.drmScheme,
+                        licenseUrl = snifferResult.drmLicense,
+                        isPlaylist = finalUrl.lowercase().run { contains(".m3u") || contains(".json") || contains("m3u=1") }
                     )
                 )
-                count++
+                lastText = null // Reset after using
             }
+
             line = reader.readLine()
         }
 

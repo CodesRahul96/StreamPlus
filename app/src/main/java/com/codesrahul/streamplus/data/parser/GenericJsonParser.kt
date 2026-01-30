@@ -19,7 +19,7 @@ class GenericJsonParser @Inject constructor() {
         val list = mutableListOf<M3UItem>()
         try {
             val element = JsonParser().parse(reader)
-            findAndProcessArrays(element, list)
+            scanForItems(element, list)
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing generic JSON", e)
         }
@@ -30,64 +30,60 @@ class GenericJsonParser @Inject constructor() {
         return parse(StringReader(jsonString))
     }
 
-    private fun findAndProcessArrays(element: com.google.gson.JsonElement, list: MutableList<M3UItem>, depth: Int = 0) {
-        if (depth > 5) return
+    private fun scanForItems(element: com.google.gson.JsonElement, list: MutableList<M3UItem>, depth: Int = 0) {
+        if (depth > 20) return // Increased depth for nested structures
 
         when {
             element.isJsonArray -> {
-                val array = element.asJsonArray
-                val looksLikeChannels = array.any { 
-                    it.isJsonObject && (
-                        hasAnyKey(it.asJsonObject, "url", "link", "stream", "uri", "source", "file", "m3u8_url", "mpd_url", "play_url", "m3uLink", "m3u_url")
-                    )
-                }
-
-                if (looksLikeChannels) {
-                    processArray(array, list)
-                } else {
-                    array.forEach { findAndProcessArrays(it, list, depth + 1) }
-                }
+                element.asJsonArray.forEach { scanForItems(it, list, depth + 1) }
             }
             element.isJsonObject -> {
                 val obj = element.asJsonObject
-                if (hasAnyKey(obj, "url", "link", "stream", "uri", "source", "file", "m3u8_url", "m3uLink", "m3u_url")) {
-                    val tv = parseSingleObject(obj, list.size)
-                    if (tv != null) list.add(tv)
+                // Check if this object ITSELF is a channel
+                val url = findPotentialUrl(obj)
+                if (url != null) {
+                    val item = parseSingleObject(obj, list.size)
+                    if (item != null) list.add(item)
                 } else {
+                    // Otherwise keep digging
                     for (key in obj.keySet()) {
-                        findAndProcessArrays(obj.get(key), list, depth + 1)
+                        scanForItems(obj.get(key), list, depth + 1)
                     }
                 }
             }
         }
     }
-    
-    private fun hasAnyKey(obj: JsonObject, vararg keys: String): Boolean {
-        return keys.any { findString(obj, it) != null }
-    }
 
-    private fun processArray(array: JsonArray, list: MutableList<M3UItem>) {
-        for (item in array) {
-            if (item.isJsonObject) {
-                val obj = item.asJsonObject
-                val tv = parseSingleObject(obj, list.size)
-                if (tv != null) {
-                    list.add(tv)
+    private fun findPotentialUrl(obj: JsonObject): String? {
+        val keys = listOf("url", "link", "stream", "uri", "source", "file", "m3u8_url", "mpd_url", "play_url", "m3uLink", "m3u_url", "video")
+        for (key in keys) {
+            val value = findString(obj, key)
+            if (value != null && (value.startsWith("http") || value.startsWith("rtsp") || value.contains("://"))) {
+                return value
+            }
+        }
+        // Try all string fields if nothing obvious found
+        for (key in obj.keySet()) {
+            val element = obj.get(key)
+            if (element.isJsonPrimitive && element.asJsonPrimitive.isString) {
+                val value = element.asString
+                if (value.startsWith("http") && (value.contains(".m3u8") || value.contains(".mpd") || value.contains(".ts") || value.contains("/live/"))) {
+                    return value
                 }
             }
         }
+        return null
     }
 
     private fun parseSingleObject(obj: JsonObject, index: Int): M3UItem? {
+        val url = findPotentialUrl(obj) ?: return null
+        
         val name = findString(obj, "name", "title", "channel_name", "display_name", "caption", "station", "tv_name", "channel", "label", "tvg-name", "tvg_name", "ch_name") ?: "Channel $index"
-        val url = findString(obj, "url", "stream_url", "uri", "file", "src", "link", "stream", "play_url", "m3u8_url", "mpd_url", "video_url", "address", "location", "media_url", "hls_url", "dash_url", "rtsp_url", "source", "content_url", "m3uLink", "m3u_url")
-        if (url.isNullOrBlank()) return null
-
         val logo = findString(obj, "logo", "icon", "image", "thumb", "thumbnail", "stream_icon", "channel_logo", "logo_url", "poster", "tvg-logo", "banner", "tvg_logo", "img", "cover", "picture", "imageUrl", "image_url") ?: ""
         val group = findString(obj, "group", "category", "genre", "category_name", "group_title", "group-title", "cat_name", "category_id", "folder", "playlist", "section", "group_name") ?: "Uncategorized"
 
-        val drmLicense = findString(obj, "license_key", "drm_url", "license", "clearkey", "key", "license_url", "license_src", "drm_license", "kodi_prop_license_key")
-        var drmScheme = findString(obj, "drm_scheme", "drm_type", "license_type", "license_mode", "scheme", "drm_system")
+        val drmLicense = findString(obj, "license_key", "drm_url", "license", "clearkey", "key", "license_url", "license_src", "drm_license", "kodi_prop_license_key", "drmLicense")
+        var drmScheme = findString(obj, "drm_scheme", "drm_type", "license_type", "license_mode", "scheme", "drm_system", "drmScheme")
         
         var finalDrmLicense = drmLicense
         if (finalDrmLicense == null && obj.has("drm") && obj.get("drm").isJsonObject) {
@@ -112,14 +108,16 @@ class GenericJsonParser @Inject constructor() {
              drmScheme = "widevine"
         }
 
+        val snifferResult = MetadataSniffer.sniffMetadata(url, name)
         return M3UItem(
-            name = name,
+            name = snifferResult.name ?: name ?: "Channel ${index + 1}",
             url = url,
-            group = group,
-            logoUrl = logo,
+            group = group ?: snifferResult.group ?: "Uncategorized",
+            logoUrl = logo ?: snifferResult.logo ?: "",
             headers = parseHeaders(obj) ?: emptyMap(),
-            licenseUrl = finalDrmLicense,
-            drmScheme = drmScheme
+            licenseUrl = finalDrmLicense ?: snifferResult.drmLicense,
+            drmScheme = drmScheme ?: snifferResult.drmScheme,
+            isPlaylist = url.lowercase().run { contains(".m3u") || contains(".json") || contains("m3u=1") }
         )
     }
 
@@ -165,7 +163,7 @@ class GenericJsonParser @Inject constructor() {
         for (key in keys) {
             if (obj.has(key) && !obj.get(key).isJsonNull) {
                 val element = obj.get(key)
-                return if (element.isJsonPrimitive) element.asString else element.toString()
+                if (element.isJsonPrimitive) return element.asString
             }
         }
         
@@ -175,8 +173,8 @@ class GenericJsonParser @Inject constructor() {
                  val normalizedKey = key.replace("_", "").replace("-", "").lowercase()
                  if (normalizedKey == normalizedObjKey) {
                      val element = obj.get(objKey)
-                     if (!element.isJsonNull) {
-                         return if (element.isJsonPrimitive) element.asString else element.toString()
+                     if (!element.isJsonNull && element.isJsonPrimitive) {
+                         return element.asString
                      }
                  }
              }
