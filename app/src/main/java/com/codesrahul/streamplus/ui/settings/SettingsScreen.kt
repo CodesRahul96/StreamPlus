@@ -162,9 +162,9 @@ fun AppInfoFooter() {
     val version = remember {
         try {
             val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            pInfo.versionName ?: "1.0.52"
+            pInfo.versionName ?: "1.0.1"
         } catch (e: Exception) {
-            "1.0.52"
+            "1.0.1"
         }
     }
 
