@@ -163,6 +163,9 @@ fun PlaylistDetailScreen(
                                     
                                     channel.licenseUrl?.let { putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_DRM_LICENSE_URL, it) }
                                     channel.drmScheme?.let { putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_DRM_SCHEME, it) }
+                                    if (channel.drmHeaders.isNotEmpty()) {
+                                        putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_DRM_HEADERS, java.util.HashMap(channel.drmHeaders))
+                                    }
                                 }
                                 context.startActivity(intent)
                             }

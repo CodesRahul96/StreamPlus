@@ -34,3 +34,7 @@ val GroveTertiary = Color(0xFFCDDC39)
 val RosePrimary = Color(0xFFE91E63)
 val RoseSecondary = Color(0xFFFF4081)
 val RoseTertiary = Color(0xFFF48FB1)
+
+// StreamPlus Signature (for Pitch Black)
+val StreamPlusBlue = Color(0xFF2196F3)
+val StreamPlusNavy = Color(0xFF0D47A1)

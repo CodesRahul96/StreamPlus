@@ -7,6 +7,7 @@ data class M3UItem(
     val logoUrl: String = "",
     var status: StreamStatus = StreamStatus.UNKNOWN,
     val headers: Map<String, String> = emptyMap(),
+    val drmHeaders: Map<String, String> = emptyMap(),
     val licenseUrl: String? = null,
     val drmScheme: String? = null,
     val isPlaylist: Boolean = false

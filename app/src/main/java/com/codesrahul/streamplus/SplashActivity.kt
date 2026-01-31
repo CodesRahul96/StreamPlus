@@ -21,6 +21,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.codesrahul.streamplus.ui.theme.StreamPlusTheme
 import kotlinx.coroutines.delay
+import androidx.compose.ui.graphics.Color
+import androidx.core.view.WindowInsetsControllerCompat
+import android.app.Activity
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.runtime.SideEffect
 
 class SplashActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,9 +51,17 @@ class SplashActivity : ComponentActivity() {
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .fillMaxSize()
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background)
+                        .background(Color.White)
                 ) {
+                    val view = LocalView.current
+                    if (!view.isInEditMode) {
+                        SideEffect {
+                            val window = (view.context as Activity).window
+                            window.statusBarColor = Color.White.toArgb()
+                            val controller = WindowInsetsControllerCompat(window, view)
+                            controller.isAppearanceLightStatusBars = true
+                        }
+                    }
                     // Using the app logo drawable we just set up
                     // We assume R.drawable.app_logo exists or use ic_launcher_foreground if not if build fails on resources
                     Image(

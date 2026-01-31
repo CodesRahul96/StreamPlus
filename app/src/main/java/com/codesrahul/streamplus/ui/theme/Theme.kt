@@ -13,6 +13,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
 import com.codesrahul.streamplus.data.settings.ThemeMode
 import com.codesrahul.streamplus.data.settings.ThemeStyle
@@ -73,12 +74,20 @@ fun StreamPlusTheme(
         ThemeStyle.RED_ROSE -> if (darkTheme) RoseDark else RoseLight
         ThemeStyle.PITCH_BLACK -> {
             if (darkTheme) {
-                DarkColorScheme.copy(
-                    background = androidx.compose.ui.graphics.Color.Black,
-                    surface = androidx.compose.ui.graphics.Color.Black,
-                    surfaceVariant = androidx.compose.ui.graphics.Color.Black,
-                    onBackground = androidx.compose.ui.graphics.Color.White,
-                    onSurface = androidx.compose.ui.graphics.Color.White
+                darkColorScheme(
+                    primary = StreamPlusBlue,
+                    onPrimary = Color.White,
+                    primaryContainer = StreamPlusNavy,
+                    onPrimaryContainer = Color.White,
+                    secondary = PurpleGrey80,
+                    onSecondary = Color.Black,
+                    background = Color.Black,
+                    onBackground = Color.White,
+                    surface = Color.Black,
+                    onSurface = Color.White,
+                    surfaceVariant = Color.Black,
+                    onSurfaceVariant = Color.LightGray,
+                    outline = Color.DarkGray
                 )
             } else {
                 LightColorScheme

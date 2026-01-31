@@ -22,6 +22,7 @@ class KodiParser @Inject constructor() {
         var currentLogo: String = ""
         var currentGroup: String = ""
         var currentHeaders = mutableMapOf<String, String>()
+        var currentDrmHeaders = mutableMapOf<String, String>()
         var currentDrmScheme: String? = null
         var currentDrmLicense: String? = null
         val globalHeaders = mutableMapOf<String, String>()
@@ -66,7 +67,7 @@ class KodiParser @Inject constructor() {
                     if (parts.size == 2) {
                         val key = parts[0].trim()
                         val value = parts[1].trim()
-                        parseKodiProp(key, value, currentHeaders, { currentDrmScheme = it }, { currentDrmLicense = it })
+                        parseKodiProp(key, value, currentHeaders, currentDrmHeaders, { currentDrmScheme = it }, { currentDrmLicense = it })
                     }
                 } 
                 else if (trimmedLine.startsWith("EXTVLCOPT:", ignoreCase = true)) {
@@ -113,6 +114,7 @@ class KodiParser @Inject constructor() {
                                     logoUrl = if (currentLogo.isNotEmpty()) currentLogo else (snifferResult.logo ?: ""),
                                     group = if (currentGroup.isNotEmpty()) currentGroup else (snifferResult.group ?: "Uncategorized"),
                                     headers = finalHeaders.toMap(),
+                                    drmHeaders = currentDrmHeaders.toMap(),
                                     licenseUrl = if (currentDrmLicense != null) currentDrmLicense else snifferResult.drmLicense,
                                     drmScheme = finalScheme,
                                     isPlaylist = finalUrl.lowercase().run { contains(".m3u") || contains(".json") || contains("m3u=1") }
@@ -123,6 +125,7 @@ class KodiParser @Inject constructor() {
                             currentLogo = ""
                             currentGroup = ""
                             currentHeaders = mutableMapOf()
+                            currentDrmHeaders = mutableMapOf()
                             currentDrmScheme = null
                             currentDrmLicense = null
                         }
@@ -192,7 +195,14 @@ class KodiParser @Inject constructor() {
         }
     }
 
-    private fun parseKodiProp(key: String, value: String, headersMap: MutableMap<String, String>, schemeCallback: (String) -> Unit, drmCallback: (String) -> Unit) {
+    private fun parseKodiProp(
+        key: String, 
+        value: String, 
+        headersMap: MutableMap<String, String>, 
+        drmHeadersMap: MutableMap<String, String>,
+        schemeCallback: (String) -> Unit, 
+        drmCallback: (String) -> Unit
+    ) {
         when (key) {
             "inputstream.adaptive.license_type" -> {
                 schemeCallback(when(value) {
@@ -202,7 +212,22 @@ class KodiParser @Inject constructor() {
                     else -> value
                 })
             }
-            "inputstream.adaptive.license_key" -> drmCallback(value.split("|")[0])
+            "inputstream.adaptive.license_key" -> {
+                 if (value.contains("|")) {
+                     val parts = value.split("|")
+                     drmCallback(parts[0])
+                     // Rest of parts for license headers
+                     if (parts.size > 1) {
+                         val headersStr = parts[1]
+                         headersStr.split("&").forEach { pair ->
+                             val kv = pair.split("=", limit = 2)
+                             if (kv.size == 2) normalizeHeader(kv[0], kv[1], drmHeadersMap)
+                         }
+                     }
+                 } else {
+                     drmCallback(value)
+                 }
+            }
             "inputstream.adaptive.stream_headers" -> {
                 value.split("&").forEach { pair ->
                     val kv = pair.split("=", limit = 2)

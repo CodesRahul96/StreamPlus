@@ -73,6 +73,7 @@ class PlayerActivity : ComponentActivity() {
         const val EXTRA_HEADERS = "extra_headers"
         const val EXTRA_DRM_LICENSE_URL = "extra_drm_license_url"
         const val EXTRA_DRM_SCHEME = "extra_drm_scheme"
+        const val EXTRA_DRM_HEADERS = "extra_drm_headers"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -96,6 +97,8 @@ class PlayerActivity : ComponentActivity() {
         val headers = intent.getSerializableExtra(EXTRA_HEADERS) as? Map<String, String> ?: emptyMap()
         val drmLicenseUrl = intent.getStringExtra(EXTRA_DRM_LICENSE_URL)
         val drmScheme = intent.getStringExtra(EXTRA_DRM_SCHEME)
+        @Suppress("UNCHECKED_CAST")
+        val drmHeaders = intent.getSerializableExtra(EXTRA_DRM_HEADERS) as? Map<String, String> ?: emptyMap()
 
         setContent {
             StreamPlusTheme {
@@ -110,10 +113,20 @@ class PlayerActivity : ComponentActivity() {
                     headers = headers,
                     drmLicenseUrl = drmLicenseUrl,
                     drmScheme = drmScheme,
+                    drmHeaders = drmHeaders,
                     okHttpClientProvider = okHttpClientProvider,
-                    settingsRepository = settingsRepository
+                    settingsRepository = settingsRepository,
+                    onEnterPip = { enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().build()) }
                 )
             }
+        }
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        val autoPip = kotlinx.coroutines.runBlocking { settingsRepository.settings.first().autoPip }
+        if (autoPip) {
+            enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().build())
         }
     }
 }
@@ -143,8 +156,10 @@ fun PlayerScreen(
     headers: Map<String, String>,
     drmLicenseUrl: String?,
     drmScheme: String?,
+    drmHeaders: Map<String, String>,
     okHttpClientProvider: javax.inject.Provider<okhttp3.OkHttpClient>,
-    settingsRepository: com.codesrahul.streamplus.data.settings.SettingsRepository
+    settingsRepository: com.codesrahul.streamplus.data.settings.SettingsRepository,
+    onEnterPip: () -> Unit
 ) {
     val context = LocalContext.current
     val settingsState by settingsRepository.settings.collectAsState(initial = com.codesrahul.streamplus.data.settings.AppSettings())
@@ -153,6 +168,9 @@ fun PlayerScreen(
     var showGestureOverlay by remember { mutableStateOf(false) }
     var gestureIcon by remember { mutableStateOf<androidx.compose.ui.graphics.vector.ImageVector?>(null) }
     var gestureText by remember { mutableStateOf("") }
+    
+    // Lock State
+    var isLocked by remember { mutableStateOf(false) }
     
     // Helper to dim overlay after delay
     LaunchedEffect(showGestureOverlay) {
@@ -186,21 +204,36 @@ fun PlayerScreen(
         }
 
         val okHttpDataSourceFactory = OkHttpDataSource.Factory(okHttpClient).apply {
+            val lowerUrl = streamUrl.lowercase()
             val finalHeaders = mutableMapOf<String, String>()
             finalHeaders.putAll(headers)
             
             // Explicit parameters override map headers if set
-            userAgent.let { if (it.isNotBlank()) finalHeaders["User-Agent"] = it }
+            if (userAgent.isNotBlank()) finalHeaders["User-Agent"] = userAgent
             referer?.let { if (it.isNotBlank()) finalHeaders["Referer"] = it }
             cookie?.let { if (it.isNotBlank()) finalHeaders["Cookie"] = it }
             origin?.let { if (it.isNotBlank()) finalHeaders["Origin"] = it }
             
+            // Professional Logic: Auto-apply headers for known domains
+            if (lowerUrl.contains("sony") || lowerUrl.contains("zee5") || lowerUrl.contains("hotstar") || lowerUrl.contains("star")) {
+                if (finalHeaders["User-Agent"]?.contains("ExoPlayer") == true || finalHeaders["User-Agent"].isNullOrBlank()) {
+                     finalHeaders["User-Agent"] = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                }
+                if (finalHeaders["Origin"].isNullOrBlank()) {
+                     if (lowerUrl.contains("sony")) finalHeaders["Origin"] = "https://www.sonyliv.com"
+                     else if (lowerUrl.contains("zee5")) finalHeaders["Origin"] = "https://www.zee5.com"
+                     else if (lowerUrl.contains("star") || lowerUrl.contains("hotstar")) finalHeaders["Origin"] = "https://www.hotstar.com"
+                }
+            }
+
+            // CRITICAL: Normalize Hotstar/Star Origin (no trailing slash)
+            val currentOrigin = finalHeaders["Origin"]
+            if (currentOrigin != null && currentOrigin.endsWith("/")) {
+                finalHeaders["Origin"] = currentOrigin.trimEnd('/')
+            }
+            
             if (!finalHeaders.containsKey("Accept")) finalHeaders["Accept"] = "*/*"
             if (!finalHeaders.containsKey("Connection")) finalHeaders["Connection"] = "keep-alive"
-            // Ensure User-Agent is set if not already
-            if (!finalHeaders.containsKey("User-Agent") && userAgent.isNotBlank()) {
-                finalHeaders["User-Agent"] = userAgent
-            }
             
             setDefaultRequestProperties(finalHeaders)
         }
@@ -232,6 +265,10 @@ fun PlayerScreen(
                 addListener(object : androidx.media3.common.Player.Listener {
                     override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                         Log.e("PlayerScreen", "Playback Error: ${error.message}", error)
+                        if (settingsState.silentSkipping) {
+                            android.widget.Toast.makeText(context, "Playback error: ${error.errorCodeName}. Skipping...", android.widget.Toast.LENGTH_SHORT).show()
+                            return
+                        }
                         val cause = error.cause
                         val message = when {
                             cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException -> {
@@ -303,16 +340,37 @@ fun PlayerScreen(
                     drmBuilder.setLicenseUri(Uri.parse(drmLicenseUrl))
                 }
                 
-                val drmHeaders = mutableMapOf<String, String>()
-                drmHeaders.putAll(headers)
-                userAgent.let { drmHeaders["User-Agent"] = it }
-                referer?.let { if (it.isNotBlank()) drmHeaders["Referer"] = it }
-                cookie?.let { if (it.isNotBlank()) drmHeaders["Cookie"] = it }
-                origin?.let { if (it.isNotBlank()) drmHeaders["Origin"] = it }
-
-                Log.d("PlayerScreen", "DRM Config: Scheme=$scheme, LicenseUrl=$drmLicenseUrl, Headers=$drmHeaders")
+                val finalDrmHeaders = mutableMapOf<String, String>()
+                finalDrmHeaders.putAll(headers) // Stream headers serve as baseline
+                finalDrmHeaders.putAll(drmHeaders) // Explicit DRM headers override
                 
-                drmBuilder.setLicenseRequestHeaders(drmHeaders)
+                // Re-apply explicit overrides and auto-logic
+                if (userAgent.isNotBlank()) finalDrmHeaders["User-Agent"] = userAgent
+                referer?.let { if (it.isNotBlank()) finalDrmHeaders["Referer"] = it }
+                cookie?.let { if (it.isNotBlank()) finalDrmHeaders["Cookie"] = it }
+                origin?.let { if (it.isNotBlank()) finalDrmHeaders["Origin"] = it }
+                
+                val lowerUrl = streamUrl.lowercase()
+                if (lowerUrl.contains("sony") || lowerUrl.contains("zee5") || lowerUrl.contains("hotstar") || lowerUrl.contains("star")) {
+                    if (finalDrmHeaders["User-Agent"]?.contains("ExoPlayer") == true || finalDrmHeaders["User-Agent"].isNullOrBlank()) {
+                         finalDrmHeaders["User-Agent"] = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                    }
+                    if (finalDrmHeaders["Origin"].isNullOrBlank()) {
+                         if (lowerUrl.contains("sony")) finalDrmHeaders["Origin"] = "https://www.sonyliv.com"
+                         else if (lowerUrl.contains("zee5")) finalDrmHeaders["Origin"] = "https://www.zee5.com"
+                         else if (lowerUrl.contains("star") || lowerUrl.contains("hotstar")) finalDrmHeaders["Origin"] = "https://www.hotstar.com"
+                    }
+                }
+
+                // CRITICAL: Normalize Hotstar/Star Origin (no trailing slash)
+                val currentOrigin = finalDrmHeaders["Origin"]
+                if (currentOrigin != null && currentOrigin.endsWith("/")) {
+                    finalDrmHeaders["Origin"] = currentOrigin.trimEnd('/')
+                }
+
+                Log.d("PlayerScreen", "DRM Config: Scheme=$scheme, LicenseUrl=$drmLicenseUrl, Headers=$finalDrmHeaders")
+                
+                drmBuilder.setLicenseRequestHeaders(finalDrmHeaders)
                 mediaItemBuilder.setDrmConfiguration(drmBuilder.build())
             }
 
@@ -392,13 +450,13 @@ fun PlayerScreen(
                 })
 
                 playerView.setOnTouchListener { _, event ->
-                    detector.onTouchEvent(event)
-                    // If we want standard controls to work, we might need to handle click differently
-                    // checking if gesture consumed it.
-                    // For now, let's just return true if handled?
-                    // actually, ExoPlayer handles taps. We want to intercept scroll.
-                    // Returning false lets standard click listeners work, but Scroll consumes move.
-                    false
+                    if (isLocked) {
+                        detector.onTouchEvent(event) // Still allow tap to show "locked" msg if we want
+                        true // consume all
+                    } else {
+                        detector.onTouchEvent(event)
+                        false
+                    }
                 }
 
                 view
@@ -457,6 +515,20 @@ fun PlayerScreen(
                             // Hide system UI when entering fullscreen/landscape
                             hideSystemUI(activity)
                         }
+                    }
+                }
+                
+                val pipButton = playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.btn_pip)
+                pipButton?.setOnClickListener { onEnterPip() }
+
+                val lockButton = playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.btn_lock)
+                lockButton?.setOnClickListener {
+                    isLocked = !isLocked
+                    if (isLocked) {
+                        playerView.hideController()
+                        android.widget.Toast.makeText(context, "Controls Locked", android.widget.Toast.LENGTH_SHORT).show()
+                    } else {
+                        android.widget.Toast.makeText(context, "Controls Unlocked", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 }
                 

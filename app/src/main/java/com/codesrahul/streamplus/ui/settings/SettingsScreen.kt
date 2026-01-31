@@ -1,5 +1,6 @@
 package com.codesrahul.streamplus.ui.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -9,6 +10,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShortText
@@ -17,6 +19,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp 
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
@@ -76,7 +80,12 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text("Settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                }
             )
         }
     ) { padding ->
@@ -86,68 +95,134 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
         ) {
+            SettingsSectionHeader("Appearance & UI")
             SettingsCategoryItem(
                 title = "Appearance",
-                subtitle = "Customize theme and style preferences",
+                subtitle = "Theme mode, style, and accent colors",
                 icon = Icons.Default.Brush,
-                onClick = { onNavigate("appearance") }
+                onClick = { onNavigate("appearance") },
+                iconContainerColor = MaterialTheme.colorScheme.primaryContainer
             )
             SettingsCategoryItem(
                 title = "Playlist and Channel",
-                subtitle = "Control visibility of playlist URI and channel images",
+                subtitle = "Manage visibility and privacy",
                 icon = Icons.Default.List,
-                onClick = { onNavigate("playlist_channel") }
+                onClick = { onNavigate("playlist_channel") },
+                iconContainerColor = MaterialTheme.colorScheme.secondaryContainer
             )
+
+            SettingsSectionHeader("Playback & Tech")
             SettingsCategoryItem(
                 title = "General",
-                subtitle = "Toggle options for PiP mode, silence skipping, etc.",
+                subtitle = "PiP, silent skipping, and gestures",
                 icon = Icons.Default.Settings,
-                onClick = { onNavigate("general") }
+                onClick = { onNavigate("general") },
+                iconContainerColor = MaterialTheme.colorScheme.tertiaryContainer
             )
             SettingsCategoryItem(
-                title = "Advance Video & render options",
-                subtitle = "Configure decoder priority, tunneling, etc.",
+                title = "Playback & Rendering",
+                subtitle = "Decoders, tunneling, and HDR",
                 icon = Icons.Default.VideoSettings,
-                onClick = { onNavigate("advance_video") }
+                onClick = { onNavigate("advance_video") },
+                iconContainerColor = MaterialTheme.colorScheme.errorContainer
             )
+
+            SettingsSectionHeader("Accessibility")
             SettingsCategoryItem(
                 title = "Shortcuts",
-                subtitle = "Access captioning settings",
+                subtitle = "System captioning and shortcuts",
                 icon = Icons.Default.ShortText,
-                onClick = { onNavigate("shortcuts") }
+                onClick = { onNavigate("shortcuts") },
+                iconContainerColor = MaterialTheme.colorScheme.surfaceVariant
             )
             
             Spacer(modifier = Modifier.height(32.dp))
             
-            val context = androidx.compose.ui.platform.LocalContext.current
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        try {
-                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/CodesRahul96"))
-                            context.startActivity(intent)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    },
-                contentAlignment = androidx.compose.ui.Alignment.Center
-            ) {
-                Text(
-                    text = "Developed by CodesRahul",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) // Highlighted color to indicate link
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                Text(
-                    text = "v1.0.0",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                )
-            }
+            AppInfoFooter()
+            
             Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+fun SettingsSectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp)
+    )
+}
+
+@Composable
+fun AppInfoFooter() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val version = remember {
+        try {
+            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            pInfo.versionName ?: "1.0.52"
+        } catch (e: Exception) {
+            "1.0.52"
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 32.dp),
+        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+    ) {
+        androidx.compose.material3.Divider(
+            modifier = Modifier.width(48.dp).padding(bottom = 24.dp),
+            thickness = 3.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
+        
+        Text(
+            text = "StreamPlus",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        
+        Text(
+            text = "Version $version (Stable)",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Row(
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            modifier = Modifier
+                .clickable {
+                    try {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/CodesRahul96"))
+                        context.startActivity(intent)
+                    } catch (e: Exception) {}
+                }
+                .background(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                )
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Code,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Crafted with ♥ by CodesRahul",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
@@ -157,13 +232,24 @@ fun SettingsCategoryItem(
     title: String,
     subtitle: String,
     icon: ImageVector,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    iconContainerColor: Color = MaterialTheme.colorScheme.surfaceVariant
 ) {
     ListItem(
-        headlineContent = { Text(title) },
-        supportingContent = { Text(subtitle) },
-        leadingContent = { Icon(icon, contentDescription = null) },
-        trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
+        headlineContent = { Text(title, fontWeight = FontWeight.SemiBold) },
+        supportingContent = { Text(subtitle, style = MaterialTheme.typography.bodySmall) },
+        leadingContent = { 
+            Surface(
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = iconContainerColor,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Box(contentAlignment = androidx.compose.ui.Alignment.Center) {
+                    Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp))
+                }
+            }
+        },
+        trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
         modifier = Modifier.clickable(onClick = onClick)
     )
 }

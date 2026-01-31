@@ -251,6 +251,18 @@ fun GeneralSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 checked = settingsState.resumePlaying,
                 onCheckedChange = { viewModel.setResumePlaying(it) }
             )
+             SwitchPreference(
+                title = "Auto Picture-in-Picture",
+                subtitle = "Enter PiP mode automatically when leaving the app",
+                checked = settingsState.autoPip,
+                onCheckedChange = { viewModel.setAutoPip(it) }
+            )
+             SwitchPreference(
+                title = "Silent Error Skipping",
+                subtitle = "Suppress technical error dialogs during playback",
+                checked = settingsState.silentSkipping,
+                onCheckedChange = { viewModel.setSilentSkipping(it) }
+            )
 
             Divider(modifier = Modifier.padding(vertical = 16.dp))
 

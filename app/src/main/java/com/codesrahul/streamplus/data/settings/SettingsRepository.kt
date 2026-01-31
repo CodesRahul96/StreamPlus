@@ -43,7 +43,9 @@ data class AppSettings(
     val lastResizeMode: Int = 0, // 0=Fit,1=Fill,2=Zoom
     val decoderPriority: Int = 0, // 0=Device, 1=App, 2=DeviceOnly
     val dolbyVision: Boolean = false,
-    val disableFrameRateCheck: Boolean = false
+    val disableFrameRateCheck: Boolean = false,
+    val autoPip: Boolean = true,
+    val silentSkipping: Boolean = false
 )
 
 @Singleton
@@ -70,6 +72,8 @@ class SettingsRepository @Inject constructor(
         val DECODER_PRIORITY = intPreferencesKey("decoder_priority")
         val DOLBY_VISION = booleanPreferencesKey("dolby_vision")
         val DISABLE_FRAME_RATE_CHECK = booleanPreferencesKey("disable_frame_rate_check")
+        val AUTO_PIP = booleanPreferencesKey("auto_pip")
+        val SILENT_SKIPPING = booleanPreferencesKey("silent_skipping")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -96,7 +100,9 @@ class SettingsRepository @Inject constructor(
             lastResizeMode = prefs[Keys.LAST_RESIZE_MODE] ?: 0,
             decoderPriority = prefs[Keys.DECODER_PRIORITY] ?: 0,
             dolbyVision = prefs[Keys.DOLBY_VISION] ?: false,
-            disableFrameRateCheck = prefs[Keys.DISABLE_FRAME_RATE_CHECK] ?: false
+            disableFrameRateCheck = prefs[Keys.DISABLE_FRAME_RATE_CHECK] ?: false,
+            autoPip = prefs[Keys.AUTO_PIP] ?: true,
+            silentSkipping = prefs[Keys.SILENT_SKIPPING] ?: false
         )
     }
 
@@ -170,6 +176,14 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setDisableFrameRateCheck(enabled: Boolean) {
         context.dataStore.edit { it[Keys.DISABLE_FRAME_RATE_CHECK] = enabled }
+    }
+
+    suspend fun setAutoPip(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.AUTO_PIP] = enabled }
+    }
+
+    suspend fun setSilentSkipping(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.SILENT_SKIPPING] = enabled }
     }
 
     suspend fun factoryReset() {

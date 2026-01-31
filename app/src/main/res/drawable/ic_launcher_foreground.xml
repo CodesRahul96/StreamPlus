@@ -13,10 +13,10 @@
             android:gradientRadius="40"
             android:type="radial">
             <item
-                android:color="#FF00B0FF"
+                android:color="#FF2196F3"
                 android:offset="0" />
             <item
-                android:color="#FF0081CB"
+                android:color="#FF1976D2"
                 android:offset="1" />
         </gradient>
     </path>

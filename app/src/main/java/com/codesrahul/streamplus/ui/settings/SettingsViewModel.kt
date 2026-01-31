@@ -95,4 +95,12 @@ class SettingsViewModel @Inject constructor(
     fun setDisableFrameRateCheck(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setDisableFrameRateCheck(enabled) }
     }
+
+    fun setAutoPip(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setAutoPip(enabled) }
+    }
+
+    fun setSilentSkipping(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setSilentSkipping(enabled) }
+    }
 }

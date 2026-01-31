@@ -28,6 +28,9 @@ object MetadataSniffer {
                     val segments = url.substringAfter("/cmaf/live/").split("/")
                     if (segments.size >= 2) segments[1].clean() else null
                 }
+                url.contains("sony", ignoreCase = true) && url.contains(".mpd") -> "Sony Stream"
+                url.contains("zee5", ignoreCase = true) && url.contains(".mpd") -> "Zee5 Stream"
+                url.contains("star", ignoreCase = true) && url.contains(".mpd") -> "Star Stream"
                 url.contains("/channels/") -> url.substringAfter("/channels/").substringBefore("/").substringBefore(".").clean()
                 url.contains("/hls/") -> url.substringAfter("/hls/").substringBefore("/").substringBefore(".").clean()
                 else -> null
@@ -37,11 +40,16 @@ object MetadataSniffer {
         // 2. Sniff DRM
         if (lowerUrl.contains("clearkey") || lowerUrl.contains("ck=")) {
             drmScheme = "clearkey"
-        } else if (lowerUrl.contains("widevine") || lowerUrl.contains("wv=") || lowerUrl.contains("sony") || lowerUrl.contains("zee5")) {
-            // Sony and Zee5 usually use Widevine if it's protected
-            if (lowerUrl.contains(".mpd") || lowerUrl.contains("license") || lowerUrl.contains("sony") || lowerUrl.contains("zee5")) {
+        } else if (lowerUrl.contains("widevine") || lowerUrl.contains("wv=") || lowerUrl.contains("sony") || lowerUrl.contains("zee5") || lowerUrl.contains("star") || lowerUrl.contains("hotstar") || lowerUrl.contains("voot") || lowerUrl.contains("jiocinema")) {
+            // Premium Indian OTT patterns
+            if (lowerUrl.contains(".mpd") || lowerUrl.contains("license") || lowerUrl.contains("manifest") || lowerUrl.contains("/drm/") || lowerUrl.contains("key")) {
                  drmScheme = "widevine"
             }
+        }
+        
+        // Final fallback for MPD
+        if (drmScheme == null && lowerUrl.contains(".mpd")) {
+            drmScheme = "widevine"
         }
 
         // 3. Sniff Group from URL

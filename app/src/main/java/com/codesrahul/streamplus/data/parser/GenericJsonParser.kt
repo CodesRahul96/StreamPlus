@@ -86,12 +86,14 @@ class GenericJsonParser @Inject constructor() {
         var drmScheme = findString(obj, "drm_scheme", "drm_type", "license_type", "license_mode", "scheme", "drm_system", "drmScheme")
         
         var finalDrmLicense = drmLicense
+        var drmHeaders = mutableMapOf<String, String>()
         if (finalDrmLicense == null && obj.has("drm") && obj.get("drm").isJsonObject) {
              val drmObj = obj.getAsJsonObject("drm")
              finalDrmLicense = findString(drmObj, "key", "license", "url", "license_url")
              if (drmScheme == null) {
                  drmScheme = findString(drmObj, "type", "scheme", "system")
              }
+             parseHeadersInObject(drmObj)?.let { drmHeaders.putAll(it) }
         }
 
         if (drmScheme == null && finalDrmLicense != null) {
@@ -115,6 +117,7 @@ class GenericJsonParser @Inject constructor() {
             group = group ?: snifferResult.group ?: "Uncategorized",
             logoUrl = logo ?: snifferResult.logo ?: "",
             headers = parseHeaders(obj) ?: emptyMap(),
+            drmHeaders = drmHeaders.toMap(),
             licenseUrl = finalDrmLicense ?: snifferResult.drmLicense,
             drmScheme = drmScheme ?: snifferResult.drmScheme,
             isPlaylist = url.lowercase().run { contains(".m3u") || contains(".json") || contains("m3u=1") }
@@ -122,10 +125,15 @@ class GenericJsonParser @Inject constructor() {
     }
 
     private fun parseHeaders(obj: JsonObject): Map<String, String>? {
+        return parseHeadersInObject(obj)
+    }
+
+    private fun parseHeadersInObject(obj: JsonObject): Map<String, String>? {
         val headers = mutableMapOf<String, String>()
         val headersKey = obj.keySet().firstOrNull { 
             it.equals("headers", ignoreCase = true) || it.equals("http_headers", ignoreCase = true) || 
-            it.equals("request_headers", ignoreCase = true) || it.equals("stream_headers", ignoreCase = true)
+            it.equals("request_headers", ignoreCase = true) || it.equals("stream_headers", ignoreCase = true) ||
+            it.equals("license_headers", ignoreCase = true) || it.equals("drm_headers", ignoreCase = true)
         }
         
         if (headersKey != null && obj.get(headersKey).isJsonObject) {

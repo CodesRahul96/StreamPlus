@@ -134,12 +134,32 @@
             android:paddingTop="8dp">
 
             <ImageButton
-                android:id="@+id/exo_resize_mode_button"
+                android:id="@+id/btn_lock"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="24dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Lock Controls"
+                android:src="@drawable/ic_lock"
+                android:tint="@android:color/white" />
+
+            <ImageButton
+                android:id="@+id/btn_pip"
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Picture in Picture"
+                android:src="@drawable/ic_pip"
+                android:tint="@android:color/white" />
+
+            <ImageButton
+                android:id="@+id/exo_resize_mode_button"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="24dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Resize Mode"
-                android:src="@drawable/ic_resize"
+                android:src="@drawable/ic_aspect_ratio"
                 android:tint="@android:color/white" />
 
             <ImageButton
@@ -160,7 +180,7 @@
                 android:layout_marginStart="24dp"
                 android:background="?android:attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Fullscreen"
-                android:src="@drawable/ic_fullscreen"
+                android:src="@drawable/ic_screen_rotation"
                 android:tint="@android:color/white" />
 
         </LinearLayout>
