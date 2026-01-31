@@ -257,8 +257,22 @@ fun PlayerScreen(
             }
         }
 
+        val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                30000, // Min buffer 30s
+                60000, // Max buffer 60s
+                2500,  // Buffer for playback 2.5s
+                5000   // Buffer for playback after rebuffer 5s
+            )
+            .setPrioritizeTimeOverSizeThresholds(true)
+            .build()
+
+        val bandwidthMeter = androidx.media3.exoplayer.upstream.DefaultBandwidthMeter.Builder(context).build()
+
         ExoPlayer.Builder(context, renderersFactory)
             .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory, extractorsFactory))
+            .setLoadControl(loadControl)
+            .setBandwidthMeter(bandwidthMeter)
             .build().apply {
                 playWhenReady = true
 

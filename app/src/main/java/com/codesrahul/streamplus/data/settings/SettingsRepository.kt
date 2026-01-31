@@ -27,7 +27,7 @@ enum class ThemeStyle {
 data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val themeStyle: ThemeStyle = ThemeStyle.DYNAMIC,
-    val dynamicTheme: Boolean = true,
+    val dynamicTheme: Boolean = false,
     val hidePlaylistUri: Boolean = false,
     val hideChannelImage: Boolean = false,
     val userAgent: String = "ExoPlayerLib/2.19.1",
@@ -35,16 +35,16 @@ data class AppSettings(
     val skipSslVerification: Boolean = false,
     val enableTunneling: Boolean = false,
     val preferSoftwareDecoder: Boolean = false,
-    val forceLandscape: Boolean = true,
-    val volumeGestures: Boolean = true,
-    val brightnessGestures: Boolean = true,
+    val forceLandscape: Boolean = false,
+    val volumeGestures: Boolean = false,
+    val brightnessGestures: Boolean = false,
     val resumePlaying: Boolean = false,
     val playlistCache: Boolean = false,
     val lastResizeMode: Int = 0, // 0=Fit,1=Fill,2=Zoom
     val decoderPriority: Int = 0, // 0=Device, 1=App, 2=DeviceOnly
     val dolbyVision: Boolean = false,
     val disableFrameRateCheck: Boolean = false,
-    val autoPip: Boolean = true,
+    val autoPip: Boolean = false,
     val silentSkipping: Boolean = false
 )
 

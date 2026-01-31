@@ -21,6 +21,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.codesrahul.streamplus.domain.model.M3UItem
 import com.codesrahul.streamplus.ui.settings.SettingsViewModel
 
@@ -34,6 +35,7 @@ fun PlaylistDetailScreen(
     val playlist by viewModel.playlist.collectAsState()
     val channels by viewModel.channels.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val settingsState by hiltViewModel<SettingsViewModel>().settings.collectAsState()
     val context = LocalContext.current
     
     var searchQuery by remember { mutableStateOf("") }
@@ -120,8 +122,8 @@ fun PlaylistDetailScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(filteredChannels) { channel ->
-                        ChannelItem(channel) {
+                    items(filteredChannels, key = { it.url + it.name }) { channel ->
+                        ChannelItem(channel, settingsState.hideChannelImage) {
                             val lowerUrl = channel.url.lowercase()
                             val isPlaylist = channel.isPlaylist || 
                                             lowerUrl.endsWith(".m3u") || 
@@ -178,7 +180,7 @@ fun PlaylistDetailScreen(
 }
 
 @Composable
-fun ChannelItem(channel: M3UItem, onClick: () -> Unit) {
+fun ChannelItem(channel: M3UItem, hideImage: Boolean, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -197,16 +199,19 @@ fun ChannelItem(channel: M3UItem, onClick: () -> Unit) {
                     .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
                 contentAlignment = Alignment.Center
             ) {
-                val settingsRepository = hiltViewModel<SettingsViewModel>().settings.collectAsState()
-                val hideImage = settingsRepository.value.hideChannelImage
+                // val settingsRepository = hiltViewModel<SettingsViewModel>().settings.collectAsState()
+                // val hideImage = settingsRepository.value.hideChannelImage
 
                 if (channel.logoUrl.isNotBlank() && !hideImage) {
                     AsyncImage(
-                        model = channel.logoUrl,
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(channel.logoUrl)
+                            .crossfade(true)
+                            .build(),
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize().padding(8.dp),
                         contentScale = ContentScale.Fit,
-                        error = painterResource(android.R.drawable.ic_menu_report_image) // Fallback
+                        error = painterResource(android.R.drawable.ic_menu_report_image)
                     )
                 } else {
                     Icon(
