@@ -192,7 +192,7 @@ fun PlayerScreen(
         }
     }
 
-    val exoPlayer = remember(settingsState) {
+    val exoPlayer = remember(settingsState.skipSslVerification, settingsState.decoderPriority, settingsState.enableTunneling) {
         // Handle SSL Verification
         val okHttpClient = if (settingsState.skipSslVerification) {
             getUnsafeOkHttpClient()
@@ -299,7 +299,7 @@ fun PlayerScreen(
             }
     }
 
-    LaunchedEffect(streamUrl) {
+    LaunchedEffect(streamUrl, exoPlayer) {
         if (streamUrl.isNotBlank()) {
             val uri = Uri.parse(streamUrl)
             val lowerUrl = streamUrl.lowercase()
@@ -478,6 +478,12 @@ fun PlayerScreen(
             modifier = Modifier.fillMaxSize(),
             update = { view ->
                 val playerView = view.findViewById<androidx.media3.ui.PlayerView>(com.codesrahul.streamplus.R.id.player_view)
+                
+                // Ensure correct player is attached
+                if (playerView.player != exoPlayer) {
+                    playerView.player = exoPlayer
+                }
+
                 val titleView = playerView.findViewById<android.widget.TextView>(com.codesrahul.streamplus.R.id.tv_player_title)
                 titleView?.text = streamTitle
                 
@@ -491,7 +497,7 @@ fun PlayerScreen(
                 // Apply stored resize mode
                 try {
                     val storedMode = settingsState.lastResizeMode
-                    if (storedMode in 0..2) playerView.resizeMode = storedMode
+                    if (storedMode in 0..4) playerView.resizeMode = storedMode
                 } catch (e: Exception) { /* ignore */ }
 
                 resizeButton?.setOnClickListener {
