@@ -460,35 +460,54 @@ fun PlayerScreen(
     }
 
     // --- Active Player Logic (Exo vs Cast) ---
-    var activePlayer by remember { mutableStateOf<androidx.media3.common.Player>(exoPlayer) }
+    var isCasting by remember { mutableStateOf(false) }
+    val activePlayer = if (isCasting && castPlayer != null) castPlayer else exoPlayer
     
     // Listen for Cast session availability
     DisposableEffect(castPlayer) {
         val listener = object : androidx.media3.common.Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                if (castPlayer?.isCastSessionAvailable == true) {
-                    activePlayer = castPlayer
-                    if (exoPlayer.isPlaying) exoPlayer.pause()
-                } else {
-                    activePlayer = exoPlayer
+            override fun onPositionDiscontinuity(
+                oldPosition: androidx.media3.common.Player.PositionInfo,
+                newPosition: androidx.media3.common.Player.PositionInfo,
+                reason: Int
+            ) {
+                 // Check if we switched to/from Cast
+                 isCasting = castPlayer?.isCastSessionAvailable == true
+            }
+
+            override fun onEvents(player: androidx.media3.common.Player, events: androidx.media3.common.Player.Events) {
+                if (events.contains(androidx.media3.common.Player.EVENT_MEDIA_ITEM_TRANSITION) || 
+                    events.contains(androidx.media3.common.Player.EVENT_PLAY_WHEN_READY_CHANGED)) {
+                    isCasting = castPlayer?.isCastSessionAvailable == true
                 }
             }
         }
+        
+        // Initial check
+        isCasting = castPlayer?.isCastSessionAvailable == true
+        
         castPlayer?.addListener(listener)
         onDispose { castPlayer?.removeListener(listener) }
     }
 
     // Sync media item to Cast if activePlayer becomes castPlayer
-    LaunchedEffect(activePlayer) {
-        if (activePlayer == castPlayer && castPlayer != null) {
+    LaunchedEffect(isCasting) {
+        if (isCasting && castPlayer != null) {
             val mediaItem = exoPlayer.currentMediaItem
             if (mediaItem != null) {
                 val currentPos = exoPlayer.currentPosition
-                castPlayer.setMediaItem(mediaItem, currentPos)
-                castPlayer.prepare()
-                castPlayer.play()
-                android.widget.Toast.makeText(context, "Casting to TV...", android.widget.Toast.LENGTH_SHORT).show()
+                // Only sync if cast player doesn't already have it
+                if (castPlayer.currentMediaItem?.localConfiguration?.uri != mediaItem.localConfiguration?.uri) {
+                    castPlayer.setMediaItem(mediaItem, currentPos)
+                    castPlayer.prepare()
+                    castPlayer.play()
+                    if (exoPlayer.isPlaying) exoPlayer.pause()
+                    android.widget.Toast.makeText(context, "Casting to TV...", android.widget.Toast.LENGTH_SHORT).show()
+                }
             }
+        } else if (!isCasting) {
+            // If we stopped casting, make sure ExoPlayer is ready to resume (UI will switch back via activePlayer)
+            // Note: We don't auto-resume ExoPlayer to avoid surprising the user with loud audio
         }
     }
 
