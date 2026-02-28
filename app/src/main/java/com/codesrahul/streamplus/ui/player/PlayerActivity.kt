@@ -13,7 +13,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.activity.compose.setContent
-import androidx.annotation.OptIn
+import kotlin.OptIn
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -48,6 +48,8 @@ import androidx.media3.datasource.DataSchemeDataSource
 import androidx.media3.datasource.DataSpec
 import com.codesrahul.streamplus.ui.theme.StreamPlusTheme
 import android.util.Log
+import android.media.audiofx.DynamicsProcessing
+import androidx.compose.material3.ExperimentalMaterial3Api
 import dagger.hilt.android.AndroidEntryPoint
 import okhttp3.OkHttpClient
 
@@ -110,6 +112,8 @@ class PlayerActivity : AppCompatActivity() {
         const val EXTRA_DRM_LICENSE_URL = "extra_drm_license_url"
         const val EXTRA_DRM_SCHEME = "extra_drm_scheme"
         const val EXTRA_DRM_HEADERS = "extra_drm_headers"
+        const val EXTRA_PLAYLIST_ID = "extra_playlist_id"
+        const val EXTRA_STREAM_GROUP = "extra_stream_group"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -139,6 +143,8 @@ class PlayerActivity : AppCompatActivity() {
         val drmScheme = intent.getStringExtra(EXTRA_DRM_SCHEME)
         @Suppress("UNCHECKED_CAST")
         val drmHeaders = intent.getSerializableExtra(EXTRA_DRM_HEADERS) as? Map<String, String> ?: emptyMap()
+        val playlistId = intent.getIntExtra(EXTRA_PLAYLIST_ID, -1)
+        val groupTitle = intent.getStringExtra(EXTRA_STREAM_GROUP) ?: "Default"
 
         setContent {
             StreamPlusTheme {
@@ -157,8 +163,11 @@ class PlayerActivity : AppCompatActivity() {
                     okHttpClientProvider = okHttpClientProvider,
                     settingsRepository = settingsRepository,
                     historyRepository = historyRepository,
+                    playlistId = playlistId,
+                    groupTitle = groupTitle,
                     castPlayer = castPlayer,
-                    onEnterPip = { enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().build()) }
+                    onEnterPip = { enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().build()) },
+                    isInPip = isInPictureInPictureMode
                 )
             }
         }
@@ -206,7 +215,6 @@ private fun hexToByteArray(hex: String): ByteArray {
     return data
 }
 
-@OptIn(UnstableApi::class)
 @Composable
 fun PlayerScreen(
     streamUrl: String,
@@ -223,11 +231,33 @@ fun PlayerScreen(
     okHttpClientProvider: javax.inject.Provider<okhttp3.OkHttpClient>,
     settingsRepository: com.codesrahul.streamplus.data.settings.SettingsRepository,
     historyRepository: com.codesrahul.streamplus.data.repository.HistoryRepository,
+    playlistId: Int,
+    groupTitle: String,
     castPlayer: androidx.media3.cast.CastPlayer? = null,
-    onEnterPip: () -> Unit
+    onEnterPip: () -> Unit,
+    isInPip: Boolean = false
 ) {
     val context = LocalContext.current
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     val settingsState by settingsRepository.settings.collectAsState(initial = com.codesrahul.streamplus.data.settings.AppSettings())
+    
+    // Audio Boost State
+    var audioBoost by remember { mutableStateOf(0f) }
+    var volumeAccumulator by remember { mutableStateOf(0f) }
+    
+    // Playback Speed State
+    var playbackSpeed by remember { mutableFloatStateOf(1.0f) }
+    
+    // Sleep Timer State
+    var sleepTimerMillis by remember { mutableLongStateOf(0L) }
+    var sleepTimerActive by remember { mutableStateOf(false) }
+
+    // Subtitle Picker state
+    var subtitlePickerLauncher: (() -> Unit)? by remember { mutableStateOf(null) }
+
+    // Bottom Sheet State
+    var showSettingsSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
 
     // Resume Logic
     // Using a separate LaunchedEffect for resume so it doesn't re-trigger on other changes
@@ -459,6 +489,36 @@ fun PlayerScreen(
         player
     }
 
+    // --- Subtitle Picker (defined here to have access to exoPlayer) ---
+    val subtitlePicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            val subtitle = MediaItem.SubtitleConfiguration.Builder(it)
+                .setMimeType(if (it.toString().endsWith(".vtt")) androidx.media3.common.MimeTypes.TEXT_VTT else androidx.media3.common.MimeTypes.APPLICATION_SUBRIP)
+                .setLanguage("en")
+                .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+                .build()
+            
+            val currentMediaItem = exoPlayer.currentMediaItem
+            if (currentMediaItem != null) {
+                val newMediaItem = currentMediaItem.buildUpon()
+                    .setSubtitleConfigurations(listOf(subtitle))
+                    .build()
+                val currentPos = exoPlayer.currentPosition
+                exoPlayer.setMediaItem(newMediaItem, currentPos)
+                exoPlayer.prepare()
+                exoPlayer.play()
+                android.widget.Toast.makeText(context, "Subtitle loaded", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    
+    // Sync launcher
+    LaunchedEffect(Unit) {
+        subtitlePickerLauncher = { subtitlePicker.launch("*/*") }
+    }
+
     // --- Active Player Logic (Exo vs Cast) ---
     var isCasting by remember { mutableStateOf(false) }
     val activePlayer = if (isCasting && castPlayer != null) castPlayer else exoPlayer
@@ -511,6 +571,23 @@ fun PlayerScreen(
         }
     }
 
+    // Audio Boost Effect Application
+    LaunchedEffect(audioBoost) {
+        if (audioBoost > 0f) {
+            val gainDb = audioBoost * 12f // Max 12dB boost
+            try {
+                val sessionId = exoPlayer.audioSessionId
+                if (sessionId != C.AUDIO_SESSION_ID_UNSET) {
+                    val enhancer = android.media.audiofx.LoudnessEnhancer(sessionId)
+                    enhancer.setTargetGain((gainDb * 100).toInt()) // gain in milliBels
+                    enhancer.enabled = true
+                }
+            } catch (e: Exception) {
+                Log.e("PlayerScreen", "Failed to apply Audio Boost", e)
+            }
+        }
+    }
+
     // Effect to update player when settings change
     LaunchedEffect(settingsState.skipSilence, settingsState.repeatMode) {
         exoPlayer.setSkipSilenceEnabled(settingsState.skipSilence)
@@ -521,13 +598,32 @@ fun PlayerScreen(
     LaunchedEffect(resolvedItem, exoPlayer) {
         if (settingsState.resumePlaying && resolvedItem.url.isNotBlank()) {
             val savedPos = try {
-                historyRepository.getLastPosition(resolvedItem.url)
+                historyRepository.getLastPosition(resolvedItem.name, groupTitle, playlistId)
             } catch (e: Exception) { 0L }
             
             if (savedPos > 5000) { // Only resume if > 5 seconds
                 exoPlayer.seekTo(savedPos)
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    android.widget.Toast.makeText(context, "Resuming playback", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, "Resuming playback", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // Playback Speed Effect
+    LaunchedEffect(playbackSpeed) {
+        exoPlayer.setPlaybackSpeed(playbackSpeed)
+    }
+
+    // Sleep Timer Effect
+    LaunchedEffect(sleepTimerActive, sleepTimerMillis) {
+        if (sleepTimerActive && sleepTimerMillis > 0) {
+            var remaining = sleepTimerMillis
+            while (remaining > 0 && sleepTimerActive) {
+                kotlinx.coroutines.delay(1000)
+                remaining -= 1000
+                if (remaining <= 0) {
+                    exoPlayer.pause()
+                    sleepTimerActive = false
+                    android.widget.Toast.makeText(context, "Sleep timer: Playback stopped", android.widget.Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -548,7 +644,8 @@ fun PlayerScreen(
                         url = resolvedItem.url,
                         name = resolvedItem.name,
                         logo = resolvedItem.logoUrl,
-                        group = resolvedItem.group,
+                        group = groupTitle,
+                        playlistId = playlistId,
                         userAgent = resolvedItem.userAgent,
                         cookie = cookie,
                         referer = referer,
@@ -579,7 +676,8 @@ fun PlayerScreen(
                             url = resolvedItem.url,
                             name = resolvedItem.name,
                             logo = resolvedItem.logoUrl,
-                            group = resolvedItem.group,
+                            group = groupTitle,
+                            playlistId = playlistId,
                             userAgent = resolvedItem.userAgent,
                             cookie = cookie,
                             referer = referer,
@@ -731,61 +829,96 @@ fun PlayerScreen(
                     val audioManager = activityContext.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
                     val window = (activityContext as? android.app.Activity)?.window
 
-                    override fun onScroll(e1: android.view.MotionEvent?, e2: android.view.MotionEvent, distanceX: Float, distanceY: Float): Boolean {
-                        if (isLocked || e1 == null) return false
-                        val width = playerView.width
-                        val isLeft = e1.x < width / 2
-                        val delta = distanceY / playerView.height
-                        
-                        if (isLeft && settingsState.brightnessGestures) {
-                            window?.let { win ->
-                                val lp = win.attributes
-                                val curr = if (lp.screenBrightness < 0) 0.5f else lp.screenBrightness
-                                val newVal = (curr + delta).coerceIn(0f, 1f)
-                                lp.screenBrightness = newVal
-                                win.attributes = lp
-                                gestureText = "Brightness: ${(newVal * 100).toInt()}%"
-                                gestureIcon = Icons.Default.BrightnessMedium
-                                gestureLevel = newVal
-                                showGestureOverlay = true
-                            }
-                        } else if (!isLeft && settingsState.volumeGestures) {
-                            val max = audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
-                            val curr = audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)
-                            val chg = (delta * max * 3).toInt() 
-                            if (chg != 0 || kotlin.math.abs(distanceY) > 10) {
-                                val target = (curr + chg).coerceIn(0, max)
-                                audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, target, 0)
-                                gestureText = "Volume: ${(target * 100 / max)}%"
-                                gestureIcon = if (target == 0) Icons.Default.VolumeOff else Icons.Default.VolumeUp
-                                gestureLevel = target.toFloat() / max
-                                showGestureOverlay = true
-                            }
+                    override fun onDown(e: android.view.MotionEvent): Boolean {
+                        volumeAccumulator = 0f // Reset for new gesture
+                        if (isLocked) {
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                         }
                         return true
                     }
 
+                    override fun onScroll(e1: android.view.MotionEvent?, e2: android.view.MotionEvent, distanceX: Float, distanceY: Float): Boolean {
+                        if (isLocked || e1 == null) return false
+                        val width = playerView.width
+                        val height = playerView.height
+                        val isLeft = e1.x < width / 2
+                        
+                        // Vertical sensitivity
+                        if (kotlin.math.abs(distanceY) > kotlin.math.abs(distanceX)) {
+                            val delta = distanceY / height
+                            
+                            if (isLeft && settingsState.brightnessGestures) {
+                                window?.let { win ->
+                                    val lp = win.attributes
+                                    val curr = if (lp.screenBrightness < 0) 0.5f else lp.screenBrightness
+                                    val newVal = (curr + delta).coerceIn(0f, 1f)
+                                    lp.screenBrightness = newVal
+                                    win.attributes = lp
+                                    gestureText = "Brightness: ${(newVal * 100).toInt()}%"
+                                    gestureIcon = Icons.Default.BrightnessMedium
+                                    gestureLevel = newVal
+                                    showGestureOverlay = true
+                                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                                }
+                                return true
+                            } else if (!isLeft && settingsState.volumeGestures) {
+                                val max = audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
+                                val curr = audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)
+                                
+                                // Accumulate delta for discrete volume steps
+                                volumeAccumulator += delta
+                                val step = 1f / max
+                                
+                                if (kotlin.math.abs(volumeAccumulator) >= step) {
+                                    val chg = if (volumeAccumulator > 0) 1 else -1
+                                    val target = (curr + chg).coerceIn(0, max)
+                                    volumeAccumulator -= (chg * step) // Reduce accumulator by one step
+                                    
+                                    audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, target, android.media.AudioManager.FLAG_SHOW_UI)
+                                    gestureText = "Volume: ${(target * 100 / max)}%"
+                                    gestureIcon = if (target == 0) Icons.Default.VolumeOff else Icons.Default.VolumeUp
+                                    gestureLevel = target.toFloat() / max
+                                    showGestureOverlay = true
+                                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                                }
+                                return true
+                            }
+                        }
+                        return false
+                    }
+
                     override fun onSingleTapConfirmed(e: android.view.MotionEvent): Boolean {
-                        isControlsVisible = !isControlsVisible
-                        if (isLocked) return true
-                        if (isControlsVisible) playerView.showController() else playerView.hideController()
+                        if (isLocked) {
+                            isControlsVisible = !isControlsVisible
+                            return true
+                        }
+                        if (playerView.isControllerFullyVisible) {
+                            playerView.hideController()
+                        } else {
+                            playerView.showController()
+                        }
                         return true
                     }
 
                     override fun onDoubleTap(e: android.view.MotionEvent): Boolean {
                         if (isLocked) return false
                         val w = playerView.width
+                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                         if (e.x < w / 3) {
-                            exoPlayer.seekTo(maxOf(0L, exoPlayer.currentPosition - 10000))
+                            val target = maxOf(0L, exoPlayer.currentPosition - 10000)
+                            exoPlayer.seekTo(target)
                             seekDirection = "Rewind"
                             showSeekOverlay = true
+                            return true
                         } else if (e.x > w * 2 / 3) {
                             val dur = if (exoPlayer.duration == C.TIME_UNSET) 0L else exoPlayer.duration
-                            exoPlayer.seekTo(minOf(dur, exoPlayer.currentPosition + 10000))
+                            val target = minOf(dur, exoPlayer.currentPosition + 10000)
+                            exoPlayer.seekTo(target)
                             seekDirection = "Forward"
                             showSeekOverlay = true
+                            return true
                         }
-                        return true
+                        return false
                     }
                 })
 
@@ -799,9 +932,10 @@ fun PlayerScreen(
             update = { view ->
                 val playerView = view.findViewById<androidx.media3.ui.PlayerView>(com.codesrahul.streamplus.R.id.player_view)
                 if (playerView.player != activePlayer) playerView.player = activePlayer
-                playerView.findViewById<android.widget.TextView>(com.codesrahul.streamplus.R.id.tv_player_title)?.text = streamTitle
                 playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.btn_close)?.setOnClickListener { (playerView.context as? android.app.Activity)?.finish() }
-                playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.exo_settings)?.setOnClickListener { showSettingsDialog(playerView.context, exoPlayer) }
+                playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.exo_settings)?.setOnClickListener { 
+                    showSettingsSheet = true
+                }
                 
                 // Initialize Cast Button
                 val castButton = playerView.findViewById<androidx.mediarouter.app.MediaRouteButton>(com.codesrahul.streamplus.R.id.media_route_button)
@@ -845,25 +979,60 @@ fun PlayerScreen(
                     override fun onVisibilityChanged(visibility: Int) { isControlsVisible = visibility == android.view.View.VISIBLE }
                 })
                 val logoView = playerView.findViewById<android.widget.ImageView>(com.codesrahul.streamplus.R.id.iv_channel_logo)
-                if (logoView != null && !channelLogo.isNullOrBlank()) {
+                if (logoView != null && !channelLogo.isNullOrBlank() && !isInPip) {
                     val req = ImageRequest.Builder(playerView.context).data(channelLogo).target(logoView).build()
                     playerView.context.imageLoader.enqueue(req)
+                } else {
+                    logoView?.visibility = android.view.View.GONE
                 }
+                
+                // Hide controls in PiP
+                if (isInPip) playerView.hideController()
             }
         )
 
-        // Lock Toggle Overlay
+        // Robust Lock Mode Overlay
         AnimatedVisibility(
-            visible = isControlsVisible || isLocked,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.CenterStart).padding(start = 16.dp)
+            visible = isLocked && !isInPip,
+            enter = fadeIn() + scaleIn(),
+            exit = fadeOut() + scaleOut(),
+            modifier = Modifier.align(Alignment.Center)
         ) {
             Surface(
                 onClick = { 
-                    isLocked = !isLocked
-                    if (isLocked) isControlsVisible = false
-                    android.widget.Toast.makeText(context, if (isLocked) "Controls Locked" else "Controls Unlocked", android.widget.Toast.LENGTH_SHORT).show()
+                    isLocked = false
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    android.widget.Toast.makeText(context, "Controls Unlocked", android.widget.Toast.LENGTH_SHORT).show()
+                },
+                color = Color.Black.copy(alpha = 0.4f),
+                shape = CircleShape,
+                modifier = Modifier.size(80.dp),
+                border = BorderStroke(2.dp, Color.White.copy(alpha = 0.3f))
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = "Unlock",
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
+        }
+
+        // Small Lock Toggle Overlay (Only visible when controls are visible)
+        AnimatedVisibility(
+            visible = isControlsVisible && !isLocked && !isInPip,
+            enter = fadeIn() + slideInHorizontally(),
+            exit = fadeOut() + slideOutHorizontally(),
+            modifier = Modifier.align(Alignment.CenterStart).padding(start = 24.dp)
+        ) {
+            Surface(
+                onClick = { 
+                    isLocked = true
+                    isControlsVisible = false
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    android.widget.Toast.makeText(context, "Controls Locked", android.widget.Toast.LENGTH_SHORT).show()
                 },
                 color = Color.Black.copy(alpha = 0.5f),
                 shape = CircleShape,
@@ -871,7 +1040,7 @@ fun PlayerScreen(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        imageVector = if (isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                        imageVector = Icons.Default.LockOpen,
                         contentDescription = "Lock",
                         tint = Color.White,
                         modifier = Modifier.size(24.dp)
@@ -881,79 +1050,169 @@ fun PlayerScreen(
         }
 
         // Seek Animation Overlay
-        if (showSeekOverlay) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = if (seekDirection == "Rewind") Alignment.CenterStart else Alignment.CenterEnd
+        AnimatedVisibility(
+            visible = showSeekOverlay && !isInPip,
+            enter = fadeIn() + expandHorizontally(),
+            exit = fadeOut() + shrinkHorizontally(),
+            modifier = Modifier.align(if (seekDirection == "Rewind") Alignment.CenterStart else Alignment.CenterEnd)
+        ) {
+            Surface(
+                color = Color.Black.copy(alpha = 0.6f),
+                shape = RoundedCornerShape(topStart = if (seekDirection == "Rewind") 0.dp else 40.dp, bottomStart = if (seekDirection == "Rewind") 0.dp else 40.dp, topEnd = if (seekDirection == "Rewind") 40.dp else 0.dp, bottomEnd = if (seekDirection == "Rewind") 40.dp else 0.dp),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
+                modifier = Modifier.padding(vertical = 48.dp)
             ) {
-                Surface(
-                    color = Color.Black.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.padding(64.dp)
+                Column(
+                    modifier = Modifier.padding(horizontal = 32.dp, vertical = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            imageVector = if (seekDirection == "Rewind") Icons.Default.FastRewind else Icons.Default.FastForward,
-                            contentDescription = seekDirection,
-                            tint = Color.White,
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Text("10s", color = Color.White)
-                    }
+                    Icon(
+                        imageVector = if (seekDirection == "Rewind") Icons.Default.FastRewind else Icons.Default.FastForward,
+                        contentDescription = seekDirection,
+                        tint = Color.White,
+                        modifier = Modifier.size(56.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        if (seekDirection == "Rewind") "RETRY -10s" else "SKIP +10s",
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        style = MaterialTheme.typography.labelLarge
+                    )
                 }
             }
         }
 
-
-    // Indication Overlay
-    if (showGestureOverlay) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+    // Indication Overlay (Gestures)
+    AnimatedVisibility(
+        visible = showGestureOverlay && !isInPip,
+        enter = fadeIn() + scaleIn(),
+        exit = fadeOut() + scaleOut(),
+        modifier = Modifier.align(Alignment.Center)
+    ) {
+        Surface(
+            color = Color.Black.copy(alpha = 0.75f),
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
         ) {
-            Surface(
-                color = Color.Black.copy(alpha = 0.7f),
-                shape = RoundedCornerShape(20.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+            Column(
+                modifier = Modifier.padding(horizontal = 40.dp, vertical = 28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 32.dp, vertical = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    gestureIcon?.let {
-                        Icon(
-                            imageVector = it,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(42.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = gestureText,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
+                gestureIcon?.let {
+                    Icon(
+                        imageVector = it,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(48.dp)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    // Subtle Progress Bar
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+                Text(
+                    text = gestureText,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                // Glassy Progress Bar
+                Box(
+                    modifier = Modifier
+                        .width(140.dp)
+                        .height(6.dp)
+                        .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(3.dp))
+                ) {
                     Box(
                         modifier = Modifier
-                            .width(120.dp)
-                            .height(4.dp)
-                            .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(2.dp))
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(gestureLevel)
-                                .background(Color.White, RoundedCornerShape(2.dp))
-                        )
-                    }
+                            .fillMaxHeight()
+                            .fillMaxWidth(gestureLevel)
+                            .background(
+                                brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                    colors = listOf(Color(0xFF64B5F6), Color.White)
+                                ),
+                                shape = RoundedCornerShape(3.dp)
+                            )
+                    )
+                }
+            }
+        }
+    }
+
+    // --- Modern Settings Bottom Sheet ---
+    if (showSettingsSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSettingsSheet = false },
+            sheetState = sheetState,
+            containerColor = Color(0xFF121212),
+            contentColor = Color.White,
+            dragHandle = { BottomSheetDefaults.DragHandle(color = Color.Gray) }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+                    .navigationBarsPadding()
+            ) {
+                Text(
+                    "Player Settings",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(16.dp),
+                    fontWeight = FontWeight.Bold
+                )
+                
+                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+                // Track Sections
+                SettingsItem(Icons.Default.HighQuality, "Video Quality") {
+                    showSettingsSheet = false
+                    showTrackSelectionDialog(context, exoPlayer, C.TRACK_TYPE_VIDEO)
+                }
+                SettingsItem(Icons.Default.AudioFile, "Audio Tracks") {
+                    showSettingsSheet = false
+                    showTrackSelectionDialog(context, exoPlayer, C.TRACK_TYPE_AUDIO)
+                }
+                SettingsItem(Icons.Default.Subtitles, "Subtitles") {
+                    showSettingsSheet = false
+                    showTrackSelectionDialog(context, exoPlayer, C.TRACK_TYPE_TEXT)
+                }
+                
+                HorizontalDivider(color = Color.White.copy(alpha = 0.05f), modifier = Modifier.padding(vertical = 8.dp))
+
+                // Advanced Controls
+                SettingsItem(Icons.Default.Speed, "Playback Speed (${playbackSpeed}x)") {
+                    val speeds = arrayOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
+                    android.app.AlertDialog.Builder(context, android.R.style.Theme_DeviceDefault_Light_Dialog_Alert)
+                        .setTitle("Select Speed")
+                        .setItems(speeds.map { "${it}x" }.toTypedArray()) { _, idx ->
+                            playbackSpeed = speeds[idx]
+                            showSettingsSheet = false
+                        }.show()
+                }
+
+                SettingsSliderItem(Icons.Default.VolumeUp, "Audio Boost", audioBoost) {
+                    audioBoost = it
+                }
+
+                SettingsItem(Icons.Default.Timer, "Sleep Timer ${if (sleepTimerActive) "(Active)" else ""}") {
+                    val times = arrayOf(5, 15, 30, 60, 0)
+                    android.app.AlertDialog.Builder(context, android.R.style.Theme_DeviceDefault_Light_Dialog_Alert)
+                        .setTitle("Set Sleep Timer")
+                        .setItems(times.map { if (it == 0) "Off" else "$it Minutes" }.toTypedArray()) { _, idx ->
+                            val mins = times[idx]
+                            if (mins == 0) {
+                                sleepTimerActive = false
+                            } else {
+                                sleepTimerMillis = mins * 60 * 1000L
+                                sleepTimerActive = true
+                            }
+                            showSettingsSheet = false
+                        }.show()
+                }
+
+                SettingsItem(Icons.Default.FileOpen, "Load External Subtitle") {
+                    showSettingsSheet = false
+                    subtitlePickerLauncher?.invoke()
                 }
             }
         }
@@ -981,8 +1240,8 @@ private fun getUnsafeOkHttpClient(): OkHttpClient {
     }
 }
 
-private fun showSettingsDialog(context: Context, player: ExoPlayer) {
-    val items = arrayOf("Quality", "Audio Tracks", "Subtitles")
+private fun showSettingsDialog(context: Context, player: ExoPlayer, currentBoost: Float, onBoostChange: (Float) -> Unit, onLoadSubtitle: () -> Unit) {
+    val items = arrayOf("Quality", "Audio Tracks", "Subtitles", "Audio Boost (${(currentBoost * 100).toInt()}%)", "Load External Subtitle")
     android.app.AlertDialog.Builder(context)
         .setTitle("Settings")
         .setItems(items) { _, which ->
@@ -990,6 +1249,15 @@ private fun showSettingsDialog(context: Context, player: ExoPlayer) {
                 0 -> showTrackSelectionDialog(context, player, C.TRACK_TYPE_VIDEO)
                 1 -> showTrackSelectionDialog(context, player, C.TRACK_TYPE_AUDIO)
                 2 -> showTrackSelectionDialog(context, player, C.TRACK_TYPE_TEXT)
+                3 -> {
+                    val levels = arrayOf("Off", "25%", "50%", "75%", "100% (Max)")
+                    android.app.AlertDialog.Builder(context)
+                        .setTitle("Audio Boost")
+                        .setItems(levels) { _, bWhich ->
+                            onBoostChange(bWhich * 0.25f)
+                        }.show()
+                }
+                4 -> onLoadSubtitle()
             }
         }
         .show()
@@ -1075,5 +1343,43 @@ private fun showSystemUI(activity: android.app.Activity) {
         controller.show(WindowInsetsCompat.Type.systemBars())
     } catch (e: Exception) {
         Log.e("PlayerActivity", "Failed to show System UI", e)
+    }
+}
+@Composable
+fun SettingsItem(icon: ImageVector, title: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        color = Color.Transparent,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(24.dp))
+            Spacer(modifier = Modifier.width(20.dp))
+            Text(title, color = Color.White, style = MaterialTheme.typography.bodyLarge)
+        }
+    }
+}
+
+@Composable
+fun SettingsSliderItem(icon: ImageVector, title: String, value: Float, onValueChange: (Float) -> Unit) {
+    Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(24.dp))
+            Spacer(modifier = Modifier.width(20.dp))
+            Text("$title (${(value * 100).toInt()}%)", color = Color.White, style = MaterialTheme.typography.bodyLarge)
+        }
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.padding(top = 4.dp),
+            colors = SliderDefaults.colors(
+                thumbColor = Color.White,
+                activeTrackColor = Color(0xFF64B5F6),
+                inactiveTrackColor = Color.White.copy(alpha = 0.1f)
+            )
+        )
     }
 }

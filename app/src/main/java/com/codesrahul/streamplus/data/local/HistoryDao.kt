@@ -15,8 +15,8 @@ interface HistoryDao {
     @Query("SELECT * FROM history_table ORDER BY timestamp DESC")
     fun getAllHistory(): Flow<List<HistoryEntity>>
 
-    @Query("SELECT lastPosition FROM history_table WHERE url = :url")
-    suspend fun getPosition(url: String): Long?
+    @Query("SELECT lastPosition FROM history_table WHERE name = :name AND `group` = :group AND playlistId = :playlistId")
+    suspend fun getPosition(name: String, group: String, playlistId: Int): Long?
 
     @Delete
     suspend fun deleteHistory(history: HistoryEntity)

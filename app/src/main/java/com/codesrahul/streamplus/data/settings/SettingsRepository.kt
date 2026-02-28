@@ -36,8 +36,8 @@ data class AppSettings(
     val enableTunneling: Boolean = false,
     val preferSoftwareDecoder: Boolean = false,
     val forceLandscape: Boolean = false,
-    val volumeGestures: Boolean = true,
-    val brightnessGestures: Boolean = true,
+    val volumeGestures: Boolean = false,
+    val brightnessGestures: Boolean = false,
     val resumePlaying: Boolean = false,
     val playlistCache: Boolean = false,
     val lastResizeMode: Int = 0, // 0=Fit,1=Fill,2=Zoom

@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.InputStream
@@ -230,13 +231,29 @@ class PlaylistRepositoryImpl @Inject constructor(
     }
 
     // --- Favorites ---
-    override fun getAllFavorites() = favoriteDao.getAllFavorites()
+    override fun getAllFavorites(): kotlinx.coroutines.flow.Flow<List<FavoriteEntity>> {
+        return favoriteDao.getAllFavorites().map { favorites ->
+            withContext(Dispatchers.IO) {
+                favorites.map { fav ->
+                    // Try to find a fresher URL in the channels table (synced from latest playlist loads)
+                    val refreshed = channelDao.getChannelByIdentity(fav.name, fav.groupTitle, fav.playlistId)
+                    if (refreshed != null && refreshed.url != fav.url) {
+                        fav.copy(url = refreshed.url)
+                    } else {
+                        fav
+                    }
+                }
+            }
+        }
+    }
 
     override suspend fun addFavorite(item: FavoriteEntity) = favoriteDao.addFavorite(item)
 
-    override suspend fun removeFavorite(url: String) = favoriteDao.removeFavorite(url)
+    override suspend fun removeFavorite(name: String, group: String, playlistId: Int) = 
+        favoriteDao.removeFavorite(name, group, playlistId)
 
-    override suspend fun isFavorite(url: String) = favoriteDao.isFavorite(url)
+    override suspend fun isFavorite(name: String, group: String, playlistId: Int) = 
+        favoriteDao.isFavorite(name, group, playlistId)
 
     // --- Global Search ---
     override suspend fun searchAllPlaylists(query: String): List<M3UItem> = withContext(Dispatchers.IO) {

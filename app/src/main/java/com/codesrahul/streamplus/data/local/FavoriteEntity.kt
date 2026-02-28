@@ -3,13 +3,16 @@ package com.codesrahul.streamplus.data.local
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
-@Entity(tableName = "favorites")
+@Entity(
+    tableName = "favorites",
+    primaryKeys = ["name", "groupTitle", "playlistId"]
+)
 data class FavoriteEntity(
-    @PrimaryKey val url: String,
     val name: String,
-    val logoUrl: String,
     val groupTitle: String,
     val playlistId: Int,
+    val url: String, // Latest known URL
+    val logoUrl: String = "",
     val addedAt: Long = System.currentTimeMillis()
 )
 
@@ -18,12 +21,12 @@ interface FavoriteDao {
     @Query("SELECT * FROM favorites ORDER BY addedAt DESC")
     fun getAllFavorites(): Flow<List<FavoriteEntity>>
 
-    @Query("SELECT EXISTS(SELECT 1 FROM favorites WHERE url = :url)")
-    suspend fun isFavorite(url: String): Boolean
+    @Query("SELECT EXISTS(SELECT 1 FROM favorites WHERE name = :name AND groupTitle = :group AND playlistId = :playlistId)")
+    suspend fun isFavorite(name: String, group: String, playlistId: Int): Boolean
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addFavorite(favorite: FavoriteEntity)
 
-    @Query("DELETE FROM favorites WHERE url = :url")
-    suspend fun removeFavorite(url: String)
+    @Query("DELETE FROM favorites WHERE name = :name AND groupTitle = :group AND playlistId = :playlistId")
+    suspend fun removeFavorite(name: String, group: String, playlistId: Int)
 }

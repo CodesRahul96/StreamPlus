@@ -21,6 +21,7 @@ import javax.inject.Inject
 @HiltViewModel
 class PlaylistDetailViewModel @Inject constructor(
     private val repository: PlaylistRepository,
+    private val epgManager: com.codesrahul.streamplus.data.epg.EPGManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -40,9 +41,9 @@ class PlaylistDetailViewModel @Inject constructor(
     private val _selectedGroup = MutableStateFlow("All")
     val selectedGroup = _selectedGroup.asStateFlow()
 
-    // Favorite URLs set for fast O(1) lookup in the UI
-    val favoriteUrls = repository.getAllFavorites()
-        .map { list -> list.map { it.url }.toSet() }
+    // Favorite Identity set for fast O(1) lookup in the UI (Format: "name|group|playlistId")
+    val favoriteIdentities = repository.getAllFavorites()
+        .map { list -> list.map { "${it.name}|${it.groupTitle}|${it.playlistId}" }.toSet() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     val filteredChannels = combine(_channels, _searchQuery, _selectedGroup) { channels, query, group ->
@@ -79,7 +80,10 @@ class PlaylistDetailViewModel @Inject constructor(
                     if (entity != null) {
                         val prevUrl = _playlist.value?.url
                         _playlist.value = entity
-                        if (prevUrl != entity.url) loadChannels(entity.url, entity.userAgent)
+                        if (prevUrl != entity.url) {
+                            loadChannels(entity.url, entity.userAgent)
+                            entity.epgUrl?.let { epgManager.loadEPG(it) }
+                        }
                     }
                 }
             } else if (playlistId.startsWith("http")) {
@@ -104,16 +108,16 @@ class PlaylistDetailViewModel @Inject constructor(
     fun toggleFavorite(item: M3UItem) {
         val currentPlaylistId = _playlist.value?.id ?: -1
         viewModelScope.launch {
-            if (repository.isFavorite(item.url)) {
-                repository.removeFavorite(item.url)
+            if (repository.isFavorite(item.name, item.group, currentPlaylistId)) {
+                repository.removeFavorite(item.name, item.group, currentPlaylistId)
             } else {
                 repository.addFavorite(
                     FavoriteEntity(
-                        url = item.url,
                         name = item.name,
-                        logoUrl = item.logoUrl,
                         groupTitle = item.group,
-                        playlistId = currentPlaylistId
+                        playlistId = currentPlaylistId,
+                        url = item.url,
+                        logoUrl = item.logoUrl
                     )
                 )
             }
@@ -135,4 +139,6 @@ class PlaylistDetailViewModel @Inject constructor(
             }
         }
     }
+
+    fun getCurrentProgram(epgId: String?) = epgManager.getCurrentProgram(epgId)
 }

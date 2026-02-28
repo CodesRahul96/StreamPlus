@@ -30,6 +30,8 @@ class M3UStreamParser : StreamParser {
         var currentCookie = ""
         var currentReferer = ""
         var currentOrigin = ""
+        var currentEpgId: String? = null
+        var currentDuration: Int = -1 // -1 means live, > 0 means VOD
         
         val saveItem = { url: String ->
             val (finalUrl, pipeHeaders) = parsePipedUrl(url)
@@ -62,7 +64,9 @@ class M3UStreamParser : StreamParser {
                 licenseUrl = currentDrmLicense,
                 drmScheme = detectedScheme,
                 userAgent = mergedHeaders["User-Agent"] ?: currentUserAgent,
-                isPlaylist = false
+                isPlaylist = false,
+                epgId = currentEpgId,
+                isVod = currentDuration > 0 || isVodGroup(currentGroup)
             ))
             Log.d("M3UParser", "Created item: $finalName, UA=${mergedHeaders["User-Agent"]}, DRM Scheme=${detectedScheme}")
         }
@@ -76,11 +80,18 @@ class M3UStreamParser : StreamParser {
                     // Parse EXTINF
                     val info = trimmed.substringAfter("#EXTINF:")
                     val paramsEnd = info.lastIndexOf(',')
+                    
+                    // Parse duration
+                    try {
+                        currentDuration = info.substringBefore(" ").toInt()
+                    } catch (e: Exception) {}
+
                     if (paramsEnd != -1) {
                         currentName = info.substring(paramsEnd + 1).trim()
                         val props = info.substring(0, paramsEnd)
                         parseProps(props) { k, v -> 
                             when(k.lowercase()) {
+                                "tvg-id", "tvg-name" -> currentEpgId = v
                                 "tvg-logo", "logo" -> currentLogo = v
                                 "group-title", "group" -> currentGroup = v
                                 "tvg-name" -> if (currentName.isBlank()) currentName = v
@@ -158,6 +169,8 @@ class M3UStreamParser : StreamParser {
                     currentCookie = ""
                     currentReferer = ""
                     currentOrigin = ""
+                    currentEpgId = null
+                    currentDuration = -1
                 } else if (trimmed.startsWith("http", true) && !trimmed.contains("#")) {
                      // RAW URL Support: If it starts with http and we missed it above (though the !startsWith("#") should catch it)
                      // This block is technically redundant due to the else if (!trimmed.startsWith("#")) above, 
@@ -269,5 +282,10 @@ class M3UStreamParser : StreamParser {
         if (url.contains(".mpd") || url.contains(".mpd?")) return "widevine"
         // Let DrmResolver handle the default based on license URL content
         return null
+    }
+
+    private fun isVodGroup(group: String): Boolean {
+        val g = group.lowercase()
+        return g.contains("movie") || g.contains("vod") || g.contains("cinema") || g.contains("series") || g.contains("films")
     }
 }

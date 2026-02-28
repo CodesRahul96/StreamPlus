@@ -29,7 +29,9 @@ data class ChannelEntity(
     val headers: Map<String, String> = emptyMap(),
     val licenseUrl: String? = null,
     val drmScheme: String? = null,
-    val drmHeaders: Map<String, String> = emptyMap()
+    val drmHeaders: Map<String, String> = emptyMap(),
+    val epgId: String? = null,
+    val isVod: Boolean = false
 )
 
 fun ChannelEntity.toDomain() = M3UItem(
@@ -37,11 +39,14 @@ fun ChannelEntity.toDomain() = M3UItem(
     url = url,
     group = group,
     logoUrl = logoUrl,
+    playlistId = playlistId,
     userAgent = userAgent,
     headers = headers,
     licenseUrl = licenseUrl,
     drmScheme = drmScheme,
-    drmHeaders = drmHeaders
+    drmHeaders = drmHeaders,
+    epgId = epgId,
+    isVod = isVod
 )
 
 fun M3UItem.toEntity(playlistId: Int) = ChannelEntity(
@@ -54,5 +59,7 @@ fun M3UItem.toEntity(playlistId: Int) = ChannelEntity(
     headers = headers,
     licenseUrl = licenseUrl,
     drmScheme = drmScheme,
-    drmHeaders = drmHeaders
+    drmHeaders = drmHeaders,
+    epgId = epgId,
+    isVod = isVod
 )

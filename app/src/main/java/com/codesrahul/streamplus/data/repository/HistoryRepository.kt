@@ -3,20 +3,34 @@ package com.codesrahul.streamplus.data.repository
 import com.codesrahul.streamplus.data.local.HistoryDao
 import com.codesrahul.streamplus.data.local.HistoryEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import com.codesrahul.streamplus.data.local.ChannelDao
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class HistoryRepository @Inject constructor(
-    private val historyDao: HistoryDao
+    private val historyDao: HistoryDao,
+    private val channelDao: ChannelDao
 ) {
-    fun getAllHistory(): Flow<List<HistoryEntity>> = historyDao.getAllHistory()
+    fun getAllHistory(): Flow<List<HistoryEntity>> = historyDao.getAllHistory().map { history ->
+        history.map { entry ->
+            // Try to find a fresher URL in the channels table
+            val refreshed = channelDao.getChannelByIdentity(entry.name, entry.group, entry.playlistId)
+            if (refreshed != null && refreshed.url != entry.url) {
+                entry.copy(url = refreshed.url)
+            } else {
+                entry
+            }
+        }
+    }
 
     suspend fun saveProgress(
         url: String, 
         name: String, 
         logo: String?, 
         group: String?, 
+        playlistId: Int,
         userAgent: String? = null,
         cookie: String? = null,
         referer: String? = null,
@@ -30,7 +44,8 @@ class HistoryRepository @Inject constructor(
             url = url,
             name = name,
             logoUrl = logo,
-            group = group,
+            group = group ?: "Default",
+            playlistId = playlistId,
             userAgent = userAgent,
             cookie = cookie,
             referer = referer,
@@ -44,8 +59,8 @@ class HistoryRepository @Inject constructor(
         historyDao.insertHistory(entity)
     }
 
-    suspend fun getLastPosition(url: String): Long {
-        return historyDao.getPosition(url) ?: 0L
+    suspend fun getLastPosition(name: String, group: String, playlistId: Int): Long {
+        return historyDao.getPosition(name, group, playlistId) ?: 0L
     }
 
     suspend fun clearHistory() {

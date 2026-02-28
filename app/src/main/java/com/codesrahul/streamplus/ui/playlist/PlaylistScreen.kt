@@ -39,6 +39,7 @@ import com.codesrahul.streamplus.data.settings.AppSettings
 import com.codesrahul.streamplus.domain.model.M3UItem
 import com.codesrahul.streamplus.ui.components.PremiumBackground
 import com.codesrahul.streamplus.ui.settings.SettingsViewModel
+import com.codesrahul.streamplus.ui.player.PlayerActivity
 import com.codesrahul.streamplus.util.UserAgentManager
 import java.util.Locale
 
@@ -60,6 +61,7 @@ fun PlaylistScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
+    var showFabMenu by remember { mutableStateOf(false) }
     val context = LocalContext.current
     // Always hoist SettingsViewModel at top-level — never inside a conditional branch
     val settingsState by hiltViewModel<SettingsViewModel>().settings.collectAsState(initial = AppSettings())
@@ -113,14 +115,56 @@ fun PlaylistScreen(
             },
             floatingActionButton = {
                 if (playlists.isNotEmpty()) {
-                    ExtendedFloatingActionButton(
-                        onClick = { showAddDialog = true },
-                        icon = { Icon(Icons.Default.Add, null) },
-                        text = { Text("New Playlist") },
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        shape = RoundedCornerShape(16.dp)
-                    )
+                    Column(horizontalAlignment = Alignment.End) {
+                        AnimatedVisibility(
+                            visible = showFabMenu,
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut()
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.End,
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            ) {
+                                // Import Local File Button
+                                SmallFloatingActionButton(
+                                    onClick = { 
+                                        showFabMenu = false
+                                        filePickerLauncher.launch("*/*") 
+                                    },
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    shape = CircleShape
+                                ) {
+                                    Icon(Icons.Default.UploadFile, contentDescription = "Import File")
+                                }
+                                
+                                // Add URL Button
+                                SmallFloatingActionButton(
+                                    onClick = { 
+                                        showFabMenu = false
+                                        showAddDialog = true 
+                                    },
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    shape = CircleShape
+                                ) {
+                                    Icon(Icons.Default.AddLink, contentDescription = "Add URL")
+                                }
+                            }
+                        }
+                        
+                        FloatingActionButton(
+                            onClick = { showFabMenu = !showFabMenu },
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Icon(
+                                if (showFabMenu) Icons.Default.Close else Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.animateContentSize()
+                            )
+                        }
+                    }
                 }
             }
         ) { padding ->
@@ -234,8 +278,18 @@ fun PlaylistScreen(
                                     modifier = Modifier.padding(vertical = 4.dp)
                                 )
                             }
-                            items(searchResults, key = { it.url }) { channel ->
-                                SearchResultItem(channel = channel, onClick = { onChannelClick(channel) })
+                            items(searchResults, key = { "${it.name}|${it.group}|${it.playlistId}" }) { channel ->
+                                SearchResultItem(channel = channel, onClick = {
+                                    val intent = android.content.Intent(context, PlayerActivity::class.java).apply {
+                                        putExtra(PlayerActivity.EXTRA_STREAM_URL, channel.url)
+                                        putExtra(PlayerActivity.EXTRA_STREAM_TITLE, channel.name)
+                                        putExtra(PlayerActivity.EXTRA_CHANNEL_LOGO, channel.logoUrl)
+                                        putExtra(PlayerActivity.EXTRA_USER_AGENT, channel.userAgent)
+                                        putExtra(PlayerActivity.EXTRA_PLAYLIST_ID, channel.playlistId)
+                                        putExtra(PlayerActivity.EXTRA_STREAM_GROUP, channel.group)
+                                    }
+                                    context.startActivity(intent)
+                                })
                             }
                         }
                         return@LazyColumn
@@ -260,19 +314,20 @@ fun PlaylistScreen(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                     contentPadding = PaddingValues(end = 16.dp)
                                 ) {
-                                    items(recentlyWatched, key = { it.url }) { entry ->
-                                        RecentlyWatchedCard(
-                                            entry = entry,
-                                            onClick = { onChannelClick(
-                                                M3UItem(
-                                                    name = entry.name,
-                                                    url = entry.url,
-                                                    logoUrl = entry.logoUrl ?: "",
-                                                    group = entry.group ?: "",
-                                                    userAgent = entry.userAgent ?: ""
-                                                )
-                                            )}
-                                        )
+                                    items(recentlyWatched, key = { "${it.name}|${it.group}|${it.playlistId}" }) { entry ->
+                                            RecentlyWatchedCard(
+                                                entry = entry,
+                                                onClick = { onChannelClick(
+                                                    M3UItem(
+                                                        name = entry.name,
+                                                        url = entry.url,
+                                                        logoUrl = entry.logoUrl ?: "",
+                                                        group = entry.group,
+                                                        userAgent = entry.userAgent ?: "",
+                                                        playlistId = entry.playlistId
+                                                    )
+                                                )}
+                                            )
                                     }
                                 }
                             }
@@ -311,19 +366,19 @@ fun PlaylistScreen(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                     contentPadding = PaddingValues(end = 16.dp)
                                 ) {
-                                    items(favorites, key = { it.url }) { fav ->
+                                    items(favorites, key = { "${it.name}|${it.groupTitle}|${it.playlistId}" }) { fav ->
                                         with(sharedTransitionScope) {
                                             FavouriteChannelCard(
                                                 favorite = fav,
                                                 modifier = Modifier.sharedElement(
-                                                    rememberSharedContentState(key = "fav_${fav.url}"),
+                                                    rememberSharedContentState(key = "fav_${fav.name}_${fav.playlistId}"),
                                                     animatedVisibilityScope = animatedContentScope
                                                 ),
                                                 onClick = {
                                                     onChannelClick(
                                                         M3UItem(
                                                             name = fav.name,
-                                                            url = fav.url,
+                                                            url = fav.url, // This is now the refreshed URL from the repository
                                                             logoUrl = fav.logoUrl,
                                                             group = fav.groupTitle
                                                         )
@@ -365,8 +420,8 @@ fun PlaylistScreen(
         PlaylistDialog(
             title = "Add Playlist",
             confirmButtonText = "Save",
-            onConfirm = { name, url, userAgent, icon, color ->
-                viewModel.addPlaylist(name, url, userAgent, icon, color)
+            onConfirm = { name, url, userAgent, icon, color, epgUrl ->
+                viewModel.addPlaylist(name, url, userAgent, icon, color, epgUrl)
                 showAddDialog = false
             },
             onDismiss = { showAddDialog = false }
@@ -381,9 +436,10 @@ fun PlaylistScreen(
             initialUserAgent = playlist.userAgent,
             initialIcon = playlist.icon,
             initialColor = playlist.color,
+            initialEpgUrl = playlist.epgUrl ?: "",
             confirmButtonText = "Update",
-            onConfirm = { name, url, userAgent, icon, color ->
-                viewModel.updatePlaylist(playlist.copy(name = name, url = url, userAgent = userAgent, icon = icon, color = color))
+            onConfirm = { name, url, userAgent, icon, color, epgUrl ->
+                viewModel.updatePlaylist(playlist.copy(name = name, url = url, userAgent = userAgent, icon = icon, color = color, epgUrl = epgUrl))
                 showEditDialog = null
             },
             onDismiss = { showEditDialog = null },
@@ -492,8 +548,9 @@ fun PlaylistDialog(
     initialUserAgent: String = "Auto",
     initialIcon: String = "default",
     initialColor: Int = -16777216,
+    initialEpgUrl: String = "",
     confirmButtonText: String,
-    onConfirm: (String, String, String, String, Int) -> Unit,
+    onConfirm: (String, String, String, String, Int, String) -> Unit,
     onDismiss: () -> Unit,
     onDelete: (() -> Unit)? = null
 ) {
@@ -501,6 +558,7 @@ fun PlaylistDialog(
     var url by remember { mutableStateOf(initialUrl) }
     var icon by remember { mutableStateOf(initialIcon) }
     var color by remember { mutableStateOf(initialColor) }
+    var epgUrl by remember { mutableStateOf(initialEpgUrl) }
     var isNameModified by remember { mutableStateOf(initialName.isNotEmpty()) }
 
     var userAgentDisplay by remember {
@@ -602,6 +660,16 @@ fun PlaylistDialog(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     trailingIcon = { Icon(Icons.Default.Link, null, modifier = Modifier.size(20.dp)) }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = epgUrl,
+                    onValueChange = { epgUrl = it },
+                    label = { Text("EPG URL (XMLTV)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    placeholder = { Text("Optional .xml or .xml.gz") },
+                    trailingIcon = { Icon(Icons.Default.FormatListBulleted, null, modifier = Modifier.size(20.dp)) }
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 ExposedDropdownMenuBox(
@@ -708,7 +776,7 @@ fun PlaylistDialog(
         },
         confirmButton = {
             Button(
-                onClick = { if (name.isNotBlank() && url.isNotBlank()) onConfirm(name, url, userAgentValue, icon, color) },
+                onClick = { if (name.isNotBlank() && url.isNotBlank()) onConfirm(name, url, userAgentValue, icon, color, epgUrl) },
                 enabled = name.isNotBlank() && url.isNotBlank(),
                 shape = RoundedCornerShape(10.dp)
             ) { Text(confirmButtonText, fontWeight = FontWeight.Bold) }

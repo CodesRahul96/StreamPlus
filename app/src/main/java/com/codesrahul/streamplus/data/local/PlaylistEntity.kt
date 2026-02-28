@@ -11,5 +11,6 @@ data class PlaylistEntity(
     val userAgent: String = "",
     val type: String = "URL", // URL or FILE
     val icon: String = "default",
-    val color: Int = -16777216 // Color.Black as int, or maybe a better default like Color(0xFF6750A4).toArgb()
+    val color: Int = -16777216,
+    val epgUrl: String? = null
 )

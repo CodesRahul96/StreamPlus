@@ -52,7 +52,7 @@ fun PlaylistDetailScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedGroup by viewModel.selectedGroup.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-    val favoriteUrls by viewModel.favoriteUrls.collectAsState()
+    val favoriteIdentities by viewModel.favoriteIdentities.collectAsState()
     val settingsState by hiltViewModel<SettingsViewModel>().settings.collectAsState(initial = AppSettings())
     
     val context = LocalContext.current
@@ -162,19 +162,27 @@ fun PlaylistDetailScreen(
                         }
                     }
                     else -> {
+                        val isVodPlaylist = filteredChannels.any { it.isVod }
                         LazyVerticalGrid(
-                            columns = GridCells.Adaptive(minSize = 140.dp),
+                            columns = if (isVodPlaylist) GridCells.Fixed(3) else GridCells.Adaptive(minSize = 140.dp),
                             modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
                             contentPadding = PaddingValues(vertical = 8.dp),
-                            verticalArrangement   = Arrangement.spacedBy(8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement   = Arrangement.spacedBy(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             items(filteredChannels.size, key = { index -> 
                                 val channel = filteredChannels[index]
                                 "${channel.url}_${channel.name}_$index" 
                             }) { index ->
                                 val channel = filteredChannels[index]
-                                ChannelItem(channel, settingsState.hideChannelImage, isFavorite = channel.url in favoriteUrls, onToggleFavorite = { viewModel.toggleFavorite(channel) }) {
+                                val currentProgram = viewModel.getCurrentProgram(channel.epgId)
+                                ChannelItem(
+                                    channel = channel,
+                                    hideImage = settingsState.hideChannelImage,
+                                    currentProgram = currentProgram?.title,
+                                    isFavorite = "${channel.name}|${channel.group}|${playlist?.id}" in favoriteIdentities,
+                                    onToggleFavorite = { viewModel.toggleFavorite(channel) }
+                                ) {
                                     if (isLoading) return@ChannelItem
                                     val lowerUrl = channel.url.lowercase()
                                     val isPlaylist = channel.isPlaylist ||
@@ -211,6 +219,8 @@ fun PlaylistDetailScreen(
                                             if (channel.drmHeaders.isNotEmpty()) {
                                                 putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_DRM_HEADERS, java.util.HashMap(channel.drmHeaders))
                                             }
+                                            putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_PLAYLIST_ID, playlist?.id ?: -1)
+                                            putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_GROUP, channel.group)
                                         }
                                         context.startActivity(intent)
                                     }
@@ -224,10 +234,82 @@ fun PlaylistDetailScreen(
     }
 }
 
-// -- Premium Channel Grid Card ----------------------------------------------
+@Composable
+fun ChannelItem(
+    channel: M3UItem,
+    hideImage: Boolean,
+    currentProgram: String? = null,
+    isFavorite: Boolean = false,
+    onToggleFavorite: (() -> Unit)? = null,
+    onClick: () -> Unit
+) {
+    if (channel.isVod) {
+        VodPosterItem(channel, hideImage, isFavorite, onToggleFavorite, onClick)
+    } else {
+        LiveChannelItem(channel, hideImage, currentProgram, isFavorite, onToggleFavorite, onClick)
+    }
+}
 
 @Composable
-fun ChannelItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean = false, onToggleFavorite: (() -> Unit)? = null, onClick: () -> Unit) {
+fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onToggleFavorite: (() -> Unit)?, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(0.67f) // Movie poster ratio
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (channel.logoUrl.isNotBlank() && !hideImage) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current).data(channel.logoUrl).crossfade(true).build(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Movie, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.4f))
+                }
+            }
+            
+            // Gradient Overlay for Title
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent, Color.Black.copy(alpha = 0.8f))))
+            )
+            
+            Column(
+                modifier = Modifier.align(Alignment.BottomStart).padding(8.dp)
+            ) {
+                Text(
+                    text = channel.name,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            
+            if (onToggleFavorite != null) {
+                IconButton(onClick = onToggleFavorite, modifier = Modifier.align(Alignment.TopEnd).size(32.dp)) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = null,
+                        tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String?, isFavorite: Boolean, onToggleFavorite: (() -> Unit)?, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -328,17 +410,28 @@ fun ChannelItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean = fals
                         ),
                         RoundedCornerShape(bottomStart = 18.dp, bottomEnd = 18.dp)
                     )
-                    .padding(horizontal = 10.dp, vertical = 8.dp)
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
-                Text(
-                    text = channel.name,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = channel.name,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center
+                    )
+                    if (!currentProgram.isNullOrBlank()) {
+                        Text(
+                            text = currentProgram,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
             }
         }
     }

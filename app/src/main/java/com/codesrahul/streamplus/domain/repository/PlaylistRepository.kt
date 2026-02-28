@@ -23,8 +23,8 @@ interface PlaylistRepository {
     // Favorites
     fun getAllFavorites(): Flow<List<FavoriteEntity>>
     suspend fun addFavorite(item: FavoriteEntity)
-    suspend fun removeFavorite(url: String)
-    suspend fun isFavorite(url: String): Boolean
+    suspend fun removeFavorite(name: String, group: String, playlistId: Int)
+    suspend fun isFavorite(name: String, group: String, playlistId: Int): Boolean
 
     // Global Search
     suspend fun searchAllPlaylists(query: String): List<M3UItem>

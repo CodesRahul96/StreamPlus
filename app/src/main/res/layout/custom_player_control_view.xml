@@ -58,10 +58,18 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <ImageButton
+            android:id="@id/exo_prev"
+            style="@style/ExoMediaButton.Previous"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:tint="@android:color/white" />
+
+        <ImageButton
             android:id="@id/exo_rew"
             style="@style/ExoMediaButton.Rewind"
             android:layout_width="48dp"
             android:layout_height="48dp"
+            android:layout_marginHorizontal="8dp"
             android:tint="@android:color/white" />
 
         <ImageButton
@@ -69,12 +77,20 @@
             style="@style/ExoMediaButton.Play"
             android:layout_width="64dp"
             android:layout_height="64dp"
-            android:layout_marginHorizontal="32dp"
+            android:layout_marginHorizontal="16dp"
             android:tint="@android:color/white" />
 
         <ImageButton
             android:id="@id/exo_ffwd"
             style="@style/ExoMediaButton.FastForward"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginHorizontal="8dp"
+            android:tint="@android:color/white" />
+
+        <ImageButton
+            android:id="@id/exo_next"
+            style="@style/ExoMediaButton.Next"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:tint="@android:color/white" />

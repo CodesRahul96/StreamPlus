@@ -64,10 +64,10 @@ class PlaylistViewModel @Inject constructor(
         _searchQuery.value = query
     }
 
-    fun addPlaylist(name: String, url: String, userAgent: String, icon: String = "default", color: Int = -16777216) {
+    fun addPlaylist(name: String, url: String, userAgent: String, icon: String = "default", color: Int = -16777216, epgUrl: String? = null) {
         viewModelScope.launch {
             repository.insertPlaylist(
-                PlaylistEntity(name = name, url = url, userAgent = userAgent, icon = icon, color = color)
+                PlaylistEntity(name = name, url = url, userAgent = userAgent, icon = icon, color = color, epgUrl = epgUrl)
             )
         }
     }
@@ -82,16 +82,16 @@ class PlaylistViewModel @Inject constructor(
 
     fun toggleFavorite(item: M3UItem, playlistId: Int) {
         viewModelScope.launch {
-            if (repository.isFavorite(item.url)) {
-                repository.removeFavorite(item.url)
+            if (repository.isFavorite(item.name, item.group, playlistId)) {
+                repository.removeFavorite(item.name, item.group, playlistId)
             } else {
                 repository.addFavorite(
                     FavoriteEntity(
-                        url = item.url,
                         name = item.name,
-                        logoUrl = item.logoUrl,
                         groupTitle = item.group,
-                        playlistId = playlistId
+                        playlistId = playlistId,
+                        url = item.url,
+                        logoUrl = item.logoUrl
                     )
                 )
             }
