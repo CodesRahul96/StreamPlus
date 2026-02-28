@@ -162,6 +162,14 @@
                 android:src="@drawable/ic_aspect_ratio"
                 android:tint="@android:color/white" />
 
+            <androidx.mediarouter.app.MediaRouteButton
+                android:id="@+id/media_route_button"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="24dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                app:mediaRouteButtonTint="@android:color/white" />
+
             <ImageButton
                 android:id="@+id/exo_settings"
                 style="@style/ExoMediaButton"

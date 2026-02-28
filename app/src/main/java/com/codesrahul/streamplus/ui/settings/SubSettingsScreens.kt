@@ -1,76 +1,231 @@
 package com.codesrahul.streamplus.ui.settings
+ 
+import com.codesrahul.streamplus.data.settings.ThemeMode
+import com.codesrahul.streamplus.data.settings.ThemeStyle
 
+import android.content.Intent
+import android.graphics.Bitmap
+import android.net.Uri
+import android.provider.Settings
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
-import android.content.Intent
-import android.provider.Settings
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.codesrahul.streamplus.data.settings.ThemeMode
-import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.VideoSettings
-import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.core.content.FileProvider
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.MultiFormatWriter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
+import java.io.FileOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
     val settingsState by viewModel.settings.collectAsState()
-    var showThemeDialog by remember { mutableStateOf(false) }
-    var showStyleDialog by remember { mutableStateOf(false) }
+    
+    com.codesrahul.streamplus.ui.components.PremiumBackground {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = { Text("Appearance", fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                )
+            }
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                // Theme Mode Section
+                SettingsCard {
+                    SettingsItemHeader(
+                        title = "Theme Mode",
+                        subtitle = "Choose your preferred theme appearance",
+                        icon = Icons.Default.BrightnessMedium
+                    )
+                    
+                    SegmentedButton(
+                        options = ThemeMode.values().toList(),
+                        selectedOption = settingsState.themeMode,
+                        onOptionSelected = { viewModel.setThemeMode(it) },
+                        labelProvider = { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } },
+                        iconProvider = { mode ->
+                            Icon(
+                                imageVector = when(mode) {
+                                    ThemeMode.SYSTEM -> Icons.Default.SettingsSuggest
+                                    ThemeMode.LIGHT -> Icons.Default.LightMode
+                                    ThemeMode.DARK -> Icons.Default.DarkMode
+                                },
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = when(settingsState.themeMode) {
+                            ThemeMode.SYSTEM -> "Follows device"
+                            ThemeMode.LIGHT -> "Always Light"
+                            ThemeMode.DARK -> "Always Dark"
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Appearance") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                // Color Themes Section
+                SettingsCard {
+                    SettingsItemHeader(
+                        title = "Color Themes",
+                        subtitle = "Select one of the 5 premium themes",
+                        icon = Icons.Default.Palette
+                    )
+                    
+                    val themes = com.codesrahul.streamplus.data.settings.ThemeStyle.values()
+                    
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        themes.forEach { style ->
+                            val isSelected = settingsState.themeStyle == style
+                            val themeColor = when(style) {
+                                com.codesrahul.streamplus.data.settings.ThemeStyle.DYNAMIC -> Color(0xFF00BCD4)
+                                com.codesrahul.streamplus.data.settings.ThemeStyle.IGNITE -> Color(0xFFFF5722)
+                                com.codesrahul.streamplus.data.settings.ThemeStyle.FROSTY -> Color(0xFF03A9F4)
+                                com.codesrahul.streamplus.data.settings.ThemeStyle.GROVE -> Color(0xFF4CAF50)
+                                com.codesrahul.streamplus.data.settings.ThemeStyle.MIDNIGHT -> Color(0xFF0D47A1)
+                            }
+                            
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .clickable { viewModel.setThemeStyle(style) },
+                                color = if (isSelected) themeColor.copy(alpha = 0.15f) else Color.Transparent,
+                                border = BorderStroke(
+                                    width = if (isSelected) 2.dp else 1.dp,
+                                    color = if (isSelected) themeColor else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Surface(
+                                        shape = androidx.compose.foundation.shape.CircleShape,
+                                        color = themeColor,
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        if (isSelected) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    Icons.Default.Check, 
+                                                    contentDescription = null, 
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Text(
+                                        text = when(style) {
+                                            com.codesrahul.streamplus.data.settings.ThemeStyle.DYNAMIC -> "🌊 Dynamic Wave"
+                                            com.codesrahul.streamplus.data.settings.ThemeStyle.IGNITE -> "🔥 Ignite Blaze"
+                                            com.codesrahul.streamplus.data.settings.ThemeStyle.FROSTY -> "❄️ Frosty Aura"
+                                            com.codesrahul.streamplus.data.settings.ThemeStyle.GROVE -> "🌿 Enchanted Grove"
+                                            com.codesrahul.streamplus.data.settings.ThemeStyle.MIDNIGHT -> "🌑 Midnight Deep"
+                                        },
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) themeColor else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier.padding(padding).verticalScroll(rememberScrollState())
-        ) {
-            ListItem(
-                headlineContent = { Text("Theme Mode") },
-                supportingContent = { Text(settingsState.themeMode.name) },
-                modifier = Modifier.clickable { showThemeDialog = true }
-            )
-            ListItem(
-                headlineContent = { Text("Theme Style") },
-                supportingContent = { Text(settingsState.themeStyle.name.replace("_", " ")) },
-                modifier = Modifier.clickable { showStyleDialog = true }
-            )
-        }
-    }
 
-    if (showThemeDialog) {
-        ThemeModeDialog(
-            currentMode = settingsState.themeMode,
-            onSelect = { viewModel.setThemeMode(it) },
-            onDismiss = { showThemeDialog = false }
-        )
-    }
-    
-    if (showStyleDialog) {
-        ThemeStyleDialog(
-            currentStyle = settingsState.themeStyle,
-            onSelect = { viewModel.setThemeStyle(it) },
-            onDismiss = { showStyleDialog = false }
-        )
+                // UI Customization Section
+                SettingsCard {
+                    SettingsItemHeader(
+                        title = "Hide Navigation Labels",
+                        icon = Icons.Default.LabelOff
+                    )
+                    
+                    SettingsSwitchItem(
+                        title = "Bottom navigation labels are ${if (settingsState.hideNavLabels) "hidden" else "visible"}",
+                        checked = settingsState.hideNavLabels,
+                        onCheckedChange = { viewModel.setHideNavLabels(it) },
+                        showDivider = false
+                    )
+                }
+
+                // Default Tab Section
+                SettingsCard {
+                    SettingsItemHeader(
+                        title = "Default Tab",
+                        subtitle = "Choose which tab opens when app starts",
+                        icon = Icons.Default.Home
+                    )
+                    
+                    val tabs = listOf("playlist" to "Playlist", "local" to "Gallery", "direct_play" to "Stream")
+                    
+                    SegmentedButton(
+                        options = tabs,
+                        selectedOption = tabs.find { it.first == settingsState.defaultTab } ?: tabs[0],
+                        onOptionSelected = { viewModel.setDefaultTab(it.first) },
+                        labelProvider = { it.second },
+                        iconProvider = { tab ->
+                            Icon(
+                                imageVector = when(tab.first) {
+                                    "playlist" -> Icons.Default.PlaylistPlay
+                                    "local" -> Icons.Default.VideoLibrary
+                                    "direct_play" -> Icons.Default.Stream
+                                    else -> Icons.Default.Home
+                                },
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
     }
 }
 
@@ -159,235 +314,435 @@ fun ThemeStyleDialog(currentStyle: com.codesrahul.streamplus.data.settings.Theme
 @Composable
 fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
     val settingsState by viewModel.settings.collectAsState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Playlist & Channel Management") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+    var showIconDialog by remember { mutableStateOf(false) }
+    var showSortDialog by remember { mutableStateOf(false) }
+    var showQrDialog by remember { mutableStateOf(false) }
+    var showExportImportDialog by remember { mutableStateOf(false) }
+
+    // QR Share state
+    var qrUrlInput by remember { mutableStateOf("") }
+    var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
+
+    // Export launcher
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri: Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            try {
+                val playlists = viewModel.getAllPlaylistsOnce()
+                val jsonArray = JSONArray()
+                playlists.forEach { pl ->
+                    val obj = JSONObject().apply {
+                        put("name", pl.name)
+                        put("url", pl.url)
+                        put("userAgent", pl.userAgent)
+                        put("icon", pl.icon)
+                        put("color", pl.color)
+                    }
+                    jsonArray.put(obj)
+                }
+                context.contentResolver.openOutputStream(uri)?.use { out ->
+                    out.write(jsonArray.toString(2).toByteArray())
+                }
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "✅ Exported ${playlists.size} playlist(s)", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "❌ Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+        showExportImportDialog = false
+    }
+
+    // Import launcher
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            try {
+                val raw = context.contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: ""
+                val jsonArray = JSONArray(raw)
+                var count = 0
+                for (i in 0 until jsonArray.length()) {
+                    val obj = jsonArray.getJSONObject(i)
+                    viewModel.importPlaylist(
+                        name = obj.optString("name", "Playlist $i"),
+                        url = obj.optString("url", ""),
+                        userAgent = obj.optString("userAgent", "Auto"),
+                        icon = obj.optString("icon", "default"),
+                        color = obj.optInt("color", -16777216)
+                    )
+                    count++
+                }
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "✅ Imported $count playlist(s)", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "❌ Import failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+        showExportImportDialog = false
+    }
+
+    com.codesrahul.streamplus.ui.components.PremiumBackground {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = { Text("Playlist", fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                )
+            }
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                SettingsCard {
+                    SettingsClickableItem(
+                        title = "Default Playlist Icon",
+                        subtitle = settingsState.defaultPlaylistIcon,
+                        icon = Icons.Default.List,
+                        onClick = { showIconDialog = true },
+                        showDivider = true
+                    )
+                    
+                    SettingsClickableItem(
+                        title = "Sort Order",
+                        subtitle = settingsState.playlistSortOrder,
+                        icon = Icons.Default.SortByAlpha,
+                        onClick = { showSortDialog = true },
+                        showDivider = true
+                    )
+                    
+                    SettingsSwitchItem(
+                        title = "Mask Playlist URLs",
+                        subtitle = "Hide the actual URL for security & privacy",
+                        icon = Icons.Default.VpnKey,
+                        checked = settingsState.hidePlaylistUri,
+                        onCheckedChange = { viewModel.setHidePlaylistUri(it) },
+                        showDivider = true
+                    )
+                    
+                    SettingsClickableItem(
+                        title = "QR Share",
+                        subtitle = "Generate a QR code for any playlist URL",
+                        icon = Icons.Default.QrCode,
+                        onClick = { showQrDialog = true },
+                        showDivider = true
+                    )
+                    
+                    SettingsClickableItem(
+                        title = "Import & Export",
+                        subtitle = "Backup or restore your playlists data",
+                        icon = Icons.Default.Backup,
+                        onClick = { showExportImportDialog = true },
+                        showDivider = false
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+    }
+
+    // ── QR Share Dialog ────────────────────────────────────────────────────────
+    if (showQrDialog) {
+        AlertDialog(
+            onDismissRequest = { showQrDialog = false; qrBitmap = null },
+            title = { Text("QR Share") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    OutlinedTextField(
+                        value = qrUrlInput,
+                        onValueChange = { qrUrlInput = it; qrBitmap = null },
+                        label = { Text("Playlist URL") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    if (qrBitmap != null) {
+                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            Image(
+                                painter = androidx.compose.ui.graphics.painter.BitmapPainter(qrBitmap!!.asImageBitmap()),
+                                contentDescription = "QR Code",
+                                modifier = Modifier.size(220.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        // Share QR image via system sheet
+                        Button(
+                            onClick = {
+                                try {
+                                    val bmp = qrBitmap!!
+                                    val file = File(context.cacheDir, "streamplus_qr.png")
+                                    FileOutputStream(file).use { fos -> bmp.compress(Bitmap.CompressFormat.PNG, 100, fos) }
+                                    val shareUri = FileProvider.getUriForFile(
+                                        context,
+                                        "${context.packageName}.provider",
+                                        file
+                                    )
+                                    val intent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "image/png"
+                                        putExtra(Intent.EXTRA_STREAM, shareUri)
+                                        putExtra(Intent.EXTRA_TEXT, qrUrlInput)
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    context.startActivity(Intent.createChooser(intent, "Share Playlist QR"))
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Share failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Share, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Share QR Image")
+                        }
                     }
                 }
-            )
-        }
-    ) { padding ->
-        Column(modifier = Modifier.padding(padding)) {
-            SwitchPreference(
-                title = "Mask Playlist URI",
-                subtitle = "Hide the full playlist URL for privacy",
-                checked = settingsState.hidePlaylistUri,
-                onCheckedChange = { viewModel.setHidePlaylistUri(it) }
-            )
-            SwitchPreference(
-                title = "Disable Channel Logos",
-                subtitle = "Prevent channel icons from loading to save data",
-                checked = settingsState.hideChannelImage,
-                onCheckedChange = { viewModel.setHideChannelImage(it) }
-            )
-             SwitchPreference(
-                title = "Playlist Cache",
-                subtitle = "You can load cached playlists",
-                checked = settingsState.playlistCache,
-                onCheckedChange = { viewModel.setPlaylistCache(it) }
-            )
-        }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val url = qrUrlInput.trim()
+                        if (url.isBlank()) {
+                            Toast.makeText(context, "Please enter a URL", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        try {
+                            val size = 512
+                            val bitMatrix = MultiFormatWriter().encode(url, BarcodeFormat.QR_CODE, size, size)
+                            val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565)
+                            for (x in 0 until size) {
+                                for (y in 0 until size) {
+                                    bmp.setPixel(x, y, if (bitMatrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+                                }
+                            }
+                            qrBitmap = bmp
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Failed to generate QR: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                ) { Text("Generate") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showQrDialog = false; qrBitmap = null }) { Text("Close") }
+            }
+        )
+    }
+
+    // ── Import & Export Dialog ─────────────────────────────────────────────────
+    if (showExportImportDialog) {
+        AlertDialog(
+            onDismissRequest = { showExportImportDialog = false },
+            title = { Text("Import & Export") },
+            text = {
+                Column {
+                    Text(
+                        "Export saves all your playlists to a JSON file.\nImport loads playlists from a previously exported file.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Button(
+                        onClick = {
+                            exportLauncher.launch("streamplus_playlists_backup.json")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.FileUpload, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Export Playlists")
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = { importLauncher.launch("application/json") },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.FileDownload, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Import Playlists")
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showExportImportDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    // ── Icon & Sort dialogs ────────────────────────────────────────────────────
+    if (showIconDialog) {
+        val options = listOf("List", "Grid", "Card", "Compact")
+        AlertDialog(
+            onDismissRequest = { showIconDialog = false },
+            title = { Text("Default Playlist Icon") },
+            text = {
+                Column {
+                    options.forEach { option ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = (option == settingsState.defaultPlaylistIcon),
+                                    onClick = {
+                                        viewModel.setDefaultPlaylistIcon(option)
+                                        showIconDialog = false
+                                    }
+                                )
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (option == settingsState.defaultPlaylistIcon),
+                                onClick = null
+                            )
+                            Text(
+                                text = option,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 16.dp)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showIconDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showSortDialog) {
+        val options = listOf("Name", "Added Date", "Category", "Last Watched")
+        AlertDialog(
+            onDismissRequest = { showSortDialog = false },
+            title = { Text("Sort Order") },
+            text = {
+                Column {
+                    options.forEach { option ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = (option == settingsState.playlistSortOrder),
+                                    onClick = {
+                                        viewModel.setPlaylistSortOrder(option)
+                                        showSortDialog = false
+                                    }
+                                )
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (option == settingsState.playlistSortOrder),
+                                onClick = null
+                            )
+                            Text(
+                                text = option,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 16.dp)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showSortDialog = false }) { Text("Cancel") }
+            }
+        )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GeneralSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("General") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        val settingsState by viewModel.settings.collectAsState()
-        val context = LocalContext.current
-        var showResetDialog by remember { mutableStateOf(false) }
-        
-        Column(modifier = Modifier.padding(padding).verticalScroll(rememberScrollState()).padding(16.dp)) {
-             SwitchPreference(
-                title = "Allow Insecure Streams (Cleartext)",
-                subtitle = "Enable playback for non-HTTPS sources",
-                checked = settingsState.allowCleartext,
-                onCheckedChange = { viewModel.setAllowCleartext(it) }
-            )
-             SwitchPreference(
-                title = "Skip SSL Verification",
-                subtitle = "Bypass certificate validation errors (Caution)",
-                checked = settingsState.skipSslVerification,
-                onCheckedChange = { viewModel.setSkipSslVerification(it) }
-            )
-             SwitchPreference(
-                title = "Force Landscape Mode",
-                subtitle = "Always launch player in landscape orientation",
-                checked = settingsState.forceLandscape,
-                onCheckedChange = { viewModel.setForceLandscape(it) }
-            )
-             SwitchPreference(
-                title = "Volume gesture control",
-                subtitle = "Use gestures to control player volume",
-                checked = settingsState.volumeGestures,
-                onCheckedChange = { viewModel.setVolumeGestures(it) }
-            )
-             SwitchPreference(
-                title = "Brightness gesture control",
-                subtitle = "Use gestures to control player brightness",
-                checked = settingsState.brightnessGestures,
-                onCheckedChange = { viewModel.setBrightnessGestures(it) }
-            )
-             SwitchPreference(
-                title = "Resume playing",
-                subtitle = "Continue playing after interruptions",
-                checked = settingsState.resumePlaying,
-                onCheckedChange = { viewModel.setResumePlaying(it) }
-            )
-             SwitchPreference(
-                title = "Auto Picture-in-Picture",
-                subtitle = "Enter PiP mode automatically when leaving the app",
-                checked = settingsState.autoPip,
-                onCheckedChange = { viewModel.setAutoPip(it) }
-            )
-             SwitchPreference(
-                title = "Silent Error Skipping",
-                subtitle = "Suppress technical error dialogs during playback",
-                checked = settingsState.silentSkipping,
-                onCheckedChange = { viewModel.setSilentSkipping(it) }
-            )
-
-            Divider(modifier = Modifier.padding(vertical = 16.dp))
-
-            Button(
-                onClick = {
-                    try {
-                        context.cacheDir.deleteRecursively()
-                        android.widget.Toast.makeText(context, "Cache Cleared", android.widget.Toast.LENGTH_SHORT).show()
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
-            ) {
-                Text("Clear Cache")
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Button(
-                onClick = { showResetDialog = true },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer)
-            ) {
-                Text("Factory Reset App")
-            }
-        }
-
-        if (showResetDialog) {
-            AlertDialog(
-                onDismissRequest = { showResetDialog = false },
-                title = { Text("Factory Reset") },
-                text = { Text("Are you sure you want to reset all data and settings? This action cannot be undone and the app will restart.") },
-                confirmButton = {
-                    TextButton(onClick = {
-                        viewModel.factoryReset()
-                        android.widget.Toast.makeText(context, "App Reset Successfully", android.widget.Toast.LENGTH_LONG).show()
-                        // Force restart app
-                        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-                        val mainIntent = android.content.Intent.makeRestartActivityTask(intent?.component)
-                        context.startActivity(mainIntent)
-                        Runtime.getRuntime().exit(0)
-                    }) { Text("Reset") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showResetDialog = false }) { Text("Cancel") }
-                }
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
-    val settingsState by viewModel.settings.collectAsState(initial = com.codesrahul.streamplus.data.settings.AppSettings())
+    val settingsState by viewModel.settings.collectAsState()
     var showDecoderDialog by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Playback & Rendering") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
+    com.codesrahul.streamplus.ui.components.PremiumBackground {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = { Text("General", fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                )
+            }
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                SettingsCard {
+                    SettingsClickableItem(
+                        title = "Decoder Backend",
+                        subtitle = when(settingsState.decoderPriority) {
+                            1 -> "Application (Software)"
+                            2 -> "Hardware Only (Strict)"
+                            else -> "System Default (Hardware)"
+                        },
+                        icon = Icons.Default.Memory,
+                        onClick = { showDecoderDialog = true },
+                        showDivider = true
+                    )
+                    
+                    SettingsSwitchItem(
+                        title = "Tunneled Playback",
+                        subtitle = "Enable audio tunneling for supported 4K/HDR content",
+                        icon = Icons.Default.VerticalAlignCenter,
+                        checked = settingsState.enableTunneling,
+                        onCheckedChange = { viewModel.setEnableTunneling(it) }
+                    )
+                    
+                    SettingsSwitchItem(
+                        title = "Dolby Vision Support",
+                        subtitle = "Enable support for Dolby Vision Profile 7",
+                        icon = Icons.Default.CastConnected,
+                        checked = settingsState.dolbyVision,
+                        onCheckedChange = { viewModel.setDolbyVision(it) },
+                        showDivider = false
+                    )
                 }
-            )
-        }
-    ) { padding ->
-        Column(modifier = Modifier.padding(padding).verticalScroll(rememberScrollState())) {
-            
-            ListItem(
-                 headlineContent = { Text("Core Playback Configuration") },
-                 colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            )
-
-            ListItem(
-                headlineContent = { Text("Decoder Backend") },
-                supportingContent = { 
-                    Text(when(settingsState.decoderPriority) {
-                        1 -> "Application (Software)"
-                        2 -> "Hardware Only (Strict)"
-                        else -> "System Default (Hardware)"
-                    }) 
-                },
-                leadingContent = { Icon(Icons.Default.Memory, contentDescription = null) },
-                modifier = Modifier.clickable { showDecoderDialog = true }
-            )
-
-            SwitchPreference(
-                title = "Audio Tunneling",
-                subtitle = "Improve A/V sync on supported devices (4K/HDR)",
-                checked = settingsState.enableTunneling,
-                onCheckedChange = { viewModel.setEnableTunneling(it) }
-            )
-
-            SwitchPreference(
-                title = "Dolby Vision Support",
-                subtitle = "Enable Profile 7 compatibility mode",
-                checked = settingsState.dolbyVision,
-                onCheckedChange = { viewModel.setDolbyVision(it) }
-            )
-
-            SwitchPreference(
-                title = "Frame Rate Matching",
-                subtitle = "Sync display refresh rate to content (ignore check)",
-                checked = settingsState.disableFrameRateCheck,
-                onCheckedChange = { viewModel.setDisableFrameRateCheck(it) }
-            )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+            }
         }
     }
 
     if (showDecoderDialog) {
+        val options = listOf(
+            0 to "System Default (Hardware)",
+            1 to "Application (Software)",
+            2 to "Hardware Only (Strict)"
+        )
         AlertDialog(
             onDismissRequest = { showDecoderDialog = false },
             title = { Text("Decoder Backend") },
             text = {
                 Column {
-                    val options = listOf(
-                        0 to "System Default (Hardware)",
-                        1 to "Application (Software)",
-                        2 to "Hardware Only (Strict)"
-                    )
                     options.forEach { (value, label) ->
                         Row(
                             Modifier
@@ -417,6 +772,228 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             },
             confirmButton = {
                 TextButton(onClick = { showDecoderDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
+    val settingsState by viewModel.settings.collectAsState()
+    var showQualityDialog by remember { mutableStateOf(false) }
+    var showAudioDialog by remember { mutableStateOf(false) }
+    var showBufferDialog by remember { mutableStateOf(false) }
+
+    com.codesrahul.streamplus.ui.components.PremiumBackground {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = { Text("Video", fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                )
+            }
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                SettingsCard {
+                    SettingsClickableItem(
+                        title = "Video Quality",
+                        subtitle = settingsState.videoQuality,
+                        icon = Icons.Default.HighQuality,
+                        onClick = { showQualityDialog = true },
+                        showDivider = true
+                    )
+                    
+                    SettingsClickableItem(
+                        title = "Default Audio Track",
+                        subtitle = settingsState.defaultAudioLanguage,
+                        icon = Icons.Default.Audiotrack,
+                        onClick = { showAudioDialog = true },
+                        showDivider = true
+                    )
+
+                    SettingsClickableItem(
+                        title = "Network Buffer",
+                        subtitle = "${settingsState.networkBufferSize} seconds",
+                        icon = Icons.Default.Waves,
+                        onClick = { showBufferDialog = true },
+                        showDivider = true
+                    )
+                    
+                    SettingsSwitchItem(
+                        title = "Auto Frame Rate Matching",
+                        subtitle = "Switch display refresh rate to match video frame rate",
+                        icon = Icons.Default.Speed,
+                        checked = settingsState.autoFrameRate,
+                        onCheckedChange = { viewModel.setAutoFrameRate(it) }
+                    )
+                    
+                    SettingsSwitchItem(
+                        title = "Auto Picture-in-Picture",
+                        subtitle = "Switch to PiP when leaving the app",
+                        icon = Icons.Default.PictureInPicture,
+                        checked = settingsState.autoPip,
+                        onCheckedChange = { viewModel.setAutoPip(it) }
+                    )
+                    
+                    SettingsSwitchItem(
+                        title = "Skip Silence",
+                        subtitle = "Skip parts with silence on the audio stream",
+                        icon = Icons.Default.SkipNext,
+                        checked = settingsState.skipSilence,
+                        onCheckedChange = { viewModel.setSkipSilence(it) }
+                    )
+                    
+                    SettingsSwitchItem(
+                        title = "Repeat Toggle",
+                        subtitle = "Extra control to allow indefinitely loop video",
+                        icon = Icons.Default.Repeat,
+                        checked = settingsState.repeatMode,
+                        onCheckedChange = { viewModel.setRepeatMode(it) },
+                        showDivider = true
+                    )
+
+                    SettingsSwitchItem(
+                        title = "Force Widevine L3",
+                        subtitle = "Useful for devices with broken L1 certification (fixes black screen)",
+                        icon = Icons.Default.Security,
+                        checked = settingsState.forceWidevineL3,
+                        onCheckedChange = { viewModel.setForceWidevineL3(it) },
+                        showDivider = false
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+    }
+
+    if (showQualityDialog) {
+        val options = listOf("Auto (Recommended)", "High", "Medium", "Low", "Data Saver")
+        AlertDialog(
+            onDismissRequest = { showQualityDialog = false },
+            title = { Text("Video Quality") },
+            text = {
+                Column {
+                    options.forEach { option ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = (option == settingsState.videoQuality),
+                                    onClick = {
+                                        viewModel.setVideoQuality(option)
+                                        showQualityDialog = false
+                                    }
+                                )
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (option == settingsState.videoQuality),
+                                onClick = null
+                            )
+                            Text(
+                                text = option,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 16.dp)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showQualityDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showAudioDialog) {
+        val options = listOf("Auto", "English", "Hindi", "Spanish", "French", "German", "Russian", "Arabic", "Chinese", "Japanese", "Portuguese")
+        AlertDialog(
+            onDismissRequest = { showAudioDialog = false },
+            title = { Text("Default Audio Track") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    options.forEach { option ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = (option == settingsState.defaultAudioLanguage),
+                                    onClick = {
+                                        viewModel.setDefaultAudioLanguage(option)
+                                        showAudioDialog = false
+                                    }
+                                )
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (option == settingsState.defaultAudioLanguage),
+                                onClick = null
+                            )
+                            Text(
+                                text = option,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 16.dp)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAudioDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showBufferDialog) {
+        val options = listOf(10, 20, 30, 45, 60, 90, 120)
+        AlertDialog(
+            onDismissRequest = { showBufferDialog = false },
+            title = { Text("Network Buffer Size") },
+            text = {
+                Column {
+                    options.forEach { seconds ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = (seconds == settingsState.networkBufferSize),
+                                    onClick = {
+                                        viewModel.setNetworkBufferSize(seconds)
+                                        showBufferDialog = false
+                                    }
+                                )
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (seconds == settingsState.networkBufferSize),
+                                onClick = null
+                            )
+                            Text(
+                                text = "$seconds seconds",
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 16.dp)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showBufferDialog = false }) { Text("Cancel") }
             }
         )
     }
@@ -454,23 +1031,3 @@ fun ShortcutsSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
     }
 }
 
-@Composable
-fun SwitchPreference(
-    title: String,
-    subtitle: String? = null,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    icon: ImageVector? = null
-) {
-    ListItem(
-        headlineContent = { Text(title) },
-        supportingContent = subtitle?.let { { Text(it) } },
-        leadingContent = icon?.let { { Icon(it, contentDescription = null) } },
-        trailingContent = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange
-            )
-        }
-    )
-}

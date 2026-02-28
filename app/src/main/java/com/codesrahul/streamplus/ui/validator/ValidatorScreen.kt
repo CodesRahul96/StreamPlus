@@ -12,9 +12,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -58,14 +59,9 @@ fun ValidatorScreen(
         contract = ActivityResultContracts.CreateDocument("audio/x-mpegurl")
     ) { uri ->
         uri?.let {
-             // We need a way to write to this URI in Repository.
-             // But repository currently takes a String path.
-             // We'd need to refactor repository to take OutputStream or Context.
-             // For now, let's keep it simple and maybe just show a Toast that "Export Feature Coming Soon" 
-             // or try to fix it.
-             // Ideally we pass the URI to VM and VM uses ContentResolver (needs Context).
-             // Postponing strict export implementation to keep it simple, or we can pass context to VM (bad practice)
-             // or Repository.
+            context.contentResolver.openOutputStream(it)?.use { outputStream ->
+                viewModel.exportPlaylist(outputStream)
+            }
         }
     }
 
@@ -84,7 +80,7 @@ fun ValidatorScreen(
                 SuccessView(
                     items = state.items,
                     onValidate = { viewModel.startValidation() },
-                    onExport = { /* exportLauncher.launch("clean_playlist.m3u") */ }
+                    onExport = { exportLauncher.launch("clean_playlist.m3u") }
                 )
             }
             is ValidatorUiState.Error -> {
@@ -219,6 +215,21 @@ fun SuccessView(
                 )
                 Divider()
             }
+        }
+
+        // Export Button
+        Button(
+            onClick = onExport,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp, vertical = 8.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+            enabled = activeCount > 0
+        ) {
+            Icon(Icons.Default.Download, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Export Clean Playlist ($activeCount)")
         }
 
         // Actions

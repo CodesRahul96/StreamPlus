@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Theme.M3UValidator" parent="android:Theme.Material.Light.NoActionBar">
+    <style name="Theme.M3UValidator" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorPrimaryDark">@color/purple_700</item>
+        <item name="colorAccent">@color/teal_200</item>
         <item name="android:statusBarColor">@color/purple_700</item>
+        <item name="mediaRouteButtonStyle">@style/Widget.MediaRouter.MediaRouteButton</item>
+        <item name="mediaRouteTheme">@style/ThemeOverlay.MediaRouter.Dark</item>
+        <item name="android:colorBackground">@android:color/black</item>
     </style>
 </resources>

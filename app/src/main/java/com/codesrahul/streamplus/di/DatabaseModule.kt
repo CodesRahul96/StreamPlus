@@ -22,11 +22,17 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "stream_doctor_db"
-        ).build()
+        ).fallbackToDestructiveMigration()
+        .build()
     }
 
     @Provides
     fun providePlaylistDao(database: AppDatabase): PlaylistDao {
         return database.playlistDao()
+    }
+
+    @Provides
+    fun provideHistoryDao(database: AppDatabase): com.codesrahul.streamplus.data.local.HistoryDao {
+        return database.historyDao()
     }
 }

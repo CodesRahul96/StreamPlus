@@ -5,11 +5,12 @@ data class M3UItem(
     val url: String,
     val group: String = "",
     val logoUrl: String = "",
-    var status: StreamStatus = StreamStatus.UNKNOWN,
+    val status: StreamStatus = StreamStatus.UNKNOWN,
     val headers: Map<String, String> = emptyMap(),
     val drmHeaders: Map<String, String> = emptyMap(),
     val licenseUrl: String? = null,
     val drmScheme: String? = null,
+    val userAgent: String = "",
     val isPlaylist: Boolean = false
 )
 

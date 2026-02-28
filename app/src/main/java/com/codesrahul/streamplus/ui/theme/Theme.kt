@@ -67,30 +67,42 @@ fun StreamPlusTheme(
                 if (darkTheme) DarkColorScheme else LightColorScheme
             }
         }
-        ThemeStyle.IGNITE_BLAZE -> if (darkTheme) IgniteDark else IgniteLight
-        ThemeStyle.FROSTY_AURA -> if (darkTheme) FrostyDark else FrostyLight
-        ThemeStyle.EARTHEN_ELEGANCE -> if (darkTheme) EarthDark else EarthLight
-        ThemeStyle.ENCHANTED_GROVE -> if (darkTheme) GroveDark else GroveLight
-        ThemeStyle.RED_ROSE -> if (darkTheme) RoseDark else RoseLight
-        ThemeStyle.PITCH_BLACK -> {
+        ThemeStyle.IGNITE -> if (darkTheme) IgniteDark else IgniteLight
+        ThemeStyle.FROSTY -> if (darkTheme) FrostyDark else FrostyLight
+        ThemeStyle.GROVE -> if (darkTheme) GroveDark else GroveLight
+        ThemeStyle.MIDNIGHT -> {
             if (darkTheme) {
                 darkColorScheme(
                     primary = StreamPlusBlue,
                     onPrimary = Color.White,
                     primaryContainer = StreamPlusNavy,
                     onPrimaryContainer = Color.White,
-                    secondary = PurpleGrey80,
-                    onSecondary = Color.Black,
+                    secondary = Color(0xFF03A9F4),
+                    onSecondary = Color.White,
                     background = Color.Black,
                     onBackground = Color.White,
                     surface = Color.Black,
                     onSurface = Color.White,
-                    surfaceVariant = Color.Black,
+                    surfaceVariant = Color(0xFF121212),
                     onSurfaceVariant = Color.LightGray,
                     outline = Color.DarkGray
                 )
             } else {
-                LightColorScheme
+                lightColorScheme(
+                    primary = StreamPlusNavy,
+                    onPrimary = Color.White,
+                    primaryContainer = StreamPlusBlue,
+                    onPrimaryContainer = Color.White,
+                    secondary = Color(0xFF0288D1),
+                    onSecondary = Color.White,
+                    background = Color.White,
+                    onBackground = Color.Black,
+                    surface = Color.White,
+                    onSurface = Color.Black,
+                    surfaceVariant = Color(0xFFF5F5F5),
+                    onSurfaceVariant = Color.DarkGray,
+                    outline = Color.Gray
+                )
             }
         }
     }

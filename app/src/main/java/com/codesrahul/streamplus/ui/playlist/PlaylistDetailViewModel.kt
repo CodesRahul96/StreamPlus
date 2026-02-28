@@ -6,9 +6,12 @@ import androidx.lifecycle.viewModelScope
 import com.codesrahul.streamplus.domain.model.M3UItem
 import com.codesrahul.streamplus.domain.repository.PlaylistRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -19,7 +22,7 @@ class PlaylistDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val playlistId: String = savedStateHandle["playlistId"] ?: ""
+    private val playlistId: String = savedStateHandle.get<String>("playlistId") ?: ""
     private val _playlist = MutableStateFlow<com.codesrahul.streamplus.data.local.PlaylistEntity?>(null)
     val playlist = _playlist.asStateFlow()
 
@@ -29,32 +32,62 @@ class PlaylistDetailViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
+
+    private val _selectedGroup = MutableStateFlow("All")
+    val selectedGroup = _selectedGroup.asStateFlow()
+
+    val filteredChannels = combine(_channels, _searchQuery, _selectedGroup) { channels, query, group ->
+        if (query.isBlank() && group == "All") {
+            channels
+        } else {
+            // Processing large channel lists on Default dispatcher to avoid UI lag
+            kotlinx.coroutines.withContext(Dispatchers.Default) {
+                channels.filter { ch ->
+                    (group == "All" || ch.group == group) &&
+                    (ch.name.contains(query, ignoreCase = true) || ch.url.contains(query, ignoreCase = true))
+                }
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val groups = _channels.map { channels ->
+        // Extracting unique groups on Default dispatcher
+        kotlinx.coroutines.withContext(Dispatchers.Default) {
+            buildList {
+                add("All")
+                channels.map { it.group }
+                    .distinct()
+                    .filter { it.isNotBlank() }
+                    .sorted()
+                    .forEach { add(it) }
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), listOf("All"))
+
     init {
         viewModelScope.launch {
             val id = playlistId.toIntOrNull()
             if (id != null) {
                 repository.getPlaylist(id).collect { entity ->
                     if (entity != null) {
+                        val prevUrl = _playlist.value?.url
                         _playlist.value = entity
-                        loadChannels(entity.url, entity.userAgent)
+                        // Only load channels when the URL actually changes (not on every Room update)
+                        if (prevUrl != entity.url) {
+                            loadChannels(entity.url, entity.userAgent)
+                        }
                     }
                 }
             } else if (playlistId.startsWith("http")) {
-                // It's a direct URL (possibly base64 encoded or raw if handled by nav)
                 val decodedUrl = try {
                     java.net.URLDecoder.decode(playlistId, "UTF-8")
-                } catch (e: Exception) {
-                    playlistId
-                }
-                
+                } catch (e: Exception) { playlistId }
                 val name = savedStateHandle.get<String>("name") ?: "Sub Playlist"
                 val ua = savedStateHandle.get<String>("userAgent") ?: "Auto"
-                
                 val tempEntity = com.codesrahul.streamplus.data.local.PlaylistEntity(
-                    id = -1,
-                    name = name,
-                    url = decodedUrl,
-                    userAgent = ua
+                    id = -1, name = name, url = decodedUrl, userAgent = ua
                 )
                 _playlist.value = tempEntity
                 loadChannels(decodedUrl, ua)
@@ -70,8 +103,19 @@ class PlaylistDetailViewModel @Inject constructor(
         }
     }
 
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun setSelectedGroup(group: String) {
+        _selectedGroup.value = group
+    }
+
+    private var loadChannelsJob: kotlinx.coroutines.Job? = null
+
     private fun loadChannels(url: String, userAgent: String?) {
-        viewModelScope.launch {
+        loadChannelsJob?.cancel()
+        loadChannelsJob = viewModelScope.launch {
             _isLoading.value = true
             try {
                 _channels.value = repository.loadPlaylist(url, userAgent)

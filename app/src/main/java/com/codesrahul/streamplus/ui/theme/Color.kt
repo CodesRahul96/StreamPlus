@@ -38,3 +38,12 @@ val RoseTertiary = Color(0xFFF48FB1)
 // StreamPlus Signature (for Pitch Black)
 val StreamPlusBlue = Color(0xFF2196F3)
 val StreamPlusNavy = Color(0xFF0D47A1)
+
+// Premium Gradients
+val PremiumDarkGradientStart = Color(0xFF0F2027)
+val PremiumDarkGradientCenter = Color(0xFF203A43)
+val PremiumDarkGradientEnd = Color(0xFF2C5364)
+
+val PremiumLightGradientStart = Color(0xFFFFFFFF)
+val PremiumLightGradientCenter = Color(0xFFECE9E6)
+val PremiumLightGradientEnd = Color(0xFFECE9E6)

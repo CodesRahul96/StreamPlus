@@ -12,10 +12,29 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import com.codesrahul.streamplus.data.local.PlaylistEntity
+import com.codesrahul.streamplus.domain.repository.PlaylistRepository
+import kotlinx.coroutines.flow.first
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val playlistRepository: PlaylistRepository
 ) : ViewModel() {
+
+    /** One-shot snapshot of all playlists for export. */
+    suspend fun getAllPlaylistsOnce(): List<PlaylistEntity> =
+        playlistRepository.getAllPlaylists().first()
+
+    /** Insert a single playlist from an import operation. */
+    fun importPlaylist(name: String, url: String, userAgent: String, icon: String, color: Int) {
+        viewModelScope.launch {
+            playlistRepository.insertPlaylist(
+                PlaylistEntity(name = name, url = url, userAgent = userAgent, icon = icon, color = color)
+            )
+        }
+    }
+
 
     val settings: StateFlow<AppSettings> = settingsRepository.settings
         .stateIn(
@@ -102,5 +121,57 @@ class SettingsViewModel @Inject constructor(
 
     fun setSilentSkipping(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setSilentSkipping(enabled) }
+    }
+
+    fun setHideNavLabels(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setHideNavLabels(enabled) }
+    }
+
+    fun setDefaultTab(tab: String) {
+        viewModelScope.launch { settingsRepository.setDefaultTab(tab) }
+    }
+
+    fun setVideoQuality(quality: String) {
+        viewModelScope.launch { settingsRepository.setVideoQuality(quality) }
+    }
+
+    fun setAutoFrameRate(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setAutoFrameRate(enabled) }
+    }
+
+    fun setSkipSilence(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setSkipSilence(enabled) }
+    }
+
+    fun setRepeatMode(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setRepeatMode(enabled) }
+    }
+
+    fun setDefaultPlaylistIcon(icon: String) {
+        viewModelScope.launch { settingsRepository.setDefaultPlaylistIcon(icon) }
+    }
+
+    fun setPlaylistSortOrder(order: String) {
+        viewModelScope.launch { settingsRepository.setPlaylistSortOrder(order) }
+    }
+
+    fun setDefaultAudioLanguage(language: String) {
+        viewModelScope.launch { settingsRepository.setDefaultAudioLanguage(language) }
+    }
+
+    fun setNetworkBufferSize(seconds: Int) {
+        viewModelScope.launch { settingsRepository.setNetworkBufferSize(seconds) }
+    }
+
+    fun setForceWidevineL3(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setForceWidevineL3(enabled) }
+    }
+
+    fun setApplyEmbeddedSubtitles(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setApplyEmbeddedSubtitles(enabled) }
+    }
+
+    fun setUseBoldTypeface(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setUseBoldTypeface(enabled) }
     }
 }

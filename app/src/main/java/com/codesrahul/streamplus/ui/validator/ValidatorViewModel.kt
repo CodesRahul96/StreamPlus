@@ -77,15 +77,22 @@ class ValidatorViewModel @Inject constructor(
              // Actually, the user wants "Modern, Bugless". A progress bar that doesn't move is bad.
              // Redesign: We will validate in chunks and update progress.
              
-             val chunkSize = 10
+             val results = mutableListOf<M3UItem>()
+             val chunkSize = 20
              val chunks = currentItems.chunked(chunkSize)
              var processedCount = 0
              
-             val results = chunks.flatMap { chunk ->
-                 val validatedChunk = repository.validatePlaylist(chunk)
-                 processedCount += chunk.size
-                 _uiState.value = ValidatorUiState.Validating(processedCount, total, "Checking...")
-                 validatedChunk
+             for (chunk in chunks) {
+                 try {
+                     val validatedChunk = repository.validatePlaylist(chunk)
+                     results.addAll(validatedChunk)
+                     processedCount += chunk.size
+                     _uiState.value = ValidatorUiState.Validating(processedCount, total, "Checking items...")
+                 } catch (e: Exception) {
+                     processedCount += chunk.size
+                     results.addAll(chunk) // Fallback to original items on total failure of chunk
+                     _uiState.value = ValidatorUiState.Validating(processedCount, total, "Retrying...")
+                 }
              }
              
              currentItems = results
@@ -93,18 +100,15 @@ class ValidatorViewModel @Inject constructor(
         }
     }
     
-    fun exportCleanPlaylist(filePath: String) {
+    fun exportPlaylist(outputStream: java.io.OutputStream) {
         viewModelScope.launch {
             val cleanItems = currentItems.filter { it.status == StreamStatus.ACTIVE }
             if (cleanItems.isEmpty()) {
                  _uiState.update { ValidatorUiState.Error("No active streams to export") }
                  return@launch
             }
-            val success = repository.savePlaylist(cleanItems, filePath)
-            if (success) {
-                 // Maybe show a toast or event?
-                 // For now, staying in Success state
-            } else {
+            val success = repository.savePlaylist(cleanItems, outputStream)
+            if (!success) {
                  _uiState.update { ValidatorUiState.Error("Failed to save playlist") }
             }
         }

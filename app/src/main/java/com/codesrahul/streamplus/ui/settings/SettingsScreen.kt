@@ -1,32 +1,42 @@
 package com.codesrahul.streamplus.ui.settings
 
+import com.codesrahul.streamplus.data.settings.ThemeMode
+import com.codesrahul.streamplus.data.settings.ThemeStyle
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.Brush
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ShortText
-import androidx.compose.material.icons.filled.VideoSettings
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp 
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 
+// Specific named color shades for icon containers (iOS-inspired)
+private val GreenApple  = Color(0xFF34C759)
+private val BlueSky     = Color(0xFF007AFF)
+private val PurpleVibe  = Color(0xFF5E5CE6)
+private val OrangeWarm  = Color(0xFFFF9500)
+private val RedAlpha    = Color(0xFFFF3B30)
+private val TealSea     = Color(0xFF5AC8FA)
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
@@ -42,34 +52,22 @@ fun SettingsScreen(
             )
         }
         composable("appearance") {
-            AppearanceSettings(
-                viewModel,
-                onBack = { navController.popBackStack() }
-            )
+            AppearanceSettings(viewModel, onBack = { navController.popBackStack() })
         }
         composable("playlist_channel") {
-            PlaylistChannelSettings(
-                viewModel,
-                onBack = { navController.popBackStack() }
-            )
+            PlaylistChannelSettings(viewModel, onBack = { navController.popBackStack() })
         }
         composable("general") {
-            GeneralSettings(
-                viewModel,
-                onBack = { navController.popBackStack() }
-            )
+            GeneralSettings(viewModel, onBack = { navController.popBackStack() })
         }
         composable("advance_video") {
-            AdvanceVideoSettings(
-                viewModel,
-                onBack = { navController.popBackStack() }
-            )
+            AdvanceVideoSettings(viewModel, onBack = { navController.popBackStack() })
         }
         composable("shortcuts") {
-            ShortcutsSettings(
-                viewModel,
-                onBack = { navController.popBackStack() }
-            )
+            ShortcutsSettings(viewModel, onBack = { navController.popBackStack() })
+        }
+        composable("accessibility") {
+            AccessibilitySettings(viewModel, onBack = { navController.popBackStack() })
         }
     }
 }
@@ -77,82 +75,205 @@ fun SettingsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
+    var showAboutDialog by remember { mutableStateOf(false) }
+    var showHelpDialog by remember { mutableStateOf(false) }
+
+    com.codesrahul.streamplus.ui.components.PremiumBackground {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text("Settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                )
+            }
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                // ── Aesthetics ───────────────────────────────────────────
+                SettingsSectionHeader("Aesthetics")
+                SettingsCard {
+                    SettingsClickableItem(
+                        title = "Appearance",
+                        subtitle = "Theme, colors and UI tweaks",
+                        icon = Icons.Default.Palette,
+                        iconColor = PurpleVibe,
+                        onClick = { onNavigate("appearance") },
+                        showDivider = false
+                    )
                 }
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-        ) {
-            SettingsSectionHeader("Appearance & UI")
-            SettingsCategoryItem(
-                title = "Appearance",
-                subtitle = "Theme mode, style, and accent colors",
-                icon = Icons.Default.Brush,
-                onClick = { onNavigate("appearance") },
-                iconContainerColor = MaterialTheme.colorScheme.primaryContainer
-            )
-            SettingsCategoryItem(
-                title = "Playlist and Channel",
-                subtitle = "Manage visibility and privacy",
-                icon = Icons.Default.List,
-                onClick = { onNavigate("playlist_channel") },
-                iconContainerColor = MaterialTheme.colorScheme.secondaryContainer
-            )
 
-            SettingsSectionHeader("Playback & Tech")
-            SettingsCategoryItem(
-                title = "General",
-                subtitle = "PiP, silent skipping, and gestures",
-                icon = Icons.Default.Settings,
-                onClick = { onNavigate("general") },
-                iconContainerColor = MaterialTheme.colorScheme.tertiaryContainer
-            )
-            SettingsCategoryItem(
-                title = "Playback & Rendering",
-                subtitle = "Decoders, tunneling, and HDR",
-                icon = Icons.Default.VideoSettings,
-                onClick = { onNavigate("advance_video") },
-                iconContainerColor = MaterialTheme.colorScheme.errorContainer
-            )
+                // ── Core Features ────────────────────────────────────────
+                SettingsSectionHeader("Playback")
+                SettingsCard {
+                    SettingsClickableItem(
+                        title = "Video",
+                        subtitle = "Quality, PiP and decoder",
+                        icon = Icons.Default.VideoSettings,
+                        iconColor = BlueSky,
+                        onClick = { onNavigate("advance_video") },
+                        showDivider = true
+                    )
+                    SettingsClickableItem(
+                        title = "General",
+                        subtitle = "Decoder priority and networking",
+                        icon = Icons.Default.Sync,
+                        iconColor = TealSea,
+                        onClick = { onNavigate("general") },
+                        showDivider = false
+                    )
+                }
 
-            SettingsSectionHeader("Accessibility")
-            SettingsCategoryItem(
-                title = "Shortcuts",
-                subtitle = "System captioning and shortcuts",
-                icon = Icons.Default.ShortText,
-                onClick = { onNavigate("shortcuts") },
-                iconContainerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-            
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            AppInfoFooter()
-            
-            Spacer(modifier = Modifier.height(24.dp))
+                // ── Management ───────────────────────────────────────────
+                SettingsSectionHeader("Management")
+                SettingsCard {
+                    SettingsClickableItem(
+                        title = "Playlist",
+                        subtitle = "Backups, security and organization",
+                        icon = Icons.Default.PlaylistPlay,
+                        iconColor = GreenApple,
+                        onClick = { onNavigate("playlist_channel") },
+                        showDivider = true
+                    )
+                    SettingsClickableItem(
+                        title = "Shortcuts",
+                        subtitle = "System captions and shortcuts",
+                        icon = Icons.Default.TouchApp,
+                        iconColor = OrangeWarm,
+                        onClick = { onNavigate("shortcuts") },
+                        showDivider = true
+                    )
+                    SettingsClickableItem(
+                        title = "Accessibility",
+                        subtitle = "Customize Accessibility settings",
+                        icon = Icons.Default.Accessibility,
+                        iconColor = BlueSky,
+                        onClick = { onNavigate("accessibility") },
+                        showDivider = false
+                    )
+                }
+
+                // ── App ──────────────────────────────────────────────────
+                SettingsSectionHeader("App")
+                SettingsCard {
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    val version = remember {
+                        try {
+                            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.6"
+                        } catch (e: Exception) { "1.0.6" }
+                    }
+                    SettingsClickableItem(
+                        title = "App Version",
+                        subtitle = version,
+                        icon = Icons.Default.Info,
+                        iconColor = TealSea,
+                        onClick = { /* Info */ },
+                        showDivider = true
+                    )
+                    SettingsClickableItem(
+                        title = "Share App",
+                        subtitle = "Share StreamPlus with friends",
+                        icon = Icons.Default.Share,
+                        iconColor = BlueSky,
+                        onClick = {
+                            val shareIntent = android.content.Intent().apply {
+                                action = android.content.Intent.ACTION_SEND
+                                putExtra(android.content.Intent.EXTRA_TEXT, "Check out StreamPlus for IPTV and local media: https://github.com/CodesRahul96/StreamPlus")
+                                type = "text/plain"
+                            }
+                            context.startActivity(android.content.Intent.createChooser(shareIntent, null))
+                        },
+                        showDivider = true
+                    )
+                    SettingsClickableItem(
+                        title = "About",
+                        subtitle = "Learn more about StreamPlus",
+                        icon = Icons.Default.Description,
+                        iconColor = BlueSky,
+                        onClick = { showAboutDialog = true },
+                        showDivider = false
+                    )
+                }
+
+                // ── Support ──────────────────────────────────────────────
+                SettingsSectionHeader("Support")
+                SettingsCard {
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    SettingsClickableItem(
+                        title = "Help & FAQ",
+                        subtitle = "Get help and find answers",
+                        icon = Icons.Default.Help,
+                        iconColor = BlueSky,
+                        onClick = { showHelpDialog = true },
+                        showDivider = true
+                    )
+                    SettingsClickableItem(
+                        title = "Send Feedback",
+                        subtitle = "Help us improve StreamPlus",
+                        icon = Icons.Default.Feedback,
+                        iconColor = TealSea,
+                        onClick = {
+                            try {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+                                    data = android.net.Uri.parse("mailto:")
+                                    putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf("codesrahul96@gmail.com"))
+                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "StreamPlus Feedback")
+                                }
+                                context.startActivity(intent)
+                            } catch (e: Exception) {}
+                        },
+                        showDivider = true
+                    )
+                    SettingsClickableItem(
+                        title = "Rate App",
+                        subtitle = "Rate StreamPlus on the store",
+                        icon = Icons.Default.Star,
+                        iconColor = OrangeWarm,
+                        onClick = {
+                            try {
+                                context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=${context.packageName}")))
+                            } catch (e: Exception) {
+                                context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/details?id=${context.packageName}")))
+                            }
+                        },
+                        showDivider = false
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+                AppInfoFooter()
+                Spacer(modifier = Modifier.height(32.dp))
+            }
         }
+    }
+
+    if (showAboutDialog) {
+        AboutDialog(onDismiss = { showAboutDialog = false })
+    }
+    if (showHelpDialog) {
+        HelpFaqDialog(onDismiss = { showHelpDialog = false })
     }
 }
 
 @Composable
 fun SettingsSectionHeader(title: String) {
     Text(
-        text = title,
-        style = MaterialTheme.typography.labelLarge,
+        text = title.uppercase(),
+        style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.primary,
         fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp)
+        letterSpacing = androidx.compose.ui.unit.TextUnit(1.2f, androidx.compose.ui.unit.TextUnitType.Sp),
+        modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 4.dp)
     )
 }
 
@@ -161,64 +282,62 @@ fun AppInfoFooter() {
     val context = androidx.compose.ui.platform.LocalContext.current
     val version = remember {
         try {
-            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            pInfo.versionName ?: "1.0.1"
-        } catch (e: Exception) {
-            "1.0.1"
-        }
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.1"
+        } catch (e: Exception) { "1.0.1" }
     }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 32.dp),
-        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        androidx.compose.material3.Divider(
-            modifier = Modifier.width(48.dp).padding(bottom = 24.dp),
-            thickness = 3.dp,
-            color = MaterialTheme.colorScheme.outlineVariant
-        )
-        
-        Text(
-            text = "StreamPlus",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.ExtraBold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        
-        Text(
-            text = "Version $version (Stable)",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-        )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Row(
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        // App icon + name badge
+        Box(
             modifier = Modifier
+                .size(56.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primary,
+                            MaterialTheme.colorScheme.tertiary
+                        )
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.PlayCircle, null, tint = Color.White, modifier = Modifier.size(32.dp))
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            "StreamPlus",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.ExtraBold
+        )
+        Text(
+            "v$version · Stable",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clip(CircleShape)
                 .clickable {
                     try {
                         val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/CodesRahul96"))
                         context.startActivity(intent)
                     } catch (e: Exception) {}
                 }
-                .background(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
-                )
-                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.Code,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.width(8.dp))
+            Icon(Icons.Default.Code, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = "Crafted with ♥ by CodesRahul",
+                "Crafted with ♥ by CodesRahul",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
@@ -238,18 +357,219 @@ fun SettingsCategoryItem(
     ListItem(
         headlineContent = { Text(title, fontWeight = FontWeight.SemiBold) },
         supportingContent = { Text(subtitle, style = MaterialTheme.typography.bodySmall) },
-        leadingContent = { 
+        leadingContent = {
             Surface(
-                shape = androidx.compose.foundation.shape.CircleShape,
+                shape = RoundedCornerShape(10.dp),
                 color = iconContainerColor,
                 modifier = Modifier.size(40.dp)
             ) {
-                Box(contentAlignment = androidx.compose.ui.Alignment.Center) {
-                    Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp))
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp))
                 }
             }
         },
-        trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+        trailingContent = {
+            Icon(Icons.Default.ChevronRight, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        },
         modifier = Modifier.clickable(onClick = onClick)
     )
+}
+
+// ── Accessibility Settings Screen ──────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AccessibilitySettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
+    val settingsState by viewModel.settings.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    com.codesrahul.streamplus.ui.components.PremiumBackground {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = { Text("Accessibility", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                )
+            }
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                SettingsSectionHeader("Accessibility")
+                SettingsCard {
+                    SettingsSwitchItem(
+                        title = "Embedded Styles",
+                        subtitle = "Apply embedded subtitle styles",
+                        icon = Icons.Default.Palette,
+                        iconColor = BlueSky,
+                        checked = settingsState.applyEmbeddedSubtitles,
+                        onCheckedChange = { viewModel.setApplyEmbeddedSubtitles(it) },
+                        showDivider = true
+                    )
+                    SettingsSwitchItem(
+                        title = "Bold Style",
+                        subtitle = "Use bold typeface as regular",
+                        icon = Icons.Default.TextFormat,
+                        iconColor = BlueSky,
+                        checked = settingsState.useBoldTypeface,
+                        onCheckedChange = { viewModel.setUseBoldTypeface(it) },
+                        showDivider = true
+                    )
+                    SettingsClickableItem(
+                        title = "Captioning Preferences",
+                        subtitle = "System subtitle settings",
+                        icon = Icons.Default.ClosedCaption,
+                        iconColor = TealSea,
+                        onClick = {
+                            try {
+                                val intent = android.content.Intent("android.settings.CAPTIONING_SETTINGS")
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                try {
+                                    val intent = android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                    context.startActivity(intent)
+                                } catch (ex: Exception) {}
+                            }
+                        },
+                        showDivider = false
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ── About & Help Dialogs ──────────────────────────────────────────────────
+
+@Composable
+fun AboutDialog(onDismiss: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val version = remember {
+        try {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.6"
+        } catch (e: Exception) { "1.0.6" }
+    }
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // App Logo Badge
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.PlayCircle, null, tint = Color.White, modifier = Modifier.size(48.dp))
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("StreamPlus", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                Text("v$version · Stable", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "StreamPlus is a modern, high-performance media player designed for IPTV and local media playback. It focuses on speed, stability, and a premium user experience.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                Divider(modifier = Modifier.alpha(0.2f))
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text("CRAFTED BY", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f), fontWeight = FontWeight.Bold)
+                Text("CodesRahul", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick = {
+                        try {
+                            context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/CodesRahul96")))
+                        } catch (e: Exception) {}
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Code, null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Visit GitHub")
+                }
+                
+                TextButton(onClick = onDismiss, modifier = Modifier.padding(top = 8.dp)) {
+                    Text("Close")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun HelpFaqDialog(onDismiss: () -> Unit) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth()
+            ) {
+                Text("Help & FAQ", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Column(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    FaqItem("How do I add a playlist?", "Go to the Playlists tab, click the '+' button, and enter your M3U URL or select a local file.")
+                    FaqItem("What is DRM?", "Digital Rights Management. Some channels require a license URL and a specific scheme (like Widevine) to play.")
+                    FaqItem("Why is my stream lagging?", "Check your internet connection or try changing the 'Network Buffer Size' in Settings > General.")
+                    FaqItem("How to use Picture-in-Picture?", "Enable 'Auto PiP' in Settings > Video settings. The player will minimize when you leave the app.")
+                    FaqItem("Can I play local videos?", "Yes, go to the Gallery tab to browse and play videos stored on your device.")
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(onClick = onDismiss, modifier = Modifier.align(Alignment.End), shape = RoundedCornerShape(12.dp)) {
+                    Text("Got it")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FaqItem(question: String, answer: String) {
+    Column {
+        Text(question, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(answer, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }

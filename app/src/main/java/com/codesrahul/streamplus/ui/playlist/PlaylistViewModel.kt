@@ -25,13 +25,15 @@ class PlaylistViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    fun addPlaylist(name: String, url: String, userAgent: String) {
+    fun addPlaylist(name: String, url: String, userAgent: String, icon: String = "default", color: Int = -16777216) {
         viewModelScope.launch {
             repository.insertPlaylist(
                 PlaylistEntity(
                     name = name,
                     url = url,
-                    userAgent = userAgent
+                    userAgent = userAgent,
+                    icon = icon,
+                    color = color
                 )
             )
         }

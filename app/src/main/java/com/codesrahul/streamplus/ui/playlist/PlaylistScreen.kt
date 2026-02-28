@@ -1,111 +1,180 @@
 package com.codesrahul.streamplus.ui.playlist
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.codesrahul.streamplus.data.local.PlaylistEntity
+import com.codesrahul.streamplus.data.settings.AppSettings
+import com.codesrahul.streamplus.ui.components.PremiumBackground
 import com.codesrahul.streamplus.ui.settings.SettingsViewModel
+import com.codesrahul.streamplus.util.UserAgentManager
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlaylistScreen(
     onPlaylistClick: (Int) -> Unit,
-    viewModel: PlaylistViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+    viewModel: PlaylistViewModel = hiltViewModel()
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
-    var showEditDialog by remember { mutableStateOf<com.codesrahul.streamplus.data.local.PlaylistEntity?>(null) }
+    var showEditDialog by remember { mutableStateOf<PlaylistEntity?>(null) }
     val playlists by viewModel.playlists.collectAsState()
+    val context = LocalContext.current
+    val filePickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri: android.net.Uri? ->
+        uri?.let { viewModel.importLocalPlaylist(context, it) }
+    }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Playlist") },
-                actions = {
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Menu")
-                    }
-                    val context = androidx.compose.ui.platform.LocalContext.current
-                    val filePickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-                        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
-                    ) { uri: android.net.Uri? ->
-                        uri?.let { viewModel.importLocalPlaylist(context, it) }
-                    }
-
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Add URL") },
-                            onClick = { 
-                                showMenu = false 
-                                showAddDialog = true
+    PremiumBackground {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text("Playlists", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            if (playlists.isNotEmpty()) {
+                                Text("${playlists.size} sources", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Import Local M3U") },
-                            onClick = { 
-                                showMenu = false 
-                                filePickerLauncher.launch("*/*") // Or application/octet-stream/vnd.apple.mpegurl
-                            }
-                        )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                    actions = {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Menu")
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Add URL") },
+                                onClick = {
+                                    showMenu = false
+                                    showAddDialog = true
+                                },
+                                leadingIcon = { Icon(Icons.Default.AddLink, null, modifier = Modifier.size(20.dp)) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Import M3U File") },
+                                onClick = {
+                                    showMenu = false
+                                    filePickerLauncher.launch("*/*")
+                                },
+                                leadingIcon = { Icon(Icons.Default.UploadFile, null, modifier = Modifier.size(20.dp)) }
+                            )
+                        }
                     }
-                }
-            )
-        }
-    ) { padding ->
-        if (playlists.isEmpty()) {
-            Box(
-                modifier = Modifier.padding(padding).fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                )
+            },
+            floatingActionButton = {
+                if (playlists.isNotEmpty()) {
+                    ExtendedFloatingActionButton(
+                        onClick = { showAddDialog = true },
+                        icon = { Icon(Icons.Default.Add, null) },
+                        text = { Text("New Playlist") },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        shape = RoundedCornerShape(16.dp)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "No playlist found",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Add a playlist to get started",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(onClick = { showAddDialog = true }) {
-                        Text("Add Playlist")
-                    }
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.padding(padding).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(playlists) { playlist ->
-                    PlaylistItem(
-                        playlist = playlist,
-                        onClick = { onPlaylistClick(playlist.id) },
-                        onEdit = { showEditDialog = playlist }
-                    )
+        ) { padding ->
+            if (playlists.isEmpty()) {
+                Box(
+                    modifier = Modifier.padding(padding).fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                            modifier = Modifier.size(100.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.PlaylistAdd,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
+                            text = "No Playlists Found",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Enter a M3U link or import a local file to start streaming your favorite channels.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(32.dp))
+                        Button(
+                            onClick = { showAddDialog = true },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.height(50.dp).fillMaxWidth(0.7f)
+                        ) {
+                            Icon(Icons.Default.Add, null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Add Playlist", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            } else {
+                val settingsState by hiltViewModel<SettingsViewModel>().settings.collectAsState(initial = AppSettings())
+                val sortedPlaylists = remember(playlists, settingsState.playlistSortOrder) {
+                    when (settingsState.playlistSortOrder) {
+                        "Name"       -> playlists.sortedBy { it.name }
+                        "Category"   -> playlists.sortedBy { it.icon }
+                        "Added Date" -> playlists.sortedByDescending { it.id }
+                        else         -> playlists
+                    }
+                }
+                LazyColumn(
+                    modifier = Modifier.padding(padding),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 80.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(sortedPlaylists, key = { it.id }) { playlist ->
+                        PlaylistItem(
+                            playlist = playlist,
+                            settingsState = settingsState,
+                            onClick = { onPlaylistClick(playlist.id) },
+                            onEdit = { showEditDialog = playlist }
+                        )
+                    }
                 }
             }
         }
@@ -113,10 +182,10 @@ fun PlaylistScreen(
 
     if (showAddDialog) {
         PlaylistDialog(
-            title = "Add Playlist URL",
-            confirmButtonText = "Add",
-            onConfirm = { name, url, userAgent ->
-                viewModel.addPlaylist(name, url, userAgent)
+            title = "Add Playlist",
+            confirmButtonText = "Save",
+            onConfirm = { name, url, userAgent, icon, color ->
+                viewModel.addPlaylist(name, url, userAgent, icon, color)
                 showAddDialog = false
             },
             onDismiss = { showAddDialog = false }
@@ -125,13 +194,15 @@ fun PlaylistScreen(
 
     showEditDialog?.let { playlist ->
         PlaylistDialog(
-            title = "Edit Playlist details",
+            title = "Edit Playlist",
             initialName = playlist.name,
             initialUrl = playlist.url,
             initialUserAgent = playlist.userAgent,
+            initialIcon = playlist.icon,
+            initialColor = playlist.color,
             confirmButtonText = "Update",
-            onConfirm = { name, url, userAgent ->
-                viewModel.updatePlaylist(playlist.copy(name = name, url = url, userAgent = userAgent))
+            onConfirm = { name, url, userAgent, icon, color ->
+                viewModel.updatePlaylist(playlist.copy(name = name, url = url, userAgent = userAgent, icon = icon, color = color))
                 showEditDialog = null
             },
             onDismiss = { showEditDialog = null },
@@ -145,39 +216,86 @@ fun PlaylistScreen(
 
 @Composable
 fun PlaylistItem(
-    playlist: com.codesrahul.streamplus.data.local.PlaylistEntity,
+    playlist: PlaylistEntity,
+    settingsState: AppSettings,
     onClick: () -> Unit,
     onEdit: () -> Unit
 ) {
-    val settingsRepository = hiltViewModel<SettingsViewModel>().settings.collectAsState()
-    val hideUri = settingsRepository.value.hidePlaylistUri
+    val hideUri = settingsState.hidePlaylistUri
+    val resolvedIcon = if (playlist.icon == "default") settingsState.defaultPlaylistIcon.lowercase() else playlist.icon.lowercase()
 
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.padding(12.dp).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Colored icon box
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        if (playlist.color != -16777216) Color(playlist.color).copy(alpha = 0.15f)
+                        else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = when (resolvedIcon) {
+                        "tv"       -> Icons.Default.Tv
+                        "movie"    -> Icons.Default.Movie
+                        "sports"   -> Icons.Default.SportsSoccer
+                        "music"    -> Icons.Default.MusicNote
+                        "news"     -> Icons.Default.Public
+                        "game"     -> Icons.Default.Games
+                        "code"     -> Icons.Default.Code
+                        "grid"     -> Icons.Default.GridView
+                        "card"     -> Icons.Default.ContactPage
+                        "compact"  -> Icons.Default.ViewHeadline
+                        else       -> Icons.Default.List
+                    },
+                    contentDescription = null,
+                    tint = if (playlist.color != -16777216) Color(playlist.color) else MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = playlist.name,
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 if (!hideUri) {
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = playlist.url,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
-            IconButton(onClick = onEdit) {
-                Icon(Icons.Default.Edit, contentDescription = "Edit")
+            
+            IconButton(onClick = onEdit, modifier = Modifier.size(40.dp)) {
+                Icon(
+                    Icons.Default.Settings,
+                    contentDescription = "Settings",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }
@@ -190,71 +308,60 @@ fun PlaylistDialog(
     initialName: String = "",
     initialUrl: String = "",
     initialUserAgent: String = "Auto",
+    initialIcon: String = "default",
+    initialColor: Int = -16777216,
     confirmButtonText: String,
-    onConfirm: (String, String, String) -> Unit,
+    onConfirm: (String, String, String, String, Int) -> Unit,
     onDismiss: () -> Unit,
     onDelete: (() -> Unit)? = null
 ) {
-    val UA_MAP = mapOf(
-        "Auto" to "Auto",
-        "Default" to "ExoPlayerLib/2.19.1",
-        "Chrome(Android)" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
-        "Chrome(PC)" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "IE(PC)" to "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko",
-        "Firefox(PC)" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
-        "iPhone" to "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
-        "Nokia" to "Nokia5230/5.0 (SymbianOS/9.4; U; Series60/5.0 Mozilla/5.0; Profile/MIDP-2.1 Configuration/CLDC-1.1 ) AppleWebkit/525 (KHTML, like Gecko) Safari/525",
-        "ExoPlayer" to "ExoPlayerLib/2.19.1"
-    )
-
     var name by remember { mutableStateOf(initialName) }
     var url by remember { mutableStateOf(initialUrl) }
+    var icon by remember { mutableStateOf(initialIcon) }
+    var color by remember { mutableStateOf(initialColor) }
     var isNameModified by remember { mutableStateOf(initialName.isNotEmpty()) }
 
-    // Store the display value for the dropdown, but we will pass the mapped value on confirm
-    var userAgentDisplay by remember { mutableStateOf(
-        when (initialUserAgent) {
-            "Auto" -> "Auto (Inbuilt)"
-            UA_MAP["Default"] -> "Default"
-            else -> UA_MAP.entries.find { it.value == initialUserAgent }?.key ?: "Custom"
-        }
-    ) }
-    var userAgentValue by remember { mutableStateOf(initialUserAgent.ifEmpty { UA_MAP["Default"]!! }) }
+    var userAgentDisplay by remember {
+        mutableStateOf(
+            when (initialUserAgent) {
+                "Auto" -> "Auto (Inbuilt)"
+                UserAgentManager.DEFAULT_UA -> "Default"
+                else -> UserAgentManager.presets.find { it.value == initialUserAgent }?.name ?: "Custom"
+            }
+        )
+    }
+    var userAgentValue by remember { mutableStateOf(initialUserAgent.ifEmpty { UserAgentManager.DEFAULT_UA }) }
     var isUserAgentExpanded by remember { mutableStateOf(false) }
+    val userAgentOptions = listOf("Auto (Inbuilt)", "Default") + UserAgentManager.presets.map { it.name } + "Custom"
 
-    val userAgentOptions = listOf(
-        "Auto (Inbuilt)",
-        "Default", 
-        "Chrome(Android)", 
-        "Chrome(PC)", 
-        "IE(PC)", 
-        "Firefox(PC)", 
-        "iPhone", 
-        "Nokia", 
-        "Custom"
-    )
-    
     var showCustomUADialog by remember { mutableStateOf(false) }
     var customUAInput by remember { mutableStateOf("") }
+
+    val icons = listOf("default", "tv", "movie", "sports", "music", "news", "game", "code")
+    val colors = listOf(
+        -16777216, 0xFF6200EE.toInt(), 0xFF007AFF.toInt(), 0xFF34C759.toInt(),
+        0xFFFF9500.toInt(), 0xFFFF3B30.toInt(), 0xFF5E5CE6.toInt(), 0xFF5AC8FA.toInt()
+    )
 
     if (showCustomUADialog) {
         AlertDialog(
             onDismissRequest = { showCustomUADialog = false },
-            title = { Text("Custom UserAgent") },
+            title = { Text("Custom User Agent") },
             text = {
                 OutlinedTextField(
                     value = customUAInput,
                     onValueChange = { customUAInput = it },
-                    label = { Text("Enter UserAgent string") },
-                    modifier = Modifier.fillMaxWidth()
+                    label = { Text("UA String") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
                 )
             },
             confirmButton = {
                 TextButton(onClick = {
-                    userAgentValue = customUAInput
+                    userAgentValue = customUAInput.ifBlank { UserAgentManager.DEFAULT_UA }
                     userAgentDisplay = "Custom"
                     showCustomUADialog = false
-                }) { Text("OK") }
+                }) { Text("Confirm") }
             },
             dismissButton = {
                 TextButton(onClick = { showCustomUADialog = false }) { Text("Cancel") }
@@ -264,22 +371,33 @@ fun PlaylistDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, style = MaterialTheme.typography.titleLarge) },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { 
-                        name = it
-                        isNameModified = true
-                    },
-                    label = { Text("Enter playlist name") },
-                    modifier = Modifier.fillMaxWidth()
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    if (onDelete != null) Icons.Default.Edit else Icons.Default.AddCircleOutline,
+                    null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
                 )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            }
+        },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it; isNameModified = true },
+                    label = { Text("Playlist Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
                     value = url,
-                    onValueChange = { newUrl -> 
+                    onValueChange = { newUrl ->
                         url = newUrl
                         if (!isNameModified && newUrl.isNotEmpty()) {
                             try {
@@ -288,31 +406,22 @@ fun PlaylistDialog(
                                 if (!lastSegment.isNullOrEmpty()) {
                                     var fileName = lastSegment
                                     val dotIndex = fileName.lastIndexOf('.')
-                                    if (dotIndex != -1) {
-                                        fileName = fileName.substring(0, dotIndex)
-                                    }
-                                    // Formatting: replace separators with spaces and capitalize
+                                    if (dotIndex != -1) fileName = fileName.substring(0, dotIndex)
                                     fileName = fileName.replace(Regex("[_\\-]"), " ")
-                                        .split(" ")
-                                        .joinToString(" ") { word -> 
-                                            word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.ROOT) else it.toString() } 
-                                        }
-                                        .trim()
-                                    
-                                    if (fileName.isNotEmpty()) {
-                                        name = fileName
-                                    }
+                                        .split(" ").joinToString(" ") { word ->
+                                            word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+                                        }.trim()
+                                    if (fileName.isNotEmpty()) name = fileName
                                 }
-                            } catch (e: Exception) {
-                                // Ignore parsing errors
-                            }
+                            } catch (e: Exception) {}
                         }
                     },
-                    label = { Text("Enter playlist url") },
-                    modifier = Modifier.fillMaxWidth()
+                    label = { Text("M3U URL or JSON Path") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    trailingIcon = { Icon(Icons.Default.Link, null, modifier = Modifier.size(20.dp)) }
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                
+                Spacer(modifier = Modifier.height(12.dp))
                 ExposedDropdownMenuBox(
                     expanded = isUserAgentExpanded,
                     onExpandedChange = { isUserAgentExpanded = it },
@@ -322,9 +431,13 @@ fun PlaylistDialog(
                         value = userAgentDisplay,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("UserAgent") },
+                        label = { Text("User Agent") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isUserAgentExpanded) },
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.menuAnchor().fillMaxWidth()
                     )
                     ExposedDropdownMenu(
@@ -335,15 +448,13 @@ fun PlaylistDialog(
                             DropdownMenuItem(
                                 text = { Text(option) },
                                 onClick = {
-                                    if (option == "Auto (Inbuilt)") {
-                                        userAgentDisplay = "Auto (Inbuilt)"
-                                        userAgentValue = "Auto"
-                                    } else if (option == "Custom") {
-                                        customUAInput = userAgentValue
-                                        showCustomUADialog = true
-                                    } else {
-                                        userAgentDisplay = option
-                                        userAgentValue = UA_MAP[option] ?: option
+                                    when (option) {
+                                        "Auto (Inbuilt)" -> { userAgentDisplay = option; userAgentValue = "Auto" }
+                                        "Custom" -> { customUAInput = userAgentValue; showCustomUADialog = true }
+                                        else -> {
+                                            userAgentDisplay = option
+                                            userAgentValue = UserAgentManager.getFullUserAgent(option)
+                                        }
                                     }
                                     isUserAgentExpanded = false
                                 }
@@ -351,25 +462,82 @@ fun PlaylistDialog(
                         }
                     }
                 }
+                
+                Spacer(modifier = Modifier.height(20.dp))
+                Text("Icon & Theme", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(bottom = 8.dp)
+                ) {
+                    items(icons) { iconKey ->
+                        val isSelected = icon == iconKey
+                        Surface(
+                            onClick = { icon = iconKey },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = when (iconKey) {
+                                        "tv"     -> Icons.Default.Tv
+                                        "movie"  -> Icons.Default.Movie
+                                        "sports" -> Icons.Default.SportsSoccer
+                                        "music"  -> Icons.Default.MusicNote
+                                        "news"   -> Icons.Default.Public
+                                        "game"   -> Icons.Default.Games
+                                        "code"   -> Icons.Default.Code
+                                        else     -> Icons.Default.List
+                                    },
+                                    contentDescription = null,
+                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(colors) { colorInt ->
+                        val isSelected = color == colorInt
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(if (colorInt == -16777216) MaterialTheme.colorScheme.onSurface else Color(colorInt))
+                                .clickable { color = colorInt }
+                                .border(
+                                    width = if (isSelected) 3.dp else 0.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                    shape = CircleShape
+                                )
+                        )
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(name, url, userAgentValue) },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
-            ) {
-                Text(confirmButtonText)
-            }
+                onClick = { if (name.isNotBlank() && url.isNotBlank()) onConfirm(name, url, userAgentValue, icon, color) },
+                enabled = name.isNotBlank() && url.isNotBlank(),
+                shape = RoundedCornerShape(10.dp)
+            ) { Text(confirmButtonText, fontWeight = FontWeight.Bold) }
         },
         dismissButton = {
             Row {
-                TextButton(onClick = onDismiss) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = onDismiss) { Text("Cancel") }
                 if (onDelete != null) {
                     Spacer(modifier = Modifier.width(8.dp))
-                    TextButton(onClick = onDelete, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
-                        Text("Delete")
+                    TextButton(onClick = onDelete, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { 
+                        Text("Delete", fontWeight = FontWeight.Bold) 
                     }
                 }
             }

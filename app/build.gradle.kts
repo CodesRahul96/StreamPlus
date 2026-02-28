@@ -62,6 +62,7 @@ android {
 dependencies {
 
     implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
     implementation(platform("androidx.compose:compose-bom:2023.08.00"))
@@ -103,8 +104,14 @@ dependencies {
     implementation("androidx.media3:media3-ui:$media3Version")
     implementation("androidx.media3:media3-common:$media3Version")
     implementation("androidx.media3:media3-datasource-okhttp:$media3Version")
-    implementation("androidx.media3:media3-exoplayer-hls:$media3Version")
     implementation("androidx.media3:media3-exoplayer-dash:$media3Version")
+    implementation("androidx.media3:media3-exoplayer-hls:$media3Version")
+    implementation("androidx.media3:media3-exoplayer-rtsp:$media3Version")
+    implementation("androidx.media3:media3-exoplayer-smoothstreaming:$media3Version")
+    implementation("androidx.media3:media3-datasource-rtmp:$media3Version")
+    implementation("androidx.media3:media3-cast:$media3Version")
+    implementation("com.google.android.gms:play-services-cast-framework:21.4.0")
+    implementation("androidx.mediarouter:mediarouter:1.6.0")
 
     // Coil for Images
     implementation("io.coil-kt:coil-compose:2.5.0")
@@ -112,6 +119,9 @@ dependencies {
     
     // Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+
+    // QR Code generation
+    implementation("com.google.zxing:core:3.5.3")
 
     // ConstraintLayout
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")

@@ -6,7 +6,7 @@ import java.io.InputStream
 interface PlaylistRepository {
     suspend fun parsePlaylist(inputStream: InputStream): List<M3UItem>
     suspend fun validatePlaylist(items: List<M3UItem>): List<M3UItem>
-    suspend fun savePlaylist(items: List<M3UItem>, filePath: String): Boolean
+    suspend fun savePlaylist(items: List<M3UItem>, outputStream: java.io.OutputStream): Boolean
     
     // Local Playlist Management
     fun getAllPlaylists(): kotlinx.coroutines.flow.Flow<List<com.codesrahul.streamplus.data.local.PlaylistEntity>>

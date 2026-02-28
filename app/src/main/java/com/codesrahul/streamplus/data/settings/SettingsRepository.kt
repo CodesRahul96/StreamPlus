@@ -21,7 +21,7 @@ enum class ThemeMode {
 }
 
 enum class ThemeStyle {
-    DYNAMIC, IGNITE_BLAZE, FROSTY_AURA, EARTHEN_ELEGANCE, ENCHANTED_GROVE, RED_ROSE, PITCH_BLACK
+    DYNAMIC, IGNITE, FROSTY, GROVE, MIDNIGHT
 }
 
 data class AppSettings(
@@ -32,7 +32,7 @@ data class AppSettings(
     val hideChannelImage: Boolean = false,
     val userAgent: String = "ExoPlayerLib/2.19.1",
     val allowCleartext: Boolean = true,
-    val skipSslVerification: Boolean = false,
+    val skipSslVerification: Boolean = true,
     val enableTunneling: Boolean = false,
     val preferSoftwareDecoder: Boolean = false,
     val forceLandscape: Boolean = false,
@@ -45,7 +45,24 @@ data class AppSettings(
     val dolbyVision: Boolean = false,
     val disableFrameRateCheck: Boolean = false,
     val autoPip: Boolean = false,
-    val silentSkipping: Boolean = false
+    val silentSkipping: Boolean = false,
+    
+    // New Screenshot features
+    val hideNavLabels: Boolean = false,
+    val defaultTab: String = "playlist",
+    val videoQuality: String = "Auto (Recommended)",
+    val autoFrameRate: Boolean = false,
+    val skipSilence: Boolean = false,
+    val repeatMode: Boolean = false,
+    val defaultPlaylistIcon: String = "List",
+    val playlistSortOrder: String = "Name",
+    val defaultAudioLanguage: String = "Auto",
+    val networkBufferSize: Int = 30, // seconds
+    val forceWidevineL3: Boolean = true,
+    
+    // Accessibility
+    val applyEmbeddedSubtitles: Boolean = true,
+    val useBoldTypeface: Boolean = false
 )
 
 @Singleton
@@ -74,6 +91,23 @@ class SettingsRepository @Inject constructor(
         val DISABLE_FRAME_RATE_CHECK = booleanPreferencesKey("disable_frame_rate_check")
         val AUTO_PIP = booleanPreferencesKey("auto_pip")
         val SILENT_SKIPPING = booleanPreferencesKey("silent_skipping")
+        
+        // New keys
+        val HIDE_NAV_LABELS = booleanPreferencesKey("hide_nav_labels")
+        val DEFAULT_TAB = stringPreferencesKey("default_tab")
+        val VIDEO_QUALITY = stringPreferencesKey("video_quality")
+        val AUTO_FRAME_RATE = booleanPreferencesKey("auto_frame_rate")
+        val SKIP_SILENCE = booleanPreferencesKey("skip_silence")
+        val REPEAT_MODE = booleanPreferencesKey("repeat_mode")
+        val DEFAULT_PLAYLIST_ICON = stringPreferencesKey("default_playlist_icon")
+        val PLAYLIST_SORT_ORDER = stringPreferencesKey("playlist_sort_order")
+        val DEFAULT_AUDIO_LANGUAGE = stringPreferencesKey("default_audio_language")
+        val NETWORK_BUFFER_SIZE = intPreferencesKey("network_buffer_size")
+        val FORCE_WIDEVINE_L3 = booleanPreferencesKey("force_widevine_l3")
+        
+        // Accessibility
+        val APPLY_EMBEDDED_SUBTITLES = booleanPreferencesKey("apply_embedded_subtitles")
+        val USE_BOLD_TYPEFACE = booleanPreferencesKey("use_bold_typeface")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -89,20 +123,37 @@ class SettingsRepository @Inject constructor(
             hideChannelImage = prefs[Keys.HIDE_CHANNEL_IMAGE] ?: false,
             userAgent = prefs[Keys.USER_AGENT] ?: "ExoPlayerLib/2.19.1",
             allowCleartext = prefs[Keys.ALLOW_CLEARTEXT] ?: true,
-            skipSslVerification = prefs[Keys.SKIP_SSL_VERIFICATION] ?: false,
+            skipSslVerification = prefs[Keys.SKIP_SSL_VERIFICATION] ?: true,
             enableTunneling = prefs[Keys.ENABLE_TUNNELING] ?: false,
             preferSoftwareDecoder = prefs[Keys.PREFER_SOFTWARE_DECODER] ?: false,
-            forceLandscape = prefs[Keys.FORCE_LANDSCAPE] ?: true,
-            volumeGestures = prefs[Keys.VOLUME_GESTURES] ?: true,
-            brightnessGestures = prefs[Keys.BRIGHTNESS_GESTURES] ?: true,
+            forceLandscape = prefs[Keys.FORCE_LANDSCAPE] ?: false,
+            volumeGestures = prefs[Keys.VOLUME_GESTURES] ?: false,
+            brightnessGestures = prefs[Keys.BRIGHTNESS_GESTURES] ?: false,
             resumePlaying = prefs[Keys.RESUME_PLAYING] ?: false,
             playlistCache = prefs[Keys.PLAYLIST_CACHE] ?: false,
             lastResizeMode = prefs[Keys.LAST_RESIZE_MODE] ?: 0,
             decoderPriority = prefs[Keys.DECODER_PRIORITY] ?: 0,
             dolbyVision = prefs[Keys.DOLBY_VISION] ?: false,
             disableFrameRateCheck = prefs[Keys.DISABLE_FRAME_RATE_CHECK] ?: false,
-            autoPip = prefs[Keys.AUTO_PIP] ?: true,
-            silentSkipping = prefs[Keys.SILENT_SKIPPING] ?: false
+            autoPip = prefs[Keys.AUTO_PIP] ?: false,
+            silentSkipping = prefs[Keys.SILENT_SKIPPING] ?: false,
+            
+            // New Screenshot features
+            hideNavLabels = prefs[Keys.HIDE_NAV_LABELS] ?: false,
+            defaultTab = prefs[Keys.DEFAULT_TAB] ?: "playlist",
+            videoQuality = prefs[Keys.VIDEO_QUALITY] ?: "Auto (Recommended)",
+            autoFrameRate = prefs[Keys.AUTO_FRAME_RATE] ?: false,
+            skipSilence = prefs[Keys.SKIP_SILENCE] ?: false,
+            repeatMode = prefs[Keys.REPEAT_MODE] ?: false,
+            defaultPlaylistIcon = prefs[Keys.DEFAULT_PLAYLIST_ICON] ?: "List",
+            playlistSortOrder = prefs[Keys.PLAYLIST_SORT_ORDER] ?: "Name",
+            defaultAudioLanguage = prefs[Keys.DEFAULT_AUDIO_LANGUAGE] ?: "Auto",
+            networkBufferSize = prefs[Keys.NETWORK_BUFFER_SIZE] ?: 30,
+            forceWidevineL3 = prefs[Keys.FORCE_WIDEVINE_L3] ?: true,
+            
+            // Accessibility
+            applyEmbeddedSubtitles = prefs[Keys.APPLY_EMBEDDED_SUBTITLES] ?: true,
+            useBoldTypeface = prefs[Keys.USE_BOLD_TYPEFACE] ?: false
         )
     }
 
@@ -184,6 +235,58 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setSilentSkipping(enabled: Boolean) {
         context.dataStore.edit { it[Keys.SILENT_SKIPPING] = enabled }
+    }
+
+    suspend fun setHideNavLabels(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.HIDE_NAV_LABELS] = enabled }
+    }
+
+    suspend fun setDefaultTab(tab: String) {
+        context.dataStore.edit { it[Keys.DEFAULT_TAB] = tab }
+    }
+
+    suspend fun setVideoQuality(quality: String) {
+        context.dataStore.edit { it[Keys.VIDEO_QUALITY] = quality }
+    }
+
+    suspend fun setAutoFrameRate(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.AUTO_FRAME_RATE] = enabled }
+    }
+
+    suspend fun setSkipSilence(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.SKIP_SILENCE] = enabled }
+    }
+
+    suspend fun setRepeatMode(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.REPEAT_MODE] = enabled }
+    }
+
+    suspend fun setDefaultPlaylistIcon(icon: String) {
+        context.dataStore.edit { it[Keys.DEFAULT_PLAYLIST_ICON] = icon }
+    }
+
+    suspend fun setPlaylistSortOrder(order: String) {
+        context.dataStore.edit { it[Keys.PLAYLIST_SORT_ORDER] = order }
+    }
+
+    suspend fun setDefaultAudioLanguage(language: String) {
+        context.dataStore.edit { it[Keys.DEFAULT_AUDIO_LANGUAGE] = language }
+    }
+
+    suspend fun setNetworkBufferSize(seconds: Int) {
+        context.dataStore.edit { it[Keys.NETWORK_BUFFER_SIZE] = seconds }
+    }
+
+    suspend fun setForceWidevineL3(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.FORCE_WIDEVINE_L3] = enabled }
+    }
+
+    suspend fun setApplyEmbeddedSubtitles(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.APPLY_EMBEDDED_SUBTITLES] = enabled }
+    }
+
+    suspend fun setUseBoldTypeface(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.USE_BOLD_TYPEFACE] = enabled }
     }
 
     suspend fun factoryReset() {
