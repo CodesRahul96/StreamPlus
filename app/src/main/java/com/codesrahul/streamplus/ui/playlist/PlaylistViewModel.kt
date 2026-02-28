@@ -56,11 +56,27 @@ class PlaylistViewModel @Inject constructor(
             try {
                 val contentResolver = context.contentResolver
                 val fileName = getFileName(context, uri) ?: "Local Playlist"
-                // For local files, we'll store the URI as the URL
+                
+                // Create internal directory for playlists
+                val playlistDir = File(context.filesDir, "playlists")
+                if (!playlistDir.exists()) playlistDir.mkdirs()
+                
+                // Generate a unique safe filename
+                val safeName = fileName.replace(Regex("[^a-zA-Z0-9.-]"), "_")
+                val localFile = File(playlistDir, "${System.currentTimeMillis()}_$safeName")
+                
+                // Copy the file
+                contentResolver.openInputStream(uri)?.use { input ->
+                    localFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                
+                // Save the local file's URI
                 repository.insertPlaylist(
                     PlaylistEntity(
                         name = fileName,
-                        url = uri.toString(),
+                        url = Uri.fromFile(localFile).toString(),
                         userAgent = "Default"
                     )
                 )
