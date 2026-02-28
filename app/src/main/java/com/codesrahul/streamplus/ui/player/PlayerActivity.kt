@@ -15,9 +15,11 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.activity.compose.setContent
 import androidx.annotation.OptIn
 import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -187,6 +189,7 @@ fun PlayerScreen(
     var showGestureOverlay by remember { mutableStateOf(false) }
     var gestureIcon by remember { mutableStateOf<ImageVector?>(null) }
     var gestureText by remember { mutableStateOf("") }
+    var gestureLevel by remember { mutableStateOf(0f) }
     
     // Seek Overlay State
     var showSeekOverlay by remember { mutableStateOf(false) }
@@ -642,6 +645,7 @@ fun PlayerScreen(
                                 win.attributes = lp
                                 gestureText = "Brightness: ${(newVal * 100).toInt()}%"
                                 gestureIcon = Icons.Default.BrightnessMedium
+                                gestureLevel = newVal
                                 showGestureOverlay = true
                             }
                         } else if (!isLeft && settingsState.volumeGestures) {
@@ -653,6 +657,7 @@ fun PlayerScreen(
                                 audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, target, 0)
                                 gestureText = "Volume: ${(target * 100 / max)}%"
                                 gestureIcon = if (target == 0) Icons.Default.VolumeOff else Icons.Default.VolumeUp
+                                gestureLevel = target.toFloat() / max
                                 showGestureOverlay = true
                             }
                         }
@@ -801,38 +806,57 @@ fun PlayerScreen(
             }
         }
 
-        // Indication Overlay
-        if (showGestureOverlay) {
-             Box(
-                modifier = Modifier.fillMaxSize(), 
-                contentAlignment = Alignment.Center
+
+    // Indication Overlay
+    if (showGestureOverlay) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Surface(
+                color = Color.Black.copy(alpha = 0.7f),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
             ) {
-                Surface(
-                    color = Color.Black.copy(alpha = 0.6f),
-                    shape = RoundedCornerShape(16.dp)
+                Column(
+                    modifier = Modifier.padding(horizontal = 32.dp, vertical = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    gestureIcon?.let {
+                        Icon(
+                            imageVector = it,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(42.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = gestureText,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    // Subtle Progress Bar
+                    Box(
+                        modifier = Modifier
+                            .width(120.dp)
+                            .height(4.dp)
+                            .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(2.dp))
                     ) {
-                        gestureIcon?.let {
-                             Icon(
-                                 imageVector = it, 
-                                 contentDescription = null, 
-                                 tint = Color.White,
-                                 modifier = Modifier.size(48.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = gestureText,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.White
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(gestureLevel)
+                                .background(Color.White, RoundedCornerShape(2.dp))
                         )
                     }
                 }
             }
         }
+    }
     }
 }
 

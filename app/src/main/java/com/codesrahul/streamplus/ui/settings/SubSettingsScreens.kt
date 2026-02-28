@@ -1002,31 +1002,69 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShortcutsSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
-     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Shortcuts") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
+    val settingsState by viewModel.settings.collectAsState()
+    val context = LocalContext.current
+
+    com.codesrahul.streamplus.ui.components.PremiumBackground {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = { Text("Shortcuts", fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                )
+            }
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                SettingsSectionHeader("Player Gestures")
+                SettingsCard {
+                    SettingsSwitchItem(
+                        title = "Volume Gestures",
+                        subtitle = "Swipe up/down on the right side to adjust volume",
+                        icon = Icons.Default.VolumeUp,
+                        checked = settingsState.volumeGestures,
+                        onCheckedChange = { viewModel.setVolumeGestures(it) },
+                        showDivider = true
+                    )
+                    SettingsSwitchItem(
+                        title = "Brightness Gestures",
+                        subtitle = "Swipe up/down on the left side to adjust brightness",
+                        icon = Icons.Default.BrightnessMedium,
+                        checked = settingsState.brightnessGestures,
+                        onCheckedChange = { viewModel.setBrightnessGestures(it) },
+                        showDivider = false
+                    )
                 }
-            )
-        }
-    ) { padding ->
-        Column(modifier = Modifier.padding(padding)) {
-            val context = LocalContext.current
-            ListItem(
-                 headlineContent = { Text("Captioning Preferences") },
-                 modifier = Modifier.clickable { 
-                     try {
-                        val intent = android.content.Intent(android.provider.Settings.ACTION_CAPTIONING_SETTINGS)
-                        context.startActivity(intent)
-                     } catch (e: Exception) {
-                         android.widget.Toast.makeText(context, "Cannot open captioning settings", android.widget.Toast.LENGTH_SHORT).show()
-                     }
-                 }
-            )
+
+                SettingsSectionHeader("System")
+                SettingsCard {
+                    SettingsClickableItem(
+                        title = "Captioning Preferences",
+                        subtitle = "System subtitle settings",
+                        icon = Icons.Default.ClosedCaption,
+                        onClick = {
+                            try {
+                                val intent = Intent(Settings.ACTION_CAPTIONING_SETTINGS)
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Cannot open captioning settings", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        showDivider = false
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+            }
         }
     }
 }
