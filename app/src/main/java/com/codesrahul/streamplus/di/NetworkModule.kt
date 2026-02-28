@@ -17,6 +17,7 @@ import javax.inject.Singleton
 object NetworkModule {
 
     @Provides
+    @Singleton
     fun provideOkHttpClient(settingsRepository: SettingsRepository): OkHttpClient {
         val settings = kotlinx.coroutines.runBlocking { settingsRepository.settings.first() }
         

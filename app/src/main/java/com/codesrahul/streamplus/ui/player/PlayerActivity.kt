@@ -135,9 +135,12 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        val autoPip = kotlinx.coroutines.runBlocking { settingsRepository.settings.first().autoPip }
-        if (autoPip) {
-            enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().build())
+        // Use lifecycleScope to avoid blocking the main thread with runBlocking
+        lifecycleScope.launch {
+            val autoPip = settingsRepository.settings.first().autoPip
+            if (autoPip) {
+                enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().build())
+            }
         }
     }
 }
@@ -182,8 +185,6 @@ fun PlayerScreen(
     // Resume Logic
     // Using a separate LaunchedEffect for resume so it doesn't re-trigger on other changes
     // We need to wait for player to be created, so we'll do this inside the player creation or a separate effect dependent on player
-    
-    // Gesture State
     
     // Gesture State
     var showGestureOverlay by remember { mutableStateOf(false) }
@@ -433,32 +434,33 @@ fun PlayerScreen(
         }
     }
 
-    // History Save Effect
-    LaunchedEffect(resolvedItem, exoPlayer.isPlaying) {
-        if (exoPlayer.isPlaying && resolvedItem.url.isNotBlank()) {
-            while (true) {
-                kotlinx.coroutines.delay(10000)
-                val pos = exoPlayer.currentPosition
-                val dur = exoPlayer.duration
-                if (pos > 5000) {
-                    try {
-                        historyRepository.saveProgress(
-                            url = resolvedItem.url,
-                            name = resolvedItem.name,
-                            logo = resolvedItem.logoUrl,
-                            group = resolvedItem.group,
-                            userAgent = resolvedItem.userAgent,
-                            cookie = cookie,
-                            referer = referer,
-                            origin = origin,
-                            licenseUrl = resolvedItem.licenseUrl,
-                            drmScheme = resolvedItem.drmScheme,
-                            position = pos,
-                            duration = if (dur == C.TIME_UNSET) 0L else dur
-                        )
-                    } catch (e: Exception) {
-                        Log.e("PlayerScreen", "Failed to save progress", e)
-                    }
+    // History Save Effect — ticks every 10s while player is alive, skips when paused
+    LaunchedEffect(resolvedItem, exoPlayer) {
+        if (resolvedItem.url.isBlank()) return@LaunchedEffect
+        while (true) {
+            kotlinx.coroutines.delay(10_000)
+            // Only persist when actually playing and past the 5s mark
+            if (!exoPlayer.isPlaying) continue
+            val pos = exoPlayer.currentPosition
+            val dur = exoPlayer.duration
+            if (pos > 5000) {
+                try {
+                    historyRepository.saveProgress(
+                        url = resolvedItem.url,
+                        name = resolvedItem.name,
+                        logo = resolvedItem.logoUrl,
+                        group = resolvedItem.group,
+                        userAgent = resolvedItem.userAgent,
+                        cookie = cookie,
+                        referer = referer,
+                        origin = origin,
+                        licenseUrl = resolvedItem.licenseUrl,
+                        drmScheme = resolvedItem.drmScheme,
+                        position = pos,
+                        duration = if (dur == C.TIME_UNSET) 0L else dur
+                    )
+                } catch (e: Exception) {
+                    Log.e("PlayerScreen", "Failed to save progress", e)
                 }
             }
         }

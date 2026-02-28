@@ -107,9 +107,21 @@ fun MainScreen() {
             exitTransition  = { fadeOut(animationSpec = tween(300)) }
         ) {
             composable("playlist") {
+                val context = androidx.compose.ui.platform.LocalContext.current
                 PlaylistScreen(
                     onPlaylistClick = { playlistId ->
                         navController.navigate("playlist_detail/$playlistId")
+                    },
+                    onChannelClick = { channel ->
+                        val intent = android.content.Intent(
+                            context,
+                            com.codesrahul.streamplus.ui.player.PlayerActivity::class.java
+                        ).apply {
+                            putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_URL, channel.url)
+                            putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_TITLE, channel.name)
+                            putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_CHANNEL_LOGO, channel.logoUrl)
+                        }
+                        context.startActivity(intent)
                     }
                 )
             }

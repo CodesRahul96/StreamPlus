@@ -3,6 +3,7 @@ package com.codesrahul.streamplus.ui.playlist
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.codesrahul.streamplus.data.local.FavoriteEntity
 import com.codesrahul.streamplus.domain.model.M3UItem
 import com.codesrahul.streamplus.domain.repository.PlaylistRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -38,11 +40,15 @@ class PlaylistDetailViewModel @Inject constructor(
     private val _selectedGroup = MutableStateFlow("All")
     val selectedGroup = _selectedGroup.asStateFlow()
 
+    // Favorite URLs set for fast O(1) lookup in the UI
+    val favoriteUrls = repository.getAllFavorites()
+        .map { list -> list.map { it.url }.toSet() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
     val filteredChannels = combine(_channels, _searchQuery, _selectedGroup) { channels, query, group ->
         if (query.isBlank() && group == "All") {
             channels
         } else {
-            // Processing large channel lists on Default dispatcher to avoid UI lag
             kotlinx.coroutines.withContext(Dispatchers.Default) {
                 channels.filter { ch ->
                     (group == "All" || ch.group == group) &&
@@ -50,21 +56,20 @@ class PlaylistDetailViewModel @Inject constructor(
                 }
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val groups = _channels.map { channels ->
-        // Extracting unique groups on Default dispatcher
         kotlinx.coroutines.withContext(Dispatchers.Default) {
             buildList {
                 add("All")
-                channels.map { it.group }
-                    .distinct()
-                    .filter { it.isNotBlank() }
-                    .sorted()
-                    .forEach { add(it) }
+                channels.map { it.group }.distinct().filter { it.isNotBlank() }.sorted().forEach { add(it) }
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), listOf("All"))
+    }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), listOf("All"))
 
     init {
         viewModelScope.launch {
@@ -74,21 +79,14 @@ class PlaylistDetailViewModel @Inject constructor(
                     if (entity != null) {
                         val prevUrl = _playlist.value?.url
                         _playlist.value = entity
-                        // Only load channels when the URL actually changes (not on every Room update)
-                        if (prevUrl != entity.url) {
-                            loadChannels(entity.url, entity.userAgent)
-                        }
+                        if (prevUrl != entity.url) loadChannels(entity.url, entity.userAgent)
                     }
                 }
             } else if (playlistId.startsWith("http")) {
-                val decodedUrl = try {
-                    java.net.URLDecoder.decode(playlistId, "UTF-8")
-                } catch (e: Exception) { playlistId }
+                val decodedUrl = try { java.net.URLDecoder.decode(playlistId, "UTF-8") } catch (e: Exception) { playlistId }
                 val name = savedStateHandle.get<String>("name") ?: "Sub Playlist"
                 val ua = savedStateHandle.get<String>("userAgent") ?: "Auto"
-                val tempEntity = com.codesrahul.streamplus.data.local.PlaylistEntity(
-                    id = -1, name = name, url = decodedUrl, userAgent = ua
-                )
+                val tempEntity = com.codesrahul.streamplus.data.local.PlaylistEntity(id = -1, name = name, url = decodedUrl, userAgent = ua)
                 _playlist.value = tempEntity
                 loadChannels(decodedUrl, ua)
             }
@@ -96,19 +94,30 @@ class PlaylistDetailViewModel @Inject constructor(
     }
 
     fun refresh() {
+        viewModelScope.launch { playlist.value?.let { loadChannels(it.url, it.userAgent) } }
+    }
+
+    fun setSearchQuery(query: String) { _searchQuery.value = query }
+
+    fun setSelectedGroup(group: String) { _selectedGroup.value = group }
+
+    fun toggleFavorite(item: M3UItem) {
+        val currentPlaylistId = _playlist.value?.id ?: -1
         viewModelScope.launch {
-            playlist.value?.let { entity ->
-                loadChannels(entity.url, entity.userAgent)
+            if (repository.isFavorite(item.url)) {
+                repository.removeFavorite(item.url)
+            } else {
+                repository.addFavorite(
+                    FavoriteEntity(
+                        url = item.url,
+                        name = item.name,
+                        logoUrl = item.logoUrl,
+                        groupTitle = item.group,
+                        playlistId = currentPlaylistId
+                    )
+                )
             }
         }
-    }
-
-    fun setSearchQuery(query: String) {
-        _searchQuery.value = query
-    }
-
-    fun setSelectedGroup(group: String) {
-        _selectedGroup.value = group
     }
 
     private var loadChannelsJob: kotlinx.coroutines.Job? = null

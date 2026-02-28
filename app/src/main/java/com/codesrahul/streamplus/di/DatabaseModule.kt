@@ -3,6 +3,8 @@ package com.codesrahul.streamplus.di
 import android.content.Context
 import androidx.room.Room
 import com.codesrahul.streamplus.data.local.AppDatabase
+import com.codesrahul.streamplus.data.local.FavoriteDao
+import com.codesrahul.streamplus.data.local.HistoryDao
 import com.codesrahul.streamplus.data.local.PlaylistDao
 import dagger.Module
 import dagger.Provides
@@ -23,16 +25,15 @@ object DatabaseModule {
             AppDatabase::class.java,
             "stream_doctor_db"
         ).fallbackToDestructiveMigration()
-        .build()
+            .build()
     }
 
     @Provides
-    fun providePlaylistDao(database: AppDatabase): PlaylistDao {
-        return database.playlistDao()
-    }
+    fun providePlaylistDao(database: AppDatabase): PlaylistDao = database.playlistDao()
 
     @Provides
-    fun provideHistoryDao(database: AppDatabase): com.codesrahul.streamplus.data.local.HistoryDao {
-        return database.historyDao()
-    }
+    fun provideHistoryDao(database: AppDatabase): HistoryDao = database.historyDao()
+
+    @Provides
+    fun provideFavoriteDao(database: AppDatabase): FavoriteDao = database.favoriteDao()
 }

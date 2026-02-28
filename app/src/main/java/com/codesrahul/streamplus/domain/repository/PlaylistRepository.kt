@@ -1,19 +1,31 @@
 package com.codesrahul.streamplus.domain.repository
 
+import com.codesrahul.streamplus.data.local.FavoriteEntity
+import com.codesrahul.streamplus.data.local.PlaylistEntity
 import com.codesrahul.streamplus.domain.model.M3UItem
+import kotlinx.coroutines.flow.Flow
 import java.io.InputStream
 
 interface PlaylistRepository {
     suspend fun parsePlaylist(inputStream: InputStream): List<M3UItem>
     suspend fun validatePlaylist(items: List<M3UItem>): List<M3UItem>
     suspend fun savePlaylist(items: List<M3UItem>, outputStream: java.io.OutputStream): Boolean
-    
+
     // Local Playlist Management
-    fun getAllPlaylists(): kotlinx.coroutines.flow.Flow<List<com.codesrahul.streamplus.data.local.PlaylistEntity>>
-    fun getPlaylist(id: Int): kotlinx.coroutines.flow.Flow<com.codesrahul.streamplus.data.local.PlaylistEntity?>
-    suspend fun insertPlaylist(playlist: com.codesrahul.streamplus.data.local.PlaylistEntity)
-    suspend fun deletePlaylist(playlist: com.codesrahul.streamplus.data.local.PlaylistEntity)
-    
+    fun getAllPlaylists(): Flow<List<PlaylistEntity>>
+    fun getPlaylist(id: Int): Flow<PlaylistEntity?>
+    suspend fun insertPlaylist(playlist: PlaylistEntity)
+    suspend fun deletePlaylist(playlist: PlaylistEntity)
+
     // Network
     suspend fun loadPlaylist(url: String, userAgent: String? = null): List<M3UItem>
+
+    // Favorites
+    fun getAllFavorites(): Flow<List<FavoriteEntity>>
+    suspend fun addFavorite(item: FavoriteEntity)
+    suspend fun removeFavorite(url: String)
+    suspend fun isFavorite(url: String): Boolean
+
+    // Global Search
+    suspend fun searchAllPlaylists(query: String): List<M3UItem>
 }

@@ -2,8 +2,9 @@ package com.codesrahul.streamplus.data.repository
 
 import android.content.Context
 import android.net.Uri
+import com.codesrahul.streamplus.data.local.FavoriteDao
+import com.codesrahul.streamplus.data.local.FavoriteEntity
 import com.codesrahul.streamplus.data.network.StreamChecker
-
 import com.codesrahul.streamplus.data.parser.StreamParserFactory
 import com.codesrahul.streamplus.data.parser.resolver.CompositeStreamResolver
 import com.codesrahul.streamplus.data.parser.resolver.HeaderResolver
@@ -11,10 +12,13 @@ import com.codesrahul.streamplus.data.parser.resolver.DrmResolver
 import com.codesrahul.streamplus.domain.model.M3UItem
 import com.codesrahul.streamplus.domain.model.StreamStatus
 import com.codesrahul.streamplus.domain.repository.PlaylistRepository
+import com.codesrahul.streamplus.data.settings.SettingsRepository
+import com.codesrahul.streamplus.data.settings.AppSettings
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.InputStream
@@ -24,8 +28,12 @@ class PlaylistRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val streamChecker: StreamChecker,
     private val playlistDao: com.codesrahul.streamplus.data.local.PlaylistDao,
-    private val client: okhttp3.OkHttpClient
+    private val favoriteDao: FavoriteDao,
+    private val client: okhttp3.OkHttpClient,
+    private val settingsRepository: SettingsRepository
 ) : PlaylistRepository {
+
+    private val playlistCache = java.util.concurrent.ConcurrentHashMap<String, List<M3UItem>>()
 
     private val resolver = CompositeStreamResolver(listOf(HeaderResolver(), DrmResolver()))
 
@@ -78,7 +86,14 @@ class PlaylistRepositoryImpl @Inject constructor(
     override suspend fun loadPlaylist(url: String, userAgent: String?): List<M3UItem> = withContext(Dispatchers.IO) {
         if (url.isBlank()) return@withContext emptyList()
         
-        if (url.startsWith("content://") || url.startsWith("file://")) {
+        val settings = settingsRepository.settings.first()
+        
+        // Check cache first if enabled
+        if (settings.playlistCache) {
+            playlistCache[url]?.let { return@withContext it }
+        }
+
+        val items = if (url.startsWith("content://") || url.startsWith("file://")) {
             try {
                 context.contentResolver.openInputStream(Uri.parse(url))?.use { inputStream ->
                     resolveUniversal(inputStream, url)
@@ -109,6 +124,11 @@ class PlaylistRepositoryImpl @Inject constructor(
                 emptyList()
             }
         }
+        
+        if (settings.playlistCache && items.isNotEmpty()) {
+            playlistCache[url] = items
+        }
+        items
     }
 
     override suspend fun parsePlaylist(inputStream: InputStream): List<M3UItem> = withContext(Dispatchers.IO) {
@@ -137,47 +157,42 @@ class PlaylistRepositoryImpl @Inject constructor(
 
     private suspend fun expandItems(items: List<M3UItem>, depth: Int = 0): List<M3UItem> = withContext(Dispatchers.IO) {
         if (depth >= 2) return@withContext items
-        val result = mutableListOf<M3UItem>()
-        for (item in items) {
-            try {
-                val lower = item.url.lowercase()
-                if (lower.contains(".m3u") || lower.contains(".m3u8") || lower.contains(".json") || lower.contains("/playlist") || lower.contains("/m3u")) {
-                    var handled = false
-                    try {
+        
+        val expandedResults = items.map { item ->
+            async {
+                try {
+                    val lower = item.url.lowercase()
+                    if (lower.contains(".m3u") || lower.contains(".m3u8") || lower.contains(".json") || lower.contains("/playlist") || lower.contains("/m3u")) {
                         val requestBuilder = okhttp3.Request.Builder().url(item.url)
                         for ((k, v) in item.headers) requestBuilder.header(k, v)
                         val request = requestBuilder.get().build()
+                        
                         client.newCall(request).execute().use { response ->
                             if (response.isSuccessful) {
                                 val bodyStream = response.body?.byteStream()
                                 if (bodyStream != null) {
                                     val parsed = resolveUniversal(bodyStream, item.url)
                                     if (parsed.isNotEmpty()) {
-                                        val adjusted = parsed.map { p ->
+                                        return@async parsed.map { p ->
                                             if (p.group.isBlank()) p.copy(group = item.name) else p
                                         }
-                                        result.addAll(adjusted)
-                                        handled = true
                                     }
                                 }
                             }
                         }
-                    } catch (e: Exception) {
-                        android.util.Log.e("PlaylistRepo", "Error parsing sub-playlist: ${item.url}", e)
                     }
-                    if (handled) continue
+                } catch (e: Exception) {
+                    android.util.Log.e("PlaylistRepo", "Error expanding item: ${item.url}", e)
                 }
-                result.add(item)
-            } catch (e: Exception) {
-                android.util.Log.e("PlaylistRepo", "Error expanding item: ${item.url}", e)
-                result.add(item)
+                listOf(item)
             }
-        }
+        }.awaitAll().flatten()
+
         // Recurse once more to expand any nested playlists found
-        if (result.any { it.url.lowercase().contains(".m3u") || it.url.lowercase().contains(".json") }) {
-            return@withContext expandItems(result, depth + 1)
+        if (expandedResults.any { it.url.lowercase().contains(".m3u") || it.url.lowercase().contains(".json") }) {
+            return@withContext expandItems(expandedResults, depth + 1)
         }
-        return@withContext result
+        return@withContext expandedResults
     }
 
     override fun getAllPlaylists() = playlistDao.getAllPlaylists()
@@ -191,5 +206,42 @@ class PlaylistRepositoryImpl @Inject constructor(
     override suspend fun deletePlaylist(playlist: com.codesrahul.streamplus.data.local.PlaylistEntity) {
         playlistDao.deletePlaylist(playlist)
     }
-}
 
+    // --- Favorites ---
+    override fun getAllFavorites() = favoriteDao.getAllFavorites()
+
+    override suspend fun addFavorite(item: FavoriteEntity) = favoriteDao.addFavorite(item)
+
+    override suspend fun removeFavorite(url: String) = favoriteDao.removeFavorite(url)
+
+    override suspend fun isFavorite(url: String) = favoriteDao.isFavorite(url)
+
+    // --- Global Search ---
+    override suspend fun searchAllPlaylists(query: String): List<M3UItem> = withContext(Dispatchers.IO) {
+        if (query.isBlank()) return@withContext emptyList()
+        val lowerQuery = query.lowercase()
+        val playlists = playlistDao.getAllPlaylistsList()
+        val settings = settingsRepository.settings.first()
+
+        // Use cached items when searching if enabled to avoid massive network amplification
+        val jobs = playlists.map { playlist ->
+            async {
+                try {
+                    // Try to get from cache first if enabled, fall back to loadPlaylist
+                    val items = if (settings.playlistCache) {
+                        playlistCache[playlist.url] ?: loadPlaylist(playlist.url, playlist.userAgent)
+                    } else {
+                        loadPlaylist(playlist.url, playlist.userAgent)
+                    }
+                    items.filter { item ->
+                        item.name.lowercase().contains(lowerQuery) ||
+                        item.group.lowercase().contains(lowerQuery)
+                    }
+                } catch (e: Exception) {
+                    emptyList()
+                }
+            }
+        }
+        jobs.awaitAll().flatten()
+    }
+}

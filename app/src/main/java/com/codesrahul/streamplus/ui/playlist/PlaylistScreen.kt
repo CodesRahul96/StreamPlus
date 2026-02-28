@@ -27,8 +27,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.codesrahul.streamplus.data.local.FavoriteEntity
 import com.codesrahul.streamplus.data.local.PlaylistEntity
+import com.codesrahul.streamplus.data.local.HistoryEntity
 import com.codesrahul.streamplus.data.settings.AppSettings
+import com.codesrahul.streamplus.domain.model.M3UItem
 import com.codesrahul.streamplus.ui.components.PremiumBackground
 import com.codesrahul.streamplus.ui.settings.SettingsViewModel
 import com.codesrahul.streamplus.util.UserAgentManager
@@ -38,13 +41,21 @@ import java.util.Locale
 @Composable
 fun PlaylistScreen(
     onPlaylistClick: (Int) -> Unit,
+    onChannelClick: (M3UItem) -> Unit = {},
     viewModel: PlaylistViewModel = hiltViewModel()
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf<PlaylistEntity?>(null) }
     val playlists by viewModel.playlists.collectAsState()
+    val favorites by viewModel.favorites.collectAsState()
+    val recentlyWatched by viewModel.recentlyWatched.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val searchResults by viewModel.searchResults.collectAsState()
+    val isSearching by viewModel.isSearching.collectAsState()
     val context = LocalContext.current
+    // Always hoist SettingsViewModel at top-level — never inside a conditional branch
+    val settingsState by hiltViewModel<SettingsViewModel>().settings.collectAsState(initial = AppSettings())
     val filePickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
     ) { uri: android.net.Uri? ->
@@ -135,7 +146,7 @@ fun PlaylistScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Enter a M3U link or import a local file to start streaming your favorite channels.",
+                            text = "Enter a M3U link or import a local file to start streaming your favourite channels.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                             textAlign = TextAlign.Center
@@ -153,7 +164,6 @@ fun PlaylistScreen(
                     }
                 }
             } else {
-                val settingsState by hiltViewModel<SettingsViewModel>().settings.collectAsState(initial = AppSettings())
                 val sortedPlaylists = remember(playlists, settingsState.playlistSortOrder) {
                     when (settingsState.playlistSortOrder) {
                         "Name"       -> playlists.sortedBy { it.name }
@@ -167,6 +177,158 @@ fun PlaylistScreen(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 80.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // --- Global Search Bar ---
+                    item {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = viewModel::onSearchQueryChange,
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("Search all playlists…") },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
+                                        Icon(Icons.Default.Close, contentDescription = "Clear")
+                                    }
+                                }
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
+
+                    // --- Search Results ---
+                    if (searchQuery.isNotEmpty()) {
+                        if (isSearching) {
+                            item {
+                                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator()
+                                }
+                            }
+                        } else if (searchResults.isEmpty()) {
+                            item {
+                                Text(
+                                    "No channels found for \"$searchQuery\"",
+                                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                    textAlign = TextAlign.Center,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else {
+                            item {
+                                Text(
+                                    "${searchResults.size} results",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
+                            }
+                            items(searchResults, key = { it.url }) { channel ->
+                                SearchResultItem(channel = channel, onClick = { onChannelClick(channel) })
+                            }
+                        }
+                        return@LazyColumn
+                    }
+
+                    // --- Recently Watched Carousel ---
+                    if (recentlyWatched.isNotEmpty()) {
+                        item {
+                            Column {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                ) {
+                                    Icon(Icons.Default.History, contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Recently Watched", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    contentPadding = PaddingValues(end = 16.dp)
+                                ) {
+                                    items(recentlyWatched, key = { it.url }) { entry ->
+                                        RecentlyWatchedCard(
+                                            entry = entry,
+                                            onClick = { onChannelClick(
+                                                M3UItem(
+                                                    name = entry.name,
+                                                    url = entry.url,
+                                                    logoUrl = entry.logoUrl ?: "",
+                                                    group = entry.group ?: "",
+                                                    userAgent = entry.userAgent ?: ""
+                                                )
+                                            )}
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // --- Favourites Carousel ---
+                    if (favorites.isNotEmpty()) {
+                        item {
+                            Column {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Favorite,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        "Favourites",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(Modifier.weight(1f))
+                                    Text(
+                                        "${favorites.size} channels",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    )
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    contentPadding = PaddingValues(end = 16.dp)
+                                ) {
+                                    items(favorites, key = { it.url }) { fav ->
+                                        FavouriteChannelCard(
+                                            favorite = fav,
+                                            onClick = {
+                                                onChannelClick(
+                                                    M3UItem(
+                                                        name = fav.name,
+                                                        url = fav.url,
+                                                        logoUrl = fav.logoUrl,
+                                                        group = fav.groupTitle
+                                                    )
+                                                )
+                                            },
+                                            onRemove = { viewModel.toggleFavorite(
+                                                M3UItem(name = fav.name, url = fav.url, logoUrl = fav.logoUrl, group = fav.groupTitle),
+                                                fav.playlistId
+                                            )}
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // --- Playlist list ---
                     items(sortedPlaylists, key = { it.id }) { playlist ->
                         PlaylistItem(
                             playlist = playlist,
@@ -536,11 +698,131 @@ fun PlaylistDialog(
                 TextButton(onClick = onDismiss) { Text("Cancel") }
                 if (onDelete != null) {
                     Spacer(modifier = Modifier.width(8.dp))
-                    TextButton(onClick = onDelete, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { 
-                        Text("Delete", fontWeight = FontWeight.Bold) 
+                    TextButton(onClick = onDelete, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+                        Text("Delete", fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
     )
+}
+
+@Composable
+fun SearchResultItem(channel: M3UItem, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+    ) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Channel logo
+            Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(44.dp)) {
+                if (channel.logoUrl.isNotBlank()) {
+                    coil.compose.AsyncImage(
+                        model = channel.logoUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                    )
+                } else {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Tv, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                    }
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(channel.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (channel.group.isNotBlank()) {
+                    Text(channel.group, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+            Icon(Icons.Default.PlayCircleOutline, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
+@Composable
+fun RecentlyWatchedCard(entry: com.codesrahul.streamplus.data.local.HistoryEntity, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier.width(140.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+    ) {
+        Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(52.dp)) {
+                if (!entry.logoUrl.isNullOrBlank()) {
+                    coil.compose.AsyncImage(
+                        model = entry.logoUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                    )
+                } else {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.PlayCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                    }
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(entry.name, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+        }
+    }
+}
+
+@Composable
+fun FavouriteChannelCard(
+    favorite: FavoriteEntity,
+    onClick: () -> Unit,
+    onRemove: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.width(130.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+    ) {
+        Box {
+            Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
+                    modifier = Modifier.size(52.dp)
+                ) {
+                    if (favorite.logoUrl.isNotBlank()) {
+                        coil.compose.AsyncImage(
+                            model = favorite.logoUrl,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                        )
+                    } else {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Tv, contentDescription = null, tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f), modifier = Modifier.size(26.dp))
+                        }
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    favorite.name,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center
+                )
+            }
+            // Remove favourite button (top-end)
+            IconButton(
+                onClick = onRemove,
+                modifier = Modifier.align(Alignment.TopEnd).size(28.dp).padding(4.dp)
+            ) {
+                Icon(
+                    Icons.Default.Favorite,
+                    contentDescription = "Remove from favourites",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+        }
+    }
 }

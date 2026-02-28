@@ -45,6 +45,7 @@ fun PlaylistDetailScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedGroup by viewModel.selectedGroup.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val favoriteUrls by viewModel.favoriteUrls.collectAsState()
     val settingsState by hiltViewModel<SettingsViewModel>().settings.collectAsState(initial = AppSettings())
     
     val context = LocalContext.current
@@ -156,7 +157,7 @@ fun PlaylistDetailScreen(
                                 "${channel.url}_${channel.name}_$index" 
                             }) { index ->
                                 val channel = filteredChannels[index]
-                                ChannelItem(channel, settingsState.hideChannelImage) {
+                                ChannelItem(channel, settingsState.hideChannelImage, isFavorite = channel.url in favoriteUrls, onToggleFavorite = { viewModel.toggleFavorite(channel) }) {
                                     if (isLoading) return@ChannelItem
                                     val lowerUrl = channel.url.lowercase()
                                     val isPlaylist = channel.isPlaylist ||
@@ -209,7 +210,7 @@ fun PlaylistDetailScreen(
 // -- Premium Channel Grid Card ----------------------------------------------
 
 @Composable
-fun ChannelItem(channel: M3UItem, hideImage: Boolean, onClick: () -> Unit) {
+fun ChannelItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean = false, onToggleFavorite: (() -> Unit)? = null, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -277,6 +278,24 @@ fun ChannelItem(channel: M3UItem, hideImage: Boolean, onClick: () -> Unit) {
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onTertiaryContainer,
                         modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            // Heart / Favorites button
+            if (onToggleFavorite != null) {
+                IconButton(
+                    onClick = onToggleFavorite,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(32.dp)
+                        .padding(4.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = if (isFavorite) "Remove from favourites" else "Add to favourites",
+                        tint = if (isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
