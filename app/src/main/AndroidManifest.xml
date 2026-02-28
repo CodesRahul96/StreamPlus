@@ -45,9 +45,7 @@
             android:supportsPictureInPicture="true"
             android:theme="@style/Theme.M3UValidator" />
 
-        <meta-data
-            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
-            android:value="com.codesrahul.streamplus.util.CastOptionsProvider" />
+
 
         <provider
             android:name="androidx.core.content.FileProvider"

@@ -9,7 +9,7 @@ import com.google.android.gms.cast.CastMediaControlIntent
 class CastOptionsProvider : OptionsProvider {
     override fun getCastOptions(context: Context): CastOptions {
         return CastOptions.Builder()
-            .setReceiverApplicationId(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_ID)
+            .setReceiverApplicationId("CC1AD845") // Default Media Receiver ID
             .build()
     }
 
