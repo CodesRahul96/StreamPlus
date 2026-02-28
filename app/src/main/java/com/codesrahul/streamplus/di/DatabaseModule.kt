@@ -36,4 +36,7 @@ object DatabaseModule {
 
     @Provides
     fun provideFavoriteDao(database: AppDatabase): FavoriteDao = database.favoriteDao()
+
+    @Provides
+    fun provideChannelDao(database: AppDatabase): com.codesrahul.streamplus.data.local.ChannelDao = database.channelDao()
 }

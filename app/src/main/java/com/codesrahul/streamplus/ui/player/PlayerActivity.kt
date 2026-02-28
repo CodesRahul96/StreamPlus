@@ -61,6 +61,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import com.google.android.gms.cast.framework.CastContext
+import com.google.android.gms.cast.framework.CastSession
+import com.google.android.gms.cast.framework.SessionManager
+import com.google.android.gms.cast.framework.SessionManagerListener
+import androidx.media3.cast.CastPlayer
+import androidx.media3.cast.DefaultMediaItemConverter
 import com.google.android.gms.cast.framework.CastButtonFactory
 import com.codesrahul.streamplus.data.drm.UnifiedMediaDrmCallback
 
@@ -76,6 +82,21 @@ class PlayerActivity : AppCompatActivity() {
 
     @Inject
     lateinit var historyRepository: com.codesrahul.streamplus.data.repository.HistoryRepository
+
+    private var castContext: CastContext? = null
+    private var castPlayer: CastPlayer? = null
+    private var sessionManager: SessionManager? = null
+    private val sessionManagerListener = object : SessionManagerListener<CastSession> {
+        override fun onSessionStarting(session: CastSession) {}
+        override fun onSessionStarted(session: CastSession, sessionId: String) { invalidateOptionsMenu() }
+        override fun onSessionStartFailed(session: CastSession, error: Int) {}
+        override fun onSessionEnding(session: CastSession) {}
+        override fun onSessionEnded(session: CastSession, error: Int) { invalidateOptionsMenu() }
+        override fun onSessionResuming(session: CastSession, sessionId: String) {}
+        override fun onSessionResumed(session: CastSession, wasSuspended: Boolean) { invalidateOptionsMenu() }
+        override fun onSessionResumeFailed(session: CastSession, error: Int) {}
+        override fun onSessionSuspended(session: CastSession, reason: Int) {}
+    }
 
     companion object {
         const val EXTRA_STREAM_URL = "extra_stream_url"
@@ -93,6 +114,15 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        try {
+            castContext = CastContext.getSharedInstance(this)
+            sessionManager = castContext?.sessionManager
+            castPlayer = CastPlayer(castContext!!, DefaultMediaItemConverter())
+        } catch (e: Exception) {
+            Log.e("PlayerActivity", "Cast initialization failed", e)
+        }
+
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
@@ -127,6 +157,7 @@ class PlayerActivity : AppCompatActivity() {
                     okHttpClientProvider = okHttpClientProvider,
                     settingsRepository = settingsRepository,
                     historyRepository = historyRepository,
+                    castPlayer = castPlayer,
                     onEnterPip = { enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().build()) }
                 )
             }
@@ -142,6 +173,21 @@ class PlayerActivity : AppCompatActivity() {
                 enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().build())
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        sessionManager?.addSessionManagerListener(sessionManagerListener, CastSession::class.java)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        sessionManager?.removeSessionManagerListener(sessionManagerListener, CastSession::class.java)
+    }
+
+    override fun onDestroy() {
+        castPlayer?.release()
+        super.onDestroy()
     }
 }
 
@@ -177,6 +223,7 @@ fun PlayerScreen(
     okHttpClientProvider: javax.inject.Provider<okhttp3.OkHttpClient>,
     settingsRepository: com.codesrahul.streamplus.data.settings.SettingsRepository,
     historyRepository: com.codesrahul.streamplus.data.repository.HistoryRepository,
+    castPlayer: androidx.media3.cast.CastPlayer? = null,
     onEnterPip: () -> Unit
 ) {
     val context = LocalContext.current
@@ -410,6 +457,39 @@ fun PlayerScreen(
         })
         
         player
+    }
+
+    // --- Active Player Logic (Exo vs Cast) ---
+    var activePlayer by remember { mutableStateOf<androidx.media3.common.Player>(exoPlayer) }
+    
+    // Listen for Cast session availability
+    DisposableEffect(castPlayer) {
+        val listener = object : androidx.media3.common.Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (castPlayer?.isCastSessionAvailable == true) {
+                    activePlayer = castPlayer
+                    if (exoPlayer.isPlaying) exoPlayer.pause()
+                } else {
+                    activePlayer = exoPlayer
+                }
+            }
+        }
+        castPlayer?.addListener(listener)
+        onDispose { castPlayer?.removeListener(listener) }
+    }
+
+    // Sync media item to Cast if activePlayer becomes castPlayer
+    LaunchedEffect(activePlayer) {
+        if (activePlayer == castPlayer && castPlayer != null) {
+            val mediaItem = exoPlayer.currentMediaItem
+            if (mediaItem != null) {
+                val currentPos = exoPlayer.currentPosition
+                castPlayer.setMediaItem(mediaItem, currentPos)
+                castPlayer.prepare()
+                castPlayer.play()
+                android.widget.Toast.makeText(context, "Casting to TV...", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     // Effect to update player when settings change
@@ -699,7 +779,7 @@ fun PlayerScreen(
             modifier = Modifier.fillMaxSize(),
             update = { view ->
                 val playerView = view.findViewById<androidx.media3.ui.PlayerView>(com.codesrahul.streamplus.R.id.player_view)
-                if (playerView.player != exoPlayer) playerView.player = exoPlayer
+                if (playerView.player != activePlayer) playerView.player = activePlayer
                 playerView.findViewById<android.widget.TextView>(com.codesrahul.streamplus.R.id.tv_player_title)?.text = streamTitle
                 playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.btn_close)?.setOnClickListener { (playerView.context as? android.app.Activity)?.finish() }
                 playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.exo_settings)?.setOnClickListener { showSettingsDialog(playerView.context, exoPlayer) }

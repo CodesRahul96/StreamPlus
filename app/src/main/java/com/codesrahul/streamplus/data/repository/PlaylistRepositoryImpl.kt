@@ -2,8 +2,12 @@ package com.codesrahul.streamplus.data.repository
 
 import android.content.Context
 import android.net.Uri
+import com.codesrahul.streamplus.data.local.ChannelDao
+import com.codesrahul.streamplus.data.local.ChannelEntity
 import com.codesrahul.streamplus.data.local.FavoriteDao
 import com.codesrahul.streamplus.data.local.FavoriteEntity
+import com.codesrahul.streamplus.data.local.toDomain
+import com.codesrahul.streamplus.data.local.toEntity
 import com.codesrahul.streamplus.data.network.StreamChecker
 import com.codesrahul.streamplus.data.parser.StreamParserFactory
 import com.codesrahul.streamplus.data.parser.resolver.CompositeStreamResolver
@@ -29,6 +33,7 @@ class PlaylistRepositoryImpl @Inject constructor(
     private val streamChecker: StreamChecker,
     private val playlistDao: com.codesrahul.streamplus.data.local.PlaylistDao,
     private val favoriteDao: FavoriteDao,
+    private val channelDao: ChannelDao,
     private val client: okhttp3.OkHttpClient,
     private val settingsRepository: SettingsRepository
 ) : PlaylistRepository {
@@ -87,10 +92,22 @@ class PlaylistRepositoryImpl @Inject constructor(
         if (url.isBlank()) return@withContext emptyList()
         
         val settings = settingsRepository.settings.first()
-        
-        // Check cache first if enabled
+        val playlistEntity = playlistDao.getAllPlaylistsList().find { it.url == url }
+        val playlistId = playlistEntity?.id ?: -1
+
+        // Check memory cache first
         if (settings.playlistCache) {
             playlistCache[url]?.let { return@withContext it }
+        }
+
+        // Check disk cache if enabled OR if network fails
+        val cachedChannels = if (playlistId != -1) {
+            channelDao.getChannelsByPlaylist(playlistId).map { it.toDomain() }
+        } else emptyList()
+
+        if (settings.playlistCache && cachedChannels.isNotEmpty()) {
+            playlistCache[url] = cachedChannels
+            return@withContext cachedChannels
         }
 
         val items = if (url.startsWith("content://") || url.startsWith("file://")) {
@@ -100,13 +117,11 @@ class PlaylistRepositoryImpl @Inject constructor(
                 } ?: emptyList()
             } catch (e: Exception) {
                 android.util.Log.e("PlaylistRepo", "Error loading local playlist: $url", e)
-                emptyList()
+                cachedChannels // Fallback to disk cache on error
             }
         } else {
             try {
                 val requestBuilder = okhttp3.Request.Builder().url(url)
-                
-                // Handle User-Agent
                 if (!userAgent.isNullOrEmpty() && userAgent != "Auto" && userAgent != "Default") {
                     requestBuilder.header("User-Agent", userAgent)
                 } else if (userAgent == "Default") {
@@ -115,18 +130,25 @@ class PlaylistRepositoryImpl @Inject constructor(
                 
                 val request = requestBuilder.build()
                 client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) return@withContext emptyList()
-                    val body = response.body ?: return@withContext emptyList()
+                    if (!response.isSuccessful) return@withContext cachedChannels
+                    val body = response.body ?: return@withContext cachedChannels
                     resolveUniversal(body.byteStream(), url)
                 }
             } catch (e: Exception) {
                 android.util.Log.e("PlaylistRepo", "Error loading remote playlist: $url", e)
-                emptyList()
+                cachedChannels // Fallback to disk cache on error
             }
         }
         
-        if (settings.playlistCache && items.isNotEmpty()) {
-            playlistCache[url] = items
+        if (items.isNotEmpty()) {
+            if (settings.playlistCache) {
+                playlistCache[url] = items
+            }
+            // Update disk cache
+            if (playlistId != -1) {
+                channelDao.deleteChannelsByPlaylist(playlistId)
+                channelDao.insertChannels(items.map { it.toEntity(playlistId) })
+            }
         }
         items
     }
@@ -219,20 +241,20 @@ class PlaylistRepositoryImpl @Inject constructor(
     // --- Global Search ---
     override suspend fun searchAllPlaylists(query: String): List<M3UItem> = withContext(Dispatchers.IO) {
         if (query.isBlank()) return@withContext emptyList()
+        val settings = settingsRepository.settings.first()
+        
+        // If caching is on, searching the DB is MUCH faster and covers all playlists at once
+        if (settings.playlistCache) {
+            return@withContext channelDao.searchChannels(query).map { it.toDomain() }
+        }
+
+        // Fallback to legacy parallel search if cache is off
         val lowerQuery = query.lowercase()
         val playlists = playlistDao.getAllPlaylistsList()
-        val settings = settingsRepository.settings.first()
-
-        // Use cached items when searching if enabled to avoid massive network amplification
         val jobs = playlists.map { playlist ->
             async {
                 try {
-                    // Try to get from cache first if enabled, fall back to loadPlaylist
-                    val items = if (settings.playlistCache) {
-                        playlistCache[playlist.url] ?: loadPlaylist(playlist.url, playlist.userAgent)
-                    } else {
-                        loadPlaylist(playlist.url, playlist.userAgent)
-                    }
+                    val items = loadPlaylist(playlist.url, playlist.userAgent)
                     items.filter { item ->
                         item.name.lowercase().contains(lowerQuery) ||
                         item.group.lowercase().contains(lowerQuery)

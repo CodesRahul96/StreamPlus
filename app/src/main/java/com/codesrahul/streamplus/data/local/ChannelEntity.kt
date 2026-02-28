@@ -1,0 +1,58 @@
+package com.codesrahul.streamplus.data.local
+
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
+import androidx.room.PrimaryKey
+import com.codesrahul.streamplus.domain.model.M3UItem
+
+@Entity(
+    tableName = "channels",
+    foreignKeys = [
+        ForeignKey(
+            entity = PlaylistEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["playlistId"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index(value = ["playlistId"]), Index(value = ["url"])]
+)
+data class ChannelEntity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val playlistId: Int,
+    val name: String,
+    val url: String,
+    val group: String = "",
+    val logoUrl: String = "",
+    val userAgent: String = "",
+    val headers: Map<String, String> = emptyMap(),
+    val licenseUrl: String? = null,
+    val drmScheme: String? = null,
+    val drmHeaders: Map<String, String> = emptyMap()
+)
+
+fun ChannelEntity.toDomain() = M3UItem(
+    name = name,
+    url = url,
+    group = group,
+    logoUrl = logoUrl,
+    userAgent = userAgent,
+    headers = headers,
+    licenseUrl = licenseUrl,
+    drmScheme = drmScheme,
+    drmHeaders = drmHeaders
+)
+
+fun M3UItem.toEntity(playlistId: Int) = ChannelEntity(
+    playlistId = playlistId,
+    name = name,
+    url = url,
+    group = group,
+    logoUrl = logoUrl,
+    userAgent = userAgent,
+    headers = headers,
+    licenseUrl = licenseUrl,
+    drmScheme = drmScheme,
+    drmHeaders = drmHeaders
+)

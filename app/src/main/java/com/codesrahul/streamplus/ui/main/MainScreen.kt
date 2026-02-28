@@ -50,115 +50,123 @@ fun MainScreen() {
         NavigationItem("Settings", "settings",     Icons.Default.Settings,       Icons.Outlined.Settings)
     )
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 0.dp  // No tonal elevation; we paint the surface manually
-            ) {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
-                items.forEach { item ->
-                    val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
-                    NavigationBarItem(
-                        icon = {
-                            Icon(
-                                if (selected) item.selectedIcon else item.unselectedIcon,
-                                contentDescription = item.title,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        },
-                        label = if (!hideLabels) {
-                            {
-                                Text(
-                                    item.title,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+    SharedTransitionLayout {
+        Scaffold(
+            bottomBar = {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 0.dp
+                ) {
+                    val navBackStackEntry by navController.currentBackStackEntryAsState()
+                    val currentDestination = navBackStackEntry?.destination
+                    items.forEach { item ->
+                        val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
+                        NavigationBarItem(
+                            icon = {
+                                Icon(
+                                    if (selected) item.selectedIcon else item.unselectedIcon,
+                                    contentDescription = item.title,
+                                    modifier = Modifier.size(24.dp)
                                 )
-                            }
-                        } else null,
-                        selected = selected,
-                        alwaysShowLabel = !hideLabels,
-                        onClick = {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                            },
+                            label = if (!hideLabels) {
+                                {
+                                    Text(
+                                        item.title,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                                    )
                                 }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                            } else null,
+                            selected = selected,
+                            alwaysShowLabel = !hideLabels,
+                            onClick = {
+                                navController.navigate(item.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                            )
                         )
-                    )
+                    }
                 }
             }
-        }
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = when (settingsState.defaultTab) {
-                "playlist", "local", "direct_play" -> settingsState.defaultTab
-                else -> "playlist"
-            },
-            modifier = Modifier.padding(innerPadding),
-            enterTransition = { fadeIn(animationSpec = tween(300)) },
-            exitTransition  = { fadeOut(animationSpec = tween(300)) }
-        ) {
-            composable("playlist") {
-                val context = androidx.compose.ui.platform.LocalContext.current
-                PlaylistScreen(
-                    onPlaylistClick = { playlistId ->
-                        navController.navigate("playlist_detail/$playlistId")
-                    },
-                    onChannelClick = { channel ->
-                        val intent = android.content.Intent(
-                            context,
-                            com.codesrahul.streamplus.ui.player.PlayerActivity::class.java
-                        ).apply {
-                            putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_URL, channel.url)
-                            putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_TITLE, channel.name)
-                            putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_CHANNEL_LOGO, channel.logoUrl)
+        ) { innerPadding ->
+            NavHost(
+                navController = navController,
+                startDestination = when (settingsState.defaultTab) {
+                    "playlist", "local", "direct_play" -> settingsState.defaultTab
+                    else -> "playlist"
+                },
+                modifier = Modifier.padding(innerPadding),
+                enterTransition = { fadeIn(animationSpec = tween(300)) },
+                exitTransition  = { fadeOut(animationSpec = tween(300)) }
+            ) {
+                composable("playlist") {
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    PlaylistScreen(
+                        sharedTransitionScope = this@SharedTransitionLayout,
+                        animatedContentScope = this@composable,
+                        onPlaylistClick = { playlistId ->
+                            navController.navigate("playlist_detail/$playlistId")
+                        },
+                        onChannelClick = { channel ->
+                            val intent = android.content.Intent(
+                                context,
+                                com.codesrahul.streamplus.ui.player.PlayerActivity::class.java
+                            ).apply {
+                                putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_URL, channel.url)
+                                putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_TITLE, channel.name)
+                                putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_CHANNEL_LOGO, channel.logoUrl)
+                            }
+                            context.startActivity(intent)
                         }
-                        context.startActivity(intent)
-                    }
-                )
-            }
-            composable("local") { LocalScreen() }
-            composable("direct_play") {
-                com.codesrahul.streamplus.ui.home.DirectPlayScreen(
-                    onBack = { navController.popBackStack() },
-                    onNavigateToHistory = { navController.navigate("history") }
-                )
-            }
-            composable("history") {
-                com.codesrahul.streamplus.ui.home.HistoryScreen(onBack = { navController.popBackStack() })
-            }
-            composable(
-                route = "playlist_detail/{playlistId}",
-                arguments = listOf(androidx.navigation.navArgument("playlistId") { type = androidx.navigation.NavType.StringType })
-            ) {
-                com.codesrahul.streamplus.ui.playlist.PlaylistDetailScreen(
-                    onBack = { navController.popBackStack() },
-                    onNavigate = { route -> navController.navigate(route) }
-                )
-            }
-            composable(
-                route = "playlist_url_detail/{playlistId}/{name}/{userAgent}",
-                arguments = listOf(
-                    androidx.navigation.navArgument("playlistId") { type = androidx.navigation.NavType.StringType },
-                    androidx.navigation.navArgument("name")       { type = androidx.navigation.NavType.StringType },
-                    androidx.navigation.navArgument("userAgent")  { type = androidx.navigation.NavType.StringType }
-                )
-            ) {
-                com.codesrahul.streamplus.ui.playlist.PlaylistDetailScreen(
-                    onBack = { navController.popBackStack() },
-                    onNavigate = { route -> navController.navigate(route) }
-                )
-            }
-            composable("settings") {
-                SettingsScreen(onBack = { navController.popBackStack() })
+                    )
+                }
+                composable("local") { LocalScreen() }
+                composable("direct_play") {
+                    com.codesrahul.streamplus.ui.home.DirectPlayScreen(
+                        onBack = { navController.popBackStack() },
+                        onNavigateToHistory = { navController.navigate("history") }
+                    )
+                }
+                composable("history") {
+                    com.codesrahul.streamplus.ui.home.HistoryScreen(onBack = { navController.popBackStack() })
+                }
+                composable(
+                    route = "playlist_detail/{playlistId}",
+                    arguments = listOf(androidx.navigation.navArgument("playlistId") { type = androidx.navigation.NavType.StringType })
+                ) {
+                    com.codesrahul.streamplus.ui.playlist.PlaylistDetailScreen(
+                        sharedTransitionScope = this@SharedTransitionLayout,
+                        animatedContentScope = this@composable,
+                        onBack = { navController.popBackStack() },
+                        onNavigate = { route -> navController.navigate(route) }
+                    )
+                }
+                composable(
+                    route = "playlist_url_detail/{playlistId}/{name}/{userAgent}",
+                    arguments = listOf(
+                        androidx.navigation.navArgument("playlistId") { type = androidx.navigation.NavType.StringType },
+                        androidx.navigation.navArgument("name")       { type = androidx.navigation.NavType.StringType },
+                        androidx.navigation.navArgument("userAgent")  { type = androidx.navigation.NavType.StringType }
+                    )
+                ) {
+                    com.codesrahul.streamplus.ui.playlist.PlaylistDetailScreen(
+                        sharedTransitionScope = this@SharedTransitionLayout,
+                        animatedContentScope = this@composable,
+                        onBack = { navController.popBackStack() },
+                        onNavigate = { route -> navController.navigate(route) }
+                    )
+                }
+                composable("settings") {
+                    SettingsScreen(onBack = { navController.popBackStack() })
+                }
             }
         }
     }

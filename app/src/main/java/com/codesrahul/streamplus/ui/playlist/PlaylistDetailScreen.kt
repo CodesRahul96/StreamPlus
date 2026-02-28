@@ -24,6 +24,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -32,9 +37,11 @@ import com.codesrahul.streamplus.data.settings.AppSettings
 import com.codesrahul.streamplus.ui.components.PremiumBackground
 import com.codesrahul.streamplus.ui.settings.SettingsViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun PlaylistDetailScreen(
+    sharedTransitionScope: SharedTransitionScope,
+    animatedContentScope: AnimatedContentScope,
     onBack: () -> Unit,
     onNavigate: (String) -> Unit,
     viewModel: PlaylistDetailViewModel = hiltViewModel()
@@ -58,7 +65,17 @@ fun PlaylistDetailScreen(
                     TopAppBar(
                         title = {
                             Column {
-                                Text(playlist?.name ?: "Playlist", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                with(sharedTransitionScope) {
+                                    Text(
+                                        playlist?.name ?: "Playlist",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.sharedElement(
+                                            rememberSharedContentState(key = "playlist_${playlist?.id}"),
+                                            animatedVisibilityScope = animatedContentScope
+                                        )
+                                    )
+                                }
                                 if (!isLoading && viewModel.channels.value.isNotEmpty()) {
                                     Text("${filteredChannels.size} channels", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }

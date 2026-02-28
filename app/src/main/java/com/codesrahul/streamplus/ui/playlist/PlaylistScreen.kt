@@ -11,6 +11,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.Modifier
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -37,9 +43,11 @@ import com.codesrahul.streamplus.ui.settings.SettingsViewModel
 import com.codesrahul.streamplus.util.UserAgentManager
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun PlaylistScreen(
+    sharedTransitionScope: SharedTransitionScope,
+    animatedContentScope: AnimatedContentScope,
     onPlaylistClick: (Int) -> Unit,
     onChannelClick: (M3UItem) -> Unit = {},
     viewModel: PlaylistViewModel = hiltViewModel()
@@ -305,23 +313,29 @@ fun PlaylistScreen(
                                     contentPadding = PaddingValues(end = 16.dp)
                                 ) {
                                     items(favorites, key = { it.url }) { fav ->
-                                        FavouriteChannelCard(
-                                            favorite = fav,
-                                            onClick = {
-                                                onChannelClick(
-                                                    M3UItem(
-                                                        name = fav.name,
-                                                        url = fav.url,
-                                                        logoUrl = fav.logoUrl,
-                                                        group = fav.groupTitle
+                                        with(sharedTransitionScope) {
+                                            FavouriteChannelCard(
+                                                favorite = fav,
+                                                modifier = Modifier.sharedElement(
+                                                    rememberSharedContentState(key = "fav_${fav.url}"),
+                                                    animatedVisibilityScope = animatedContentScope
+                                                ),
+                                                onClick = {
+                                                    onChannelClick(
+                                                        M3UItem(
+                                                            name = fav.name,
+                                                            url = fav.url,
+                                                            logoUrl = fav.logoUrl,
+                                                            group = fav.groupTitle
+                                                        )
                                                     )
-                                                )
-                                            },
-                                            onRemove = { viewModel.toggleFavorite(
-                                                M3UItem(name = fav.name, url = fav.url, logoUrl = fav.logoUrl, group = fav.groupTitle),
-                                                fav.playlistId
-                                            )}
-                                        )
+                                                },
+                                                onRemove = { viewModel.toggleFavorite(
+                                                    M3UItem(name = fav.name, url = fav.url, logoUrl = fav.logoUrl, group = fav.groupTitle),
+                                                    fav.playlistId
+                                                )}
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -330,12 +344,18 @@ fun PlaylistScreen(
 
                     // --- Playlist list ---
                     items(sortedPlaylists, key = { it.id }) { playlist ->
-                        PlaylistItem(
-                            playlist = playlist,
-                            settingsState = settingsState,
-                            onClick = { onPlaylistClick(playlist.id) },
+                        with(sharedTransitionScope) {
+                            PlaylistItem(
+                                playlist = playlist,
+                                settingsState = settingsState,
+                                modifier = Modifier.sharedElement(
+                                    rememberSharedContentState(key = "playlist_${playlist.id}"),
+                                    animatedVisibilityScope = animatedContentScope
+                                ),
+                                onClick = { onPlaylistClick(playlist.id) },
                             onEdit = { showEditDialog = playlist }
                         )
+                        }
                     }
                 }
             }
@@ -380,6 +400,7 @@ fun PlaylistScreen(
 fun PlaylistItem(
     playlist: PlaylistEntity,
     settingsState: AppSettings,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
     onEdit: () -> Unit
 ) {
@@ -387,7 +408,7 @@ fun PlaylistItem(
     val resolvedIcon = if (playlist.icon == "default") settingsState.defaultPlaylistIcon.lowercase() else playlist.icon.lowercase()
 
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)),
@@ -773,11 +794,12 @@ fun RecentlyWatchedCard(entry: com.codesrahul.streamplus.data.local.HistoryEntit
 @Composable
 fun FavouriteChannelCard(
     favorite: FavoriteEntity,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
     onRemove: () -> Unit
 ) {
     Surface(
-        modifier = Modifier.width(130.dp).clickable(onClick = onClick),
+        modifier = modifier.width(130.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
     ) {
