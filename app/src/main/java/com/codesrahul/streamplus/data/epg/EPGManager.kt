@@ -24,26 +24,44 @@ data class EPGProgram(
 @Singleton
 class EPGManager @Inject constructor() {
 
-    private val programs = mutableMapOf<String, MutableList<EPGProgram>>()
-    private val dateFormat = SimpleDateFormat("yyyyMMddHHmmss Z", Locale.US)
+    @Volatile
+    private var programs = mapOf<String, List<EPGProgram>>()
+    
+    // ThreadLocal prevents concurrency bugs with SimpleDateFormat
+    private val dateFormat = object : ThreadLocal<SimpleDateFormat>() {
+        override fun initialValue(): SimpleDateFormat {
+            return SimpleDateFormat("yyyyMMddHHmmss Z", Locale.US)
+        }
+    }
 
     suspend fun loadEPG(url: String) = withContext(Dispatchers.IO) {
         try {
             val connection = URL(url).openConnection()
-            var inputStream: InputStream = connection.getInputStream()
+            connection.connectTimeout = 15000
+            connection.readTimeout = 30000
             
-            if (url.endsWith(".gz")) {
-                inputStream = GZIPInputStream(inputStream)
+            // Auto-close streams
+            connection.getInputStream().use { rawInput ->
+                val inputStream = if (url.endsWith(".gz")) {
+                    GZIPInputStream(rawInput)
+                } else {
+                    rawInput
+                }
+                
+                // Parse to local map first to avoid exposing partial state
+                val parsedPrograms = parseXml(inputStream)
+                
+                // Atomically update the global state
+                programs = parsedPrograms
             }
-            
-            parseXml(inputStream)
             Log.d("EPGManager", "Successfully loaded EPG from $url")
         } catch (e: Exception) {
             Log.e("EPGManager", "Failed to load EPG from $url", e)
         }
     }
 
-    private fun parseXml(inputStream: InputStream) {
+    private fun parseXml(inputStream: InputStream): Map<String, List<EPGProgram>> {
+        val localPrograms = mutableMapOf<String, MutableList<EPGProgram>>()
         val parser = Xml.newPullParser()
         parser.setInput(inputStream, null)
         
@@ -70,7 +88,7 @@ class EPGManager @Inject constructor() {
                 XmlPullParser.END_TAG -> {
                     if (parser.name == "programme" && currentChannelId != null && currentTitle != null) {
                         val prog = EPGProgram(currentTitle, startTime, stopTime, currentDesc ?: "")
-                        programs.getOrPut(currentChannelId) { mutableListOf() }.add(prog)
+                        localPrograms.getOrPut(currentChannelId) { mutableListOf() }.add(prog)
                         
                         currentChannelId = null
                         currentTitle = null
@@ -80,12 +98,13 @@ class EPGManager @Inject constructor() {
             }
             eventType = parser.next()
         }
+        return localPrograms
     }
 
     private fun parseDate(dateStr: String?): Long {
         if (dateStr == null) return 0
         return try {
-            dateFormat.parse(dateStr)?.time ?: 0
+            dateFormat.get()?.parse(dateStr)?.time ?: 0
         } catch (e: Exception) { 0 }
     }
 
