@@ -21,7 +21,7 @@ enum class ThemeMode {
 }
 
 enum class ThemeStyle {
-    DYNAMIC, IGNITE, FROSTY, GROVE, MIDNIGHT
+    DYNAMIC, IGNITE, FROSTY, GROVE, MIDNIGHT, SUNSET, OCEAN, CARBON, AMOLED
 }
 
 data class AppSettings(

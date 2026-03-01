@@ -9,9 +9,11 @@ import com.codesrahul.streamplus.data.local.FavoriteEntity
 import com.codesrahul.streamplus.data.local.toDomain
 import com.codesrahul.streamplus.data.local.toEntity
 import com.codesrahul.streamplus.data.network.StreamChecker
+import com.codesrahul.streamplus.data.parser.M3UStreamParser
 import com.codesrahul.streamplus.data.parser.StreamParserFactory
 import com.codesrahul.streamplus.data.parser.resolver.CompositeStreamResolver
 import com.codesrahul.streamplus.data.parser.resolver.HeaderResolver
+import com.codesrahul.streamplus.data.epg.EPGManager
 import com.codesrahul.streamplus.data.parser.resolver.DrmResolver
 import com.codesrahul.streamplus.domain.model.M3UItem
 import com.codesrahul.streamplus.domain.model.StreamStatus
@@ -35,25 +37,33 @@ class PlaylistRepositoryImpl @Inject constructor(
     private val playlistDao: com.codesrahul.streamplus.data.local.PlaylistDao,
     private val favoriteDao: FavoriteDao,
     private val channelDao: ChannelDao,
+    private val historyDao: com.codesrahul.streamplus.data.local.HistoryDao,
     private val client: okhttp3.OkHttpClient,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val epgManager: EPGManager
 ) : PlaylistRepository {
 
     private val playlistCache = java.util.concurrent.ConcurrentHashMap<String, List<M3UItem>>()
 
     private val resolver = CompositeStreamResolver(listOf(HeaderResolver(), DrmResolver()))
 
-    private suspend fun resolveUniversal(inputStream: InputStream, url: String): List<M3UItem> = withContext(Dispatchers.IO) {
+    /**
+     * Parses the input stream and returns parsed channels + any detected EPG URL.
+     * The EPG URL is extracted from the `#EXTM3U` header's `url-tvg` / `x-tvg-url` attributes.
+     */
+    private suspend fun resolveUniversal(inputStream: InputStream, url: String): Pair<List<M3UItem>, String?> = withContext(Dispatchers.IO) {
         // Read a small prefix for format detection
-        val bufferedInput = inputStream.buffered() // Buffered for lookahead
+        val bufferedInput = inputStream.buffered()
         bufferedInput.mark(8192)
         val buffer = ByteArray(8192)
         val read = bufferedInput.read(buffer)
         val prefix = if (read > 0) String(buffer, 0, read, Charsets.UTF_8) else ""
-        bufferedInput.reset() // Reset to start for the actual parser
+        bufferedInput.reset()
         
         val parser = StreamParserFactory.getParser(url, prefix)
-        parser.parse(bufferedInput, url).map { resolver.resolve(it) }
+        val items = parser.parse(bufferedInput, url).map { resolver.resolve(it) }
+        val detectedEpgUrl = (parser as? M3UStreamParser)?.lastDetectedEpgUrl
+        Pair(items, detectedEpgUrl)
     }
 
     override suspend fun savePlaylist(items: List<M3UItem>, outputStream: java.io.OutputStream): Boolean = withContext(Dispatchers.IO) {
@@ -111,14 +121,14 @@ class PlaylistRepositoryImpl @Inject constructor(
             return@withContext cachedChannels
         }
 
-        val items = if (url.startsWith("content://") || url.startsWith("file://")) {
+        val result = if (url.startsWith("content://") || url.startsWith("file://")) {
             try {
                 context.contentResolver.openInputStream(Uri.parse(url))?.use { inputStream ->
                     resolveUniversal(inputStream, url)
-                } ?: emptyList()
+                } ?: Pair(emptyList<M3UItem>(), null)
             } catch (e: Exception) {
                 android.util.Log.e("PlaylistRepo", "Error loading local playlist: $url", e)
-                cachedChannels // Fallback to disk cache on error
+                Pair(cachedChannels, null) // Fallback to disk cache on error
             }
         } else {
             try {
@@ -137,10 +147,13 @@ class PlaylistRepositoryImpl @Inject constructor(
                 }
             } catch (e: Exception) {
                 android.util.Log.e("PlaylistRepo", "Error loading remote playlist: $url", e)
-                cachedChannels // Fallback to disk cache on error
+                Pair(cachedChannels, null) // Fallback to disk cache on error
             }
         }
         
+        val items = result.first
+        val detectedEpgUrl = result.second
+
         if (items.isNotEmpty()) {
             if (settings.playlistCache) {
                 playlistCache[url] = items
@@ -151,11 +164,26 @@ class PlaylistRepositoryImpl @Inject constructor(
                 channelDao.insertChannels(items.map { it.toEntity(playlistId) })
             }
         }
+
+        // Auto-save and auto-load detected EPG URL
+        if (!detectedEpgUrl.isNullOrBlank() && playlistId != -1) {
+            val existingEpgUrl = playlistEntity?.epgUrl
+            if (existingEpgUrl.isNullOrBlank() || existingEpgUrl != detectedEpgUrl) {
+                android.util.Log.d("PlaylistRepo", "Auto-saving detected EPG URL: $detectedEpgUrl")
+                playlistDao.updateEpgUrl(playlistId, detectedEpgUrl)
+            }
+            // Always load EPG on playlist refresh to keep guide data fresh
+            epgManager.loadEPG(detectedEpgUrl)
+        } else if (!playlistEntity?.epgUrl.isNullOrBlank()) {
+            // Load previously saved EPG URL if a new one wasn't found in headers
+            epgManager.loadEPG(playlistEntity!!.epgUrl!!)
+        }
+
         items
     }
 
     override suspend fun parsePlaylist(inputStream: InputStream): List<M3UItem> = withContext(Dispatchers.IO) {
-        resolveUniversal(inputStream, "direct_upload.m3u")
+        resolveUniversal(inputStream, "direct_upload.m3u").first
     }
 
     override suspend fun validatePlaylist(items: List<M3UItem>): List<M3UItem> = withContext(Dispatchers.IO) {
@@ -194,7 +222,7 @@ class PlaylistRepositoryImpl @Inject constructor(
                             if (response.isSuccessful) {
                                 val bodyStream = response.body?.byteStream()
                                 if (bodyStream != null) {
-                                    val parsed = resolveUniversal(bodyStream, item.url)
+                                    val parsed = resolveUniversal(bodyStream, item.url).first
                                     if (parsed.isNotEmpty()) {
                                         return@async parsed.map { p ->
                                             if (p.group.isBlank()) p.copy(group = item.name) else p
@@ -227,7 +255,12 @@ class PlaylistRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deletePlaylist(playlist: com.codesrahul.streamplus.data.local.PlaylistEntity) {
-        playlistDao.deletePlaylist(playlist)
+        withContext(Dispatchers.IO) {
+            favoriteDao.deleteByPlaylistId(playlist.id)
+            historyDao.deleteByPlaylistId(playlist.id)
+            channelDao.deleteChannelsByPlaylist(playlist.id)
+            playlistDao.deletePlaylist(playlist)
+        }
     }
 
     // --- Favorites ---
@@ -235,10 +268,18 @@ class PlaylistRepositoryImpl @Inject constructor(
         return favoriteDao.getAllFavorites().map { favorites ->
             withContext(Dispatchers.IO) {
                 favorites.map { fav ->
-                    // Try to find a fresher URL in the channels table (synced from latest playlist loads)
+                    // Try to find a fresher entry in the channels table
                     val refreshed = channelDao.getChannelByIdentity(fav.name, fav.groupTitle, fav.playlistId)
-                    if (refreshed != null && refreshed.url != fav.url) {
-                        fav.copy(url = refreshed.url)
+                    if (refreshed != null) {
+                        fav.copy(
+                            url = refreshed.url,
+                            userAgent = refreshed.userAgent,
+                            headers = refreshed.headers,
+                            licenseUrl = refreshed.licenseUrl,
+                            drmScheme = refreshed.drmScheme,
+                            drmHeaders = refreshed.drmHeaders,
+                            logoUrl = refreshed.logoUrl
+                        )
                     } else {
                         fav
                     }

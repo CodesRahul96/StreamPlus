@@ -14,10 +14,15 @@ class M3UStreamParser : StreamParser {
 
     private val PROP_REGEX = "([\\w-]+)=\"([^\"]*)\"|([\\w-]+)=([^\\s,]+)".toRegex()
     private val PIPE_REGEX = "(?i)(\\?\\|)|(\\?%7C)|(\\|)|(%7C)".toRegex()
+    
+    /** Populated after parsing — contains the EPG URL from the #EXTM3U header if present. */
+    var lastDetectedEpgUrl: String? = null
+        private set
 
     override suspend fun parse(input: InputStream, sourceUrl: String): List<M3UItem> {
         val items = mutableListOf<M3UItem>()
         val reader = input.bufferedReader()
+        lastDetectedEpgUrl = null  // Reset for this parse run
         
         var currentName = ""
         var currentLogo = ""
@@ -75,6 +80,19 @@ class M3UStreamParser : StreamParser {
             lines.forEach { line ->
                 val trimmed = line.trim()
                 if (trimmed.isEmpty()) return@forEach
+                
+                // Parse EPG URL from the #EXTM3U header line (first line only)
+                if (trimmed.startsWith("#EXTM3U")) {
+                    parseProps(trimmed.substringAfter("#EXTM3U")) { k, v ->
+                        when (k.lowercase()) {
+                            "url-tvg", "x-tvg-url" -> {
+                                if (!v.isBlank()) lastDetectedEpgUrl = v
+                                Log.d("M3UParser", "Detected EPG URL from header: $v")
+                            }
+                        }
+                    }
+                    return@forEach
+                }
                 
                 if (trimmed.startsWith("#EXTINF:")) {
                     // Parse EXTINF

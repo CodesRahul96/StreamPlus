@@ -14,11 +14,13 @@ data class HistoryEntity(
     val url: String, // Latest known URL
     val logoUrl: String?,
     val userAgent: String?,
+    val headers: Map<String, String> = emptyMap(),
     val cookie: String?,
     val referer: String?,
     val origin: String?,
     val licenseUrl: String?,
     val drmScheme: String?,
+    val drmHeaders: Map<String, String> = emptyMap(),
     val lastPosition: Long,
     val duration: Long,
     val timestamp: Long

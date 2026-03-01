@@ -117,7 +117,12 @@ class PlaylistDetailViewModel @Inject constructor(
                         groupTitle = item.group,
                         playlistId = currentPlaylistId,
                         url = item.url,
-                        logoUrl = item.logoUrl
+                        logoUrl = item.logoUrl,
+                        userAgent = item.userAgent,
+                        headers = item.headers,
+                        licenseUrl = item.licenseUrl,
+                        drmScheme = item.drmScheme,
+                        drmHeaders = item.drmHeaders
                     )
                 )
             }

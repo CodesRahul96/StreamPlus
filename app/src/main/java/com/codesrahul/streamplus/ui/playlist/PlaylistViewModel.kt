@@ -42,6 +42,9 @@ class PlaylistViewModel @Inject constructor(
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
     init {
         // Auto-search with 500ms debounce whenever the query changes
         viewModelScope.launch {
@@ -57,6 +60,9 @@ class PlaylistViewModel @Inject constructor(
                         _isSearching.value = false
                     }
                 }
+        }
+        viewModelScope.launch {
+            playlists.collect { _isLoading.value = false }
         }
     }
 

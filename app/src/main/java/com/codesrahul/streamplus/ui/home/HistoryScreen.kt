@@ -125,6 +125,8 @@ fun HistoryScreen(
                                     item.origin?.let    { putExtra(PlayerActivity.EXTRA_ORIGIN,       it) }
                                     item.licenseUrl?.let{ putExtra(PlayerActivity.EXTRA_DRM_LICENSE_URL, it) }
                                     item.drmScheme?.let { putExtra(PlayerActivity.EXTRA_DRM_SCHEME,   it) }
+                                    putExtra(PlayerActivity.EXTRA_PLAYLIST_ID, item.playlistId)
+                                    putExtra(PlayerActivity.EXTRA_STREAM_GROUP, item.group)
                                 }
                                 context.startActivity(intent)
                             },

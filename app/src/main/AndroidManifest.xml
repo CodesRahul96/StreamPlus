@@ -43,6 +43,7 @@
             android:name=".ui.player.PlayerActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
             android:label="Player"
+            android:launchMode="singleTask"
             android:supportsPictureInPicture="true"
             android:theme="@style/Theme.M3UValidator" />
 

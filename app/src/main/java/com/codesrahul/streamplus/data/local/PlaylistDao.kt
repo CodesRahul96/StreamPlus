@@ -21,6 +21,9 @@ interface PlaylistDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPlaylist(playlist: PlaylistEntity)
 
+    @Query("UPDATE playlists SET epgUrl = :epgUrl WHERE id = :id")
+    suspend fun updateEpgUrl(id: Int, epgUrl: String)
+
     @Delete
     suspend fun deletePlaylist(playlist: PlaylistEntity)
 }

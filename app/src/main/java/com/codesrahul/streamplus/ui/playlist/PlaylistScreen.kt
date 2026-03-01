@@ -61,6 +61,7 @@ fun PlaylistScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
     var showFabMenu by remember { mutableStateOf(false) }
     val context = LocalContext.current
     // Always hoist SettingsViewModel at top-level — never inside a conditional branch
@@ -168,7 +169,18 @@ fun PlaylistScreen(
                 }
             }
         ) { padding ->
-            if (playlists.isEmpty()) {
+            if (isLoading) {
+                LazyColumn(
+                    modifier = Modifier.padding(padding).fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    userScrollEnabled = false
+                ) {
+                    items(6) {
+                        com.codesrahul.streamplus.ui.components.ShimmerPlaylistItem()
+                    }
+                }
+            } else if (playlists.isEmpty()) {
                 Box(
                     modifier = Modifier.padding(padding).fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -287,6 +299,12 @@ fun PlaylistScreen(
                                         putExtra(PlayerActivity.EXTRA_USER_AGENT, channel.userAgent)
                                         putExtra(PlayerActivity.EXTRA_PLAYLIST_ID, channel.playlistId)
                                         putExtra(PlayerActivity.EXTRA_STREAM_GROUP, channel.group)
+                                        putExtra(PlayerActivity.EXTRA_HEADERS, java.util.HashMap(channel.headers))
+                                        channel.licenseUrl?.let { putExtra(PlayerActivity.EXTRA_DRM_LICENSE_URL, it) }
+                                        channel.drmScheme?.let { putExtra(PlayerActivity.EXTRA_DRM_SCHEME, it) }
+                                        if (channel.drmHeaders.isNotEmpty()) {
+                                            putExtra(PlayerActivity.EXTRA_DRM_HEADERS, java.util.HashMap(channel.drmHeaders))
+                                        }
                                     }
                                     context.startActivity(intent)
                                 })
@@ -324,7 +342,11 @@ fun PlaylistScreen(
                                                         logoUrl = entry.logoUrl ?: "",
                                                         group = entry.group,
                                                         userAgent = entry.userAgent ?: "",
-                                                        playlistId = entry.playlistId
+                                                        playlistId = entry.playlistId,
+                                                        headers = entry.headers,
+                                                        licenseUrl = entry.licenseUrl,
+                                                        drmScheme = entry.drmScheme,
+                                                        drmHeaders = entry.drmHeaders
                                                     )
                                                 )}
                                             )
@@ -378,9 +400,15 @@ fun PlaylistScreen(
                                                     onChannelClick(
                                                         M3UItem(
                                                             name = fav.name,
-                                                            url = fav.url, // This is now the refreshed URL from the repository
+                                                            url = fav.url, 
                                                             logoUrl = fav.logoUrl,
-                                                            group = fav.groupTitle
+                                                            group = fav.groupTitle,
+                                                            playlistId = fav.playlistId,
+                                                            userAgent = fav.userAgent,
+                                                            headers = fav.headers,
+                                                            licenseUrl = fav.licenseUrl,
+                                                            drmScheme = fav.drmScheme,
+                                                            drmHeaders = fav.drmHeaders
                                                         )
                                                     )
                                                 },

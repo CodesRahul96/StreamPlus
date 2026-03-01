@@ -70,6 +70,69 @@ fun StreamPlusTheme(
         ThemeStyle.IGNITE -> if (darkTheme) IgniteDark else IgniteLight
         ThemeStyle.FROSTY -> if (darkTheme) FrostyDark else FrostyLight
         ThemeStyle.GROVE -> if (darkTheme) GroveDark else GroveLight
+        ThemeStyle.SUNSET -> {
+            if (darkTheme) {
+                darkColorScheme(primary = SunsetPrimary, secondary = SunsetSecondary, tertiary = SunsetTertiary)
+            } else {
+                lightColorScheme(primary = SunsetPrimary, secondary = SunsetSecondary, tertiary = SunsetTertiary)
+            }
+        }
+        ThemeStyle.OCEAN -> {
+            if (darkTheme) {
+                darkColorScheme(
+                    primary = OceanSecondary,
+                    onPrimary = Color.White,
+                    primaryContainer = OceanPrimary,
+                    onPrimaryContainer = Color.White,
+                    secondary = OceanSecondary,
+                    onSecondary = Color.White,
+                    background = Color(0xFF001214),
+                    onBackground = Color.White,
+                    surface = Color(0xFF001214),
+                    onSurface = Color.White,
+                    surfaceVariant = Color(0xFF002226),
+                    onSurfaceVariant = Color.LightGray
+                )
+            } else {
+                lightColorScheme(
+                    primary = OceanPrimary,
+                    onPrimary = Color.White,
+                    primaryContainer = OceanPrimary,
+                    onPrimaryContainer = Color.White,
+                    secondary = OceanSecondary,
+                    onSecondary = Color.White,
+                    background = Color(0xFFE0F7FA),
+                    onBackground = Color(0xFF002226),
+                    surface = Color.White,
+                    onSurface = Color(0xFF002226),
+                    surfaceVariant = Color(0xFFB2EBF2),
+                    onSurfaceVariant = Color.DarkGray
+                )
+            }
+        }
+        ThemeStyle.CARBON -> {
+            if (darkTheme) {
+                darkColorScheme(
+                    primary = Color.White,
+                    onPrimary = Color.Black,
+                    primaryContainer = Color.DarkGray,
+                    onPrimaryContainer = Color.White,
+                    secondary = Color.Gray,
+                    background = Color.Black,
+                    surface = Color.Black,
+                    surfaceVariant = Color(0xFF1A1A1A)
+                )
+            } else {
+                lightColorScheme(
+                    primary = CarbonPrimary,
+                    onPrimary = Color.White,
+                    secondary = CarbonSecondary,
+                    background = Color(0xFFF5F5F5),
+                    surface = Color.White,
+                    surfaceVariant = Color(0xFFE0E0E0)
+                )
+            }
+        }
         ThemeStyle.MIDNIGHT -> {
             if (darkTheme) {
                 darkColorScheme(
@@ -79,11 +142,11 @@ fun StreamPlusTheme(
                     onPrimaryContainer = Color.White,
                     secondary = Color(0xFF03A9F4),
                     onSecondary = Color.White,
-                    background = Color.Black,
+                    background = Color(0xFF0A0A0A),
                     onBackground = Color.White,
-                    surface = Color.Black,
+                    surface = Color(0xFF0A0A0A),
                     onSurface = Color.White,
-                    surfaceVariant = Color(0xFF121212),
+                    surfaceVariant = Color(0xFF161616),
                     onSurfaceVariant = Color.LightGray,
                     outline = Color.DarkGray
                 )
@@ -105,14 +168,55 @@ fun StreamPlusTheme(
                 )
             }
         }
+        ThemeStyle.AMOLED -> {
+            if (darkTheme) {
+                darkColorScheme(
+                    primary = Color.White,
+                    onPrimary = Color.Black,
+                    primaryContainer = Color(0xFF121212),
+                    onPrimaryContainer = Color.White,
+                    secondary = Color.LightGray,
+                    onSecondary = Color.Black,
+                    background = Color.Black,
+                    onBackground = Color.White,
+                    surface = Color.Black,
+                    onSurface = Color.White,
+                    surfaceVariant = Color(0xFF080808),
+                    onSurfaceVariant = Color.LightGray,
+                    outline = Color.Gray
+                )
+            } else {
+                // AMOLED Lite (high contrast)
+                lightColorScheme(
+                    primary = Color.Black,
+                    onPrimary = Color.White,
+                    primaryContainer = Color.LightGray,
+                    onPrimaryContainer = Color.Black,
+                    secondary = Color.Gray,
+                    onSecondary = Color.White,
+                    background = Color.White,
+                    onBackground = Color.Black,
+                    surface = Color.White,
+                    onSurface = Color.Black,
+                    surfaceVariant = Color(0xFFF0F0F0),
+                    onSurfaceVariant = Color.Black
+                )
+            }
+        }
     }
 
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            window.statusBarColor = Color.Transparent.toArgb()
+            window.navigationBarColor = Color.Transparent.toArgb()
+            
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+            
+            val controller = WindowCompat.getInsetsController(window, view)
+            controller?.isAppearanceLightStatusBars = !darkTheme
+            controller?.isAppearanceLightNavigationBars = !darkTheme
         }
     }
 

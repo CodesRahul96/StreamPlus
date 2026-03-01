@@ -111,7 +111,7 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 SettingsCard {
                     SettingsItemHeader(
                         title = "Color Themes",
-                        subtitle = "Select one of the 5 premium themes",
+                        subtitle = "Select one of the 9 premium themes",
                         icon = Icons.Default.Palette
                     )
                     
@@ -126,6 +126,10 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                                 com.codesrahul.streamplus.data.settings.ThemeStyle.FROSTY -> Color(0xFF03A9F4)
                                 com.codesrahul.streamplus.data.settings.ThemeStyle.GROVE -> Color(0xFF4CAF50)
                                 com.codesrahul.streamplus.data.settings.ThemeStyle.MIDNIGHT -> Color(0xFF0D47A1)
+                                com.codesrahul.streamplus.data.settings.ThemeStyle.SUNSET -> Color(0xFFFF5722)
+                                com.codesrahul.streamplus.data.settings.ThemeStyle.OCEAN -> Color(0xFF006064)
+                                com.codesrahul.streamplus.data.settings.ThemeStyle.CARBON -> Color(0xFF212121)
+                                com.codesrahul.streamplus.data.settings.ThemeStyle.AMOLED -> Color(0xFF050505)
                             }
                             
                             Surface(
@@ -167,6 +171,10 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                                             com.codesrahul.streamplus.data.settings.ThemeStyle.FROSTY -> "❄️ Frosty Aura"
                                             com.codesrahul.streamplus.data.settings.ThemeStyle.GROVE -> "🌿 Enchanted Grove"
                                             com.codesrahul.streamplus.data.settings.ThemeStyle.MIDNIGHT -> "🌑 Midnight Deep"
+                                            com.codesrahul.streamplus.data.settings.ThemeStyle.SUNSET -> "🌅 Sunset Glow"
+                                            com.codesrahul.streamplus.data.settings.ThemeStyle.OCEAN -> "🌊 Ocean Depths"
+                                            com.codesrahul.streamplus.data.settings.ThemeStyle.CARBON -> "⬛ Carbon Stealth"
+                                            com.codesrahul.streamplus.data.settings.ThemeStyle.AMOLED -> "⚫ Pitch Black AMOLED"
                                         },
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,

@@ -13,6 +13,11 @@ data class FavoriteEntity(
     val playlistId: Int,
     val url: String, // Latest known URL
     val logoUrl: String = "",
+    val userAgent: String = "",
+    val headers: Map<String, String> = emptyMap(),
+    val licenseUrl: String? = null,
+    val drmScheme: String? = null,
+    val drmHeaders: Map<String, String> = emptyMap(),
     val addedAt: Long = System.currentTimeMillis()
 )
 
@@ -29,4 +34,7 @@ interface FavoriteDao {
 
     @Query("DELETE FROM favorites WHERE name = :name AND groupTitle = :group AND playlistId = :playlistId")
     suspend fun removeFavorite(name: String, group: String, playlistId: Int)
+
+    @Query("DELETE FROM favorites WHERE playlistId = :playlistId")
+    suspend fun deleteByPlaylistId(playlistId: Int)
 }

@@ -100,6 +100,47 @@ class PlayerActivity : AppCompatActivity() {
         override fun onSessionSuspended(session: CastSession, reason: Int) {}
     }
 
+    private val _isInPip = mutableStateOf(false)
+    val isInPip: Boolean get() = _isInPip.value
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: android.content.res.Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        _isInPip.value = isInPictureInPictureMode
+    }
+
+    private fun updatePipParams() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val builder = android.app.PictureInPictureParams.Builder()
+            
+            // Set dynamic aspect ratio if player is ready
+            // We can't easily access the player here, but we can store the last known ratio
+            lastVideoRatio?.let { builder.setAspectRatio(it) }
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                lifecycleScope.launch {
+                    val autoPip = settingsRepository.settings.first().autoPip
+                    builder.setAutoEnterEnabled(autoPip)
+                    setPictureInPictureParams(builder.build())
+                }
+            } else {
+                setPictureInPictureParams(builder.build())
+            }
+        }
+    }
+
+    private var lastVideoRatio: android.util.Rational? = null
+
+    fun setLastVideoRatio(width: Int, height: Int) {
+        if (width > 0 && height > 0) {
+            val ratio = android.util.Rational(width, height)
+            // PiP aspect ratio must be between 0.4184 and 2.39
+            if (ratio.toFloat() in 0.4184f..2.39f) {
+                lastVideoRatio = ratio
+                updatePipParams()
+            }
+        }
+    }
+
     companion object {
         const val EXTRA_STREAM_URL = "extra_stream_url"
         const val EXTRA_STREAM_TITLE = "extra_stream_title"
@@ -146,46 +187,70 @@ class PlayerActivity : AppCompatActivity() {
         val playlistId = intent.getIntExtra(EXTRA_PLAYLIST_ID, -1)
         val groupTitle = intent.getStringExtra(EXTRA_STREAM_GROUP) ?: "Default"
 
+        updatePipParams()
+
+        // Update App Shortcuts with the current channel info
+        com.codesrahul.streamplus.util.ShortcutHelper.updateShortcuts(
+            context = this,
+            streamTitle = streamTitle,
+            streamUrl = streamUrl,
+            channelLogo = channelLogo,
+            playlistId = playlistId,
+            groupTitle = groupTitle
+        )
+
         setContent {
-            StreamPlusTheme {
-                PlayerScreen(
-                    streamUrl = streamUrl,
-                    streamTitle = streamTitle,
-                    channelLogo = channelLogo,
-                    userAgent = userAgent,
-                    referer = referer,
-                    cookie = cookie,
-                    origin = origin,
-                    headers = headers,
-                    drmLicenseUrl = drmLicenseUrl,
-                    drmScheme = drmScheme,
-                    drmHeaders = drmHeaders,
-                    okHttpClientProvider = okHttpClientProvider,
-                    settingsRepository = settingsRepository,
-                    historyRepository = historyRepository,
-                    playlistId = playlistId,
-                    groupTitle = groupTitle,
-                    castPlayer = castPlayer,
-                    onEnterPip = { enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().build()) },
-                    isInPip = isInPictureInPictureMode
-                )
+            key(streamUrl, streamTitle) {
+                StreamPlusTheme {
+                    PlayerScreen(
+                        streamUrl = streamUrl,
+                        streamTitle = streamTitle,
+                        channelLogo = channelLogo,
+                        userAgent = userAgent,
+                        referer = referer,
+                        cookie = cookie,
+                        origin = origin,
+                        headers = headers,
+                        drmLicenseUrl = drmLicenseUrl,
+                        drmScheme = drmScheme,
+                        drmHeaders = drmHeaders,
+                        okHttpClientProvider = okHttpClientProvider,
+                        settingsRepository = settingsRepository,
+                        historyRepository = historyRepository,
+                        playlistId = playlistId,
+                        groupTitle = groupTitle,
+                        castPlayer = castPlayer,
+                        onEnterPip = { enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().build()) },
+                        isInPip = isInPip
+                    )
+                }
             }
         }
     }
 
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // recreate() can cause flicker, but it's safe. Alternatively, we can use a state to refresh.
+        recreate()
+    }
+
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        // Use lifecycleScope to avoid blocking the main thread with runBlocking
-        lifecycleScope.launch {
-            val autoPip = settingsRepository.settings.first().autoPip
-            if (autoPip) {
-                enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().build())
+        // On older Android versions, we still need manual trigger if auto-PIP is true
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
+            lifecycleScope.launch {
+                val autoPip = settingsRepository.settings.first().autoPip
+                if (autoPip) {
+                    enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().build())
+                }
             }
         }
     }
 
     override fun onResume() {
         super.onResume()
+        updatePipParams()
         sessionManager?.addSessionManagerListener(sessionManagerListener, CastSession::class.java)
     }
 
@@ -238,6 +303,14 @@ fun PlayerScreen(
     isInPip: Boolean = false
 ) {
     val context = LocalContext.current
+    val activityContext = remember(context) {
+        var ctx = context
+        while (ctx is android.content.ContextWrapper && ctx !is PlayerActivity) {
+            ctx = ctx.baseContext
+        }
+        ctx as? PlayerActivity
+    }
+    val scope = rememberCoroutineScope()
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     val settingsState by settingsRepository.settings.collectAsState(initial = com.codesrahul.streamplus.data.settings.AppSettings())
     
@@ -484,6 +557,10 @@ fun PlayerScreen(
                 }
                 android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
             }
+
+            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                activityContext?.setLastVideoRatio(videoSize.width, videoSize.height)
+            }
         })
         
         player
@@ -647,11 +724,13 @@ fun PlayerScreen(
                         group = groupTitle,
                         playlistId = playlistId,
                         userAgent = resolvedItem.userAgent,
+                        headers = resolvedItem.headers,
                         cookie = cookie,
                         referer = referer,
                         origin = origin,
                         licenseUrl = resolvedItem.licenseUrl,
                         drmScheme = resolvedItem.drmScheme,
+                        drmHeaders = resolvedItem.drmHeaders,
                         position = pos,
                         duration = if (dur == C.TIME_UNSET) 0L else dur
                     )
@@ -679,11 +758,13 @@ fun PlayerScreen(
                             group = groupTitle,
                             playlistId = playlistId,
                             userAgent = resolvedItem.userAgent,
+                            headers = resolvedItem.headers,
                             cookie = cookie,
                             referer = referer,
                             origin = origin,
                             licenseUrl = resolvedItem.licenseUrl,
                             drmScheme = resolvedItem.drmScheme,
+                            drmHeaders = resolvedItem.drmHeaders,
                             position = pos,
                             duration = if (dur == C.TIME_UNSET || dur < 0) 0L else dur
                         )
@@ -813,7 +894,6 @@ fun PlayerScreen(
 
 
 
-    val activityContext = LocalContext.current // Capture the activity context
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         AndroidView(
@@ -825,9 +905,9 @@ fun PlayerScreen(
                 playerView.player = exoPlayer
                 playerView.keepScreenOn = true
                 
-                val detector = android.view.GestureDetector(activityContext, object : android.view.GestureDetector.SimpleOnGestureListener() {
-                    val audioManager = activityContext.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-                    val window = (activityContext as? android.app.Activity)?.window
+                val detector = android.view.GestureDetector(context, object : android.view.GestureDetector.SimpleOnGestureListener() {
+                    val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+                    val window = activityContext?.window
 
                     override fun onDown(e: android.view.MotionEvent): Boolean {
                         volumeAccumulator = 0f // Reset for new gesture
@@ -874,7 +954,7 @@ fun PlayerScreen(
                                     val target = (curr + chg).coerceIn(0, max)
                                     volumeAccumulator -= (chg * step) // Reduce accumulator by one step
                                     
-                                    audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, target, android.media.AudioManager.FLAG_SHOW_UI)
+                                    audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, target, 0)
                                     gestureText = "Volume: ${(target * 100 / max)}%"
                                     gestureIcon = if (target == 0) Icons.Default.VolumeOff else Icons.Default.VolumeUp
                                     gestureLevel = target.toFloat() / max
@@ -962,8 +1042,7 @@ fun PlayerScreen(
                     activity?.lifecycleScope?.launch { settingsRepository.setLastResizeMode(playerView.resizeMode) }
                 }
                 playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.btn_landscape)?.setOnClickListener {
-                    val act = activityContext as? android.app.Activity
-                    if (act != null) {
+                    activityContext?.let { act ->
                         val currentOrientation = act.resources.configuration.orientation
                         if (currentOrientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) {
                             act.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
@@ -987,6 +1066,7 @@ fun PlayerScreen(
                 }
                 
                 // Hide controls in PiP
+                playerView.useController = !isInPip
                 if (isInPip) playerView.hideController()
             }
         )

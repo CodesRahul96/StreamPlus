@@ -47,3 +47,18 @@ val PremiumDarkGradientEnd = Color(0xFF2C5364)
 val PremiumLightGradientStart = Color(0xFFFFFFFF)
 val PremiumLightGradientCenter = Color(0xFFECE9E6)
 val PremiumLightGradientEnd = Color(0xFFECE9E6)
+
+// Sunset Glow
+val SunsetPrimary = Color(0xFFFF5722)
+val SunsetSecondary = Color(0xFFE91E63)
+val SunsetTertiary = Color(0xFFFFC107)
+
+// Ocean Depths
+val OceanPrimary = Color(0xFF006064)
+val OceanSecondary = Color(0xFF0097A7)
+val OceanTertiary = Color(0xFFB2EBF2)
+
+// Carbon Stealth
+val CarbonPrimary = Color(0xFF212121)
+val CarbonSecondary = Color(0xFF424242)
+val CarbonTertiary = Color(0xFF757575)
