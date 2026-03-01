@@ -1012,6 +1012,10 @@ fun PlayerScreen(
             update = { view ->
                 val playerView = view.findViewById<androidx.media3.ui.PlayerView>(com.codesrahul.streamplus.R.id.player_view)
                 if (playerView.player != activePlayer) playerView.player = activePlayer
+                
+                // Bind the stream title to the custom TextView in the controller layout
+                playerView.findViewById<android.widget.TextView>(com.codesrahul.streamplus.R.id.tv_player_title)?.text = streamTitle
+                
                 playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.btn_close)?.setOnClickListener { (playerView.context as? android.app.Activity)?.finish() }
                 playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.exo_settings)?.setOnClickListener { 
                     showSettingsSheet = true
