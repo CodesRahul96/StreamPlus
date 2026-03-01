@@ -267,27 +267,7 @@ class PlaylistRepositoryImpl @Inject constructor(
 
     // --- Favorites ---
     override fun getAllFavorites(): kotlinx.coroutines.flow.Flow<List<FavoriteEntity>> {
-        return favoriteDao.getAllFavorites().map { favorites ->
-            withContext(Dispatchers.IO) {
-                favorites.map { fav ->
-                    // Try to find a fresher entry in the channels table
-                    val refreshed = channelDao.getChannelByIdentity(fav.name, fav.groupTitle, fav.playlistId)
-                    if (refreshed != null) {
-                        fav.copy(
-                            url = refreshed.url,
-                            userAgent = refreshed.userAgent,
-                            headers = refreshed.headers,
-                            licenseUrl = refreshed.licenseUrl,
-                            drmScheme = refreshed.drmScheme,
-                            drmHeaders = refreshed.drmHeaders,
-                            logoUrl = refreshed.logoUrl
-                        )
-                    } else {
-                        fav
-                    }
-                }
-            }
-        }
+        return favoriteDao.getAllFavorites()
     }
 
     override suspend fun addFavorite(item: FavoriteEntity) = favoriteDao.addFavorite(item)

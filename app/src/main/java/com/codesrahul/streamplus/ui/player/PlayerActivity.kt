@@ -63,6 +63,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.google.android.gms.cast.framework.CastContext
 import com.google.android.gms.cast.framework.CastSession
 import com.google.android.gms.cast.framework.SessionManager
@@ -84,6 +85,9 @@ class PlayerActivity : AppCompatActivity() {
 
     @Inject
     lateinit var historyRepository: com.codesrahul.streamplus.data.repository.HistoryRepository
+
+    @Inject
+    lateinit var channelDao: com.codesrahul.streamplus.data.local.ChannelDao
 
     private var castContext: CastContext? = null
     private var castPlayer: CastPlayer? = null
@@ -173,17 +177,17 @@ class PlayerActivity : AppCompatActivity() {
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        val streamUrl = intent.getStringExtra(EXTRA_STREAM_URL) ?: ""
+        var streamUrl = intent.getStringExtra(EXTRA_STREAM_URL) ?: ""
         val streamTitle = intent.getStringExtra(EXTRA_STREAM_TITLE) ?: "Unknown Stream"
         val channelLogo = intent.getStringExtra(EXTRA_CHANNEL_LOGO)
-        val userAgent = intent.getStringExtra(EXTRA_USER_AGENT) ?: "ExoPlayerLib/2.19.1"
-        val referer = intent.getStringExtra(EXTRA_REFERER)
-        val cookie = intent.getStringExtra(EXTRA_COOKIE)
-        val origin = intent.getStringExtra(EXTRA_ORIGIN)
+        var userAgent = intent.getStringExtra(EXTRA_USER_AGENT) ?: "ExoPlayerLib/2.19.1"
+        var referer = intent.getStringExtra(EXTRA_REFERER)
+        var cookie = intent.getStringExtra(EXTRA_COOKIE)
+        var origin = intent.getStringExtra(EXTRA_ORIGIN)
         @Suppress("UNCHECKED_CAST")
         val headers = intent.getSerializableExtra(EXTRA_HEADERS) as? Map<String, String> ?: emptyMap()
-        val drmLicenseUrl = intent.getStringExtra(EXTRA_DRM_LICENSE_URL)
-        val drmScheme = intent.getStringExtra(EXTRA_DRM_SCHEME)
+        var drmLicenseUrl = intent.getStringExtra(EXTRA_DRM_LICENSE_URL)
+        var drmScheme = intent.getStringExtra(EXTRA_DRM_SCHEME)
         @Suppress("UNCHECKED_CAST")
         val drmHeaders = intent.getSerializableExtra(EXTRA_DRM_HEADERS) as? Map<String, String> ?: emptyMap()
         val playlistId = intent.getIntExtra(EXTRA_PLAYLIST_ID, -1)
@@ -191,40 +195,57 @@ class PlayerActivity : AppCompatActivity() {
 
         updatePipParams()
 
-        // Update App Shortcuts with the current channel info
-        com.codesrahul.streamplus.util.ShortcutHelper.updateShortcuts(
-            context = this,
-            streamTitle = streamTitle,
-            streamUrl = streamUrl,
-            channelLogo = channelLogo,
-            playlistId = playlistId,
-            groupTitle = groupTitle
-        )
+        lifecycleScope.launch {
+            if (playlistId != -1 && streamTitle != "Unknown Stream") {
+                withContext(Dispatchers.IO) {
+                    val fresh = channelDao.getChannelByIdentity(streamTitle, groupTitle, playlistId)
+                    if (fresh != null) {
+                        streamUrl = fresh.url
+                        userAgent = fresh.userAgent
+                        referer = fresh.headers["Referer"] ?: referer
+                        cookie = fresh.headers["Cookie"] ?: cookie
+                        origin = fresh.headers["Origin"] ?: origin
+                        drmLicenseUrl = fresh.licenseUrl ?: drmLicenseUrl
+                        drmScheme = fresh.drmScheme ?: drmScheme
+                    }
+                }
+            }
 
-        setContent {
-            key(streamUrl, streamTitle) {
-                StreamPlusTheme {
-                    PlayerScreen(
-                        streamUrl = streamUrl,
-                        streamTitle = streamTitle,
-                        channelLogo = channelLogo,
-                        userAgent = userAgent,
-                        referer = referer,
-                        cookie = cookie,
-                        origin = origin,
-                        headers = headers,
-                        drmLicenseUrl = drmLicenseUrl,
-                        drmScheme = drmScheme,
-                        drmHeaders = drmHeaders,
-                        okHttpClientProvider = okHttpClientProvider,
-                        settingsRepository = settingsRepository,
-                        historyRepository = historyRepository,
-                        playlistId = playlistId,
-                        groupTitle = groupTitle,
-                        castPlayer = castPlayer,
-                        onEnterPip = { enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().build()) },
-                        isInPip = isInPip
-                    )
+            // Update App Shortcuts with the current channel info
+            com.codesrahul.streamplus.util.ShortcutHelper.updateShortcuts(
+                context = this@PlayerActivity,
+                streamTitle = streamTitle,
+                streamUrl = streamUrl,
+                channelLogo = channelLogo,
+                playlistId = playlistId,
+                groupTitle = groupTitle
+            )
+
+            setContent {
+                key(streamUrl, streamTitle) {
+                    StreamPlusTheme {
+                        PlayerScreen(
+                            streamUrl = streamUrl,
+                            streamTitle = streamTitle,
+                            channelLogo = channelLogo,
+                            userAgent = userAgent,
+                            referer = referer,
+                            cookie = cookie,
+                            origin = origin,
+                            headers = headers,
+                            drmLicenseUrl = drmLicenseUrl,
+                            drmScheme = drmScheme,
+                            drmHeaders = drmHeaders,
+                            okHttpClientProvider = okHttpClientProvider,
+                            settingsRepository = settingsRepository,
+                            historyRepository = historyRepository,
+                            playlistId = playlistId,
+                            groupTitle = groupTitle,
+                            castPlayer = castPlayer,
+                            onEnterPip = { enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().build()) },
+                            isInPip = isInPip
+                        )
+                    }
                 }
             }
         }

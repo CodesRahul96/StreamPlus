@@ -13,25 +13,7 @@ class HistoryRepository @Inject constructor(
     private val historyDao: HistoryDao,
     private val channelDao: ChannelDao
 ) {
-    fun getAllHistory(): Flow<List<HistoryEntity>> = historyDao.getAllHistory().map { history ->
-        history.map { entry ->
-            // Try to find a fresher entry in the channels table
-            val refreshed = channelDao.getChannelByIdentity(entry.name, entry.group, entry.playlistId)
-            if (refreshed != null) {
-                entry.copy(
-                    url = refreshed.url,
-                    userAgent = refreshed.userAgent,
-                    headers = refreshed.headers,
-                    licenseUrl = refreshed.licenseUrl,
-                    drmScheme = refreshed.drmScheme,
-                    drmHeaders = refreshed.drmHeaders,
-                    logoUrl = refreshed.logoUrl
-                )
-            } else {
-                entry
-            }
-        }
-    }
+    fun getAllHistory(): Flow<List<HistoryEntity>> = historyDao.getAllHistory()
 
     suspend fun saveProgress(
         url: String, 
