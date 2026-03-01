@@ -39,3 +39,17 @@
 -keep class dagger.hilt.** { *; }
 -keep class * extends android.app.Application { *; }
 -keep @dagger.hilt.android.AndroidEntryPoint class * { *; }
+
+# Gson & TypeToken Fix
+-keepattributes Signature
+-keepclassmembers class * {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
+-keep class com.google.gson.reflect.TypeToken
+-keep class * extends com.google.gson.reflect.TypeToken
+-keep public class * implements com.google.gson.TypeAdapterFactory
+-keep public class * implements com.google.gson.JsonSerializer
+-keep public class * implements com.google.gson.JsonDeserializer
+
+# MapTypeConverter
+-keep class com.codesrahul.streamplus.data.local.MapTypeConverter { *; }
