@@ -484,10 +484,10 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         singleLine = true
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    if (qrBitmap != null) {
+                    qrBitmap?.let { bmp ->
                         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                             Image(
-                                painter = androidx.compose.ui.graphics.painter.BitmapPainter(qrBitmap!!.asImageBitmap()),
+                                painter = androidx.compose.ui.graphics.painter.BitmapPainter(bmp.asImageBitmap()),
                                 contentDescription = "QR Code",
                                 modifier = Modifier.size(220.dp)
                             )
@@ -497,7 +497,6 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         Button(
                             onClick = {
                                 try {
-                                    val bmp = qrBitmap!!
                                     val file = File(context.cacheDir, "streamplus_qr.png")
                                     FileOutputStream(file).use { fos -> bmp.compress(Bitmap.CompressFormat.PNG, 100, fos) }
                                     val shareUri = FileProvider.getUriForFile(

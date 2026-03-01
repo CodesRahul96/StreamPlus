@@ -174,9 +174,11 @@ class PlaylistRepositoryImpl @Inject constructor(
             }
             // Always load EPG on playlist refresh to keep guide data fresh
             epgManager.loadEPG(detectedEpgUrl)
-        } else if (!playlistEntity?.epgUrl.isNullOrBlank()) {
+        } else {
             // Load previously saved EPG URL if a new one wasn't found in headers
-            epgManager.loadEPG(playlistEntity!!.epgUrl!!)
+            playlistEntity?.epgUrl?.let { savedUrl ->
+                epgManager.loadEPG(savedUrl)
+            }
         }
 
         items

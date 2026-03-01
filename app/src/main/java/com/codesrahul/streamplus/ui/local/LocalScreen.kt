@@ -271,9 +271,11 @@ fun LocalVideoList(viewModel: LocalViewModel, onBack: () -> Unit) {
             text = { Text("Are you sure you want to delete \"${videoToDelete?.title}\"?") },
             confirmButton = {
                 TextButton(onClick = {
-                    val result = deleteVideo(context, videoToDelete!!)
-                    if (result is FileOpResult.RequiresPermission) {
-                        launcher.launch(IntentSenderRequest.Builder(result.intentSender).build())
+                    videoToDelete?.let { video ->
+                        val result = deleteVideo(context, video)
+                        if (result is FileOpResult.RequiresPermission) {
+                            launcher.launch(IntentSenderRequest.Builder(result.intentSender).build())
+                        }
                     }
                     videoToDelete = null
                     viewModel.selectFolder(folderName)
@@ -300,9 +302,11 @@ fun LocalVideoList(viewModel: LocalViewModel, onBack: () -> Unit) {
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val result = renameVideo(context, videoToRename!!, newName)
-                    if (result is FileOpResult.RequiresPermission) {
-                        launcher.launch(IntentSenderRequest.Builder(result.intentSender).build())
+                    videoToRename?.let { video ->
+                        val result = renameVideo(context, video, newName)
+                        if (result is FileOpResult.RequiresPermission) {
+                            launcher.launch(IntentSenderRequest.Builder(result.intentSender).build())
+                        }
                     }
                     videoToRename = null
                     viewModel.selectFolder(folderName)

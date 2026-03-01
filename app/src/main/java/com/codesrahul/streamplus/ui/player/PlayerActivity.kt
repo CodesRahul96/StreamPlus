@@ -163,7 +163,9 @@ class PlayerActivity : AppCompatActivity() {
         try {
             castContext = CastContext.getSharedInstance(this)
             sessionManager = castContext?.sessionManager
-            castPlayer = CastPlayer(castContext!!, DefaultMediaItemConverter())
+            castContext?.let {
+                castPlayer = CastPlayer(it, DefaultMediaItemConverter())
+            }
         } catch (e: Exception) {
             Log.e("PlayerActivity", "Cast initialization failed", e)
         }

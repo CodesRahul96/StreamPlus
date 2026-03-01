@@ -41,7 +41,7 @@ class UnifiedMediaDrmCallback(
         if (uuid == C.CLEARKEY_UUID && headers != null) {
             val clearKeyHeaderKey = headers.keys.find { it.equals("X-ClearKey-Data", ignoreCase = true) }
             if (clearKeyHeaderKey != null) {
-                val clearKeyJson = headers[clearKeyHeaderKey]!!
+                val clearKeyJson = headers[clearKeyHeaderKey] ?: ""
                 Log.d("UnifiedMediaDrm", "Using ClearKey JSON from headers ($clearKeyHeaderKey): $clearKeyJson")
                 return clearKeyJson.toByteArray()
             }
