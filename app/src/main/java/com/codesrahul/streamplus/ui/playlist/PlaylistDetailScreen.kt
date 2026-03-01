@@ -1,5 +1,7 @@
 package com.codesrahul.streamplus.ui.playlist
 
+import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -65,7 +67,7 @@ fun PlaylistDetailScreen(
             containerColor = Color.Transparent,
             topBar = {
                 Column {
-                    LargeTopAppBar(
+                    TopAppBar(
                         title = {
                             Column {
                                 with(sharedTransitionScope) {
@@ -84,7 +86,7 @@ fun PlaylistDetailScreen(
                                 }
                             }
                         },
-                        colors = TopAppBarDefaults.largeTopAppBarColors(
+                        colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = MaterialTheme.colorScheme.background,
                             scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
                         ),
@@ -262,6 +264,7 @@ fun ChannelItem(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onToggleFavorite: (() -> Unit)?, onClick: () -> Unit) {
     Card(
@@ -270,7 +273,9 @@ fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onT
             .aspectRatio(0.67f) // Movie poster ratio
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (channel.logoUrl.isNotBlank() && !hideImage) {
@@ -301,8 +306,8 @@ fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onT
                     style = MaterialTheme.typography.labelMedium,
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    maxLines = 1,
+                    modifier = Modifier.basicMarquee()
                 )
             }
             
@@ -320,6 +325,7 @@ fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onT
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String?, isFavorite: Boolean, onToggleFavorite: (() -> Unit)?, onClick: () -> Unit) {
     Card(
@@ -331,7 +337,8 @@ fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             // Logo / placeholder
@@ -430,7 +437,7 @@ fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.basicMarquee(),
                         textAlign = TextAlign.Center
                     )
                     if (!currentProgram.isNullOrBlank()) {

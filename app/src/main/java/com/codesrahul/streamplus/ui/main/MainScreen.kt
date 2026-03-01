@@ -1,4 +1,4 @@
-package com.codesrahul.streamplus.ui.main
+ package com.codesrahul.streamplus.ui.main
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -54,10 +54,9 @@ fun MainScreen() {
         Scaffold(
             bottomBar = {
                 NavigationBar(
-                    // iOS translucent frosted glass effect
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-                    tonalElevation = 0.dp,
-                    modifier = Modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    tonalElevation = 8.dp
                 ) {
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentDestination = navBackStackEntry?.destination
@@ -68,14 +67,14 @@ fun MainScreen() {
                                 Icon(
                                     if (selected) item.selectedIcon else item.unselectedIcon,
                                     contentDescription = item.title,
-                                    modifier = Modifier.size(26.dp)
+                                    modifier = Modifier.size(24.dp)
                                 )
                             },
                             label = if (!hideLabels) {
                                 {
                                     Text(
                                         item.title,
-                                        style = MaterialTheme.typography.labelSmall,
+                                        style = MaterialTheme.typography.labelMedium,
                                         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium
                                     )
                                 }
@@ -92,12 +91,11 @@ fun MainScreen() {
                                 }
                             },
                             colors = NavigationBarItemDefaults.colors(
-                                // Remove the Android Material pill indicator
-                                indicatorColor = Color.Transparent,
-                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         )
                     }

@@ -15,6 +15,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -31,6 +32,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -45,6 +47,9 @@ import com.codesrahul.streamplus.ui.components.PermissionBox
 import com.codesrahul.streamplus.ui.components.PremiumBackground
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberPermissionState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import com.codesrahul.streamplus.ui.settings.SettingsViewModel
 import java.util.concurrent.TimeUnit
 
 data class VideoFolder(
@@ -80,31 +85,56 @@ fun LocalScreen() {
     )
 
     val viewModel: LocalViewModel = hiltViewModel()
+    val settingsViewModel: SettingsViewModel = hiltViewModel()
+    val settings by viewModel.settings.collectAsState(initial = com.codesrahul.streamplus.data.settings.AppSettings())
     val selectedFolder by viewModel.selectedFolder.collectAsState()
+
+    var showSettings by remember { mutableStateOf(false) }
 
     PermissionBox(
         permissionState = permissionState,
         description = "Permission needed to load local videos"
     ) {
         if (selectedFolder != null) {
-            LocalVideoList(viewModel = viewModel, onBack = { viewModel.selectFolder(null) })
+            LocalVideoList(
+                viewModel = viewModel, 
+                settingsViewModel = settingsViewModel,
+                settings = settings,
+                onBack = { viewModel.selectFolder(null) },
+                onShowSettings = { showSettings = true }
+            )
         } else {
-            LocalVideoGrid(viewModel = viewModel)
+            LocalVideoGrid(
+                viewModel = viewModel, 
+                settingsViewModel = settingsViewModel,
+                settings = settings,
+                onShowSettings = { showSettings = true }
+            )
+        }
+
+        if (showSettings) {
+            GallerySettingsBottomSheet(
+                settings = settings,
+                viewModel = settingsViewModel,
+                onDismiss = { showSettings = false }
+            )
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LocalVideoGrid(viewModel: LocalViewModel) {
+fun LocalVideoGrid(
+    viewModel: LocalViewModel,
+    settingsViewModel: SettingsViewModel,
+    settings: com.codesrahul.streamplus.data.settings.AppSettings,
+    onShowSettings: () -> Unit
+) {
     val context = LocalContext.current
     val folders by viewModel.folders.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val sortType by viewModel.sortType.collectAsState()
     
     var isSelectionMode by remember { mutableStateOf(false) }
     val selectedFolders = remember { mutableStateListOf<String>() }
-    var showSortMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.refreshFolders()
@@ -169,13 +199,8 @@ fun LocalVideoGrid(viewModel: LocalViewModel) {
                                     Icon(Icons.Filled.Close, contentDescription = "Cancel")
                                 }
                             } else {
-                                IconButton(onClick = { showSortMenu = true }) {
-                                    Icon(Icons.Filled.Sort, contentDescription = "Sort")
-                                }
-                                DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
-                                    DropdownMenuItem(text = { Text("Name") }, onClick = { viewModel.setSortType(SortType.NAME); showSortMenu = false })
-                                    DropdownMenuItem(text = { Text("Count") }, onClick = { viewModel.setSortType(SortType.COUNT); showSortMenu = false })
-                                    DropdownMenuItem(text = { Text("Size") }, onClick = { viewModel.setSortType(SortType.SIZE); showSortMenu = false })
+                                IconButton(onClick = onShowSettings) {
+                                    Icon(Icons.Filled.Settings, contentDescription = "Settings")
                                 }
                             }
                         }
@@ -197,7 +222,7 @@ fun LocalVideoGrid(viewModel: LocalViewModel) {
                     }
                 } else {
                     LazyVerticalGrid(
-                        columns = GridCells.Adaptive(160.dp),
+                        columns = if (settings.galleryLayout == "Grid") GridCells.Adaptive(160.dp) else GridCells.Fixed(1),
                         modifier = Modifier
                             .padding(padding)
                             .padding(horizontal = 12.dp),
@@ -210,6 +235,7 @@ fun LocalVideoGrid(viewModel: LocalViewModel) {
                                 folder = folder,
                                 isSelected = selectedFolders.contains(folder.name),
                                 isSelectionMode = isSelectionMode,
+                                settings = settings,
                                 onClick = {
                                     if (isSelectionMode) {
                                         if (selectedFolders.contains(folder.name)) {
@@ -238,7 +264,13 @@ fun LocalVideoGrid(viewModel: LocalViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LocalVideoList(viewModel: LocalViewModel, onBack: () -> Unit) {
+fun LocalVideoList(
+    viewModel: LocalViewModel,
+    settingsViewModel: SettingsViewModel,
+    settings: com.codesrahul.streamplus.data.settings.AppSettings,
+    onBack: () -> Unit,
+    onShowSettings: () -> Unit
+) {
     val context = LocalContext.current
     val videos by viewModel.videos.collectAsState()
     val selectedFolder by viewModel.selectedFolder.collectAsState()
@@ -367,10 +399,10 @@ fun LocalVideoList(viewModel: LocalViewModel, onBack: () -> Unit) {
                             }
                         },
                         actions = {
-                            IconButton(onClick = { isSearchActive = true }) {
-                                Icon(Icons.Filled.Search, contentDescription = "Search")
+                            IconButton(onClick = onShowSettings) {
+                                Icon(Icons.Filled.Settings, contentDescription = "Settings")
                             }
-                            IconButton(onClick = { viewModel.selectFolder(folderName) }) {
+                            IconButton(onClick = { viewModel.refreshFolders() }) {
                                 Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
                             }
                         }
@@ -388,7 +420,7 @@ fun LocalVideoList(viewModel: LocalViewModel, onBack: () -> Unit) {
             }
         } else {
             LazyVerticalGrid(
-                columns = GridCells.Adaptive(160.dp),
+                columns = if (settings.galleryLayout == "Grid") GridCells.Adaptive(160.dp) else GridCells.Fixed(1),
                 modifier = Modifier.padding(padding),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
@@ -397,6 +429,7 @@ fun LocalVideoList(viewModel: LocalViewModel, onBack: () -> Unit) {
                 items(filteredVideos, key = { it.id }) { video ->
                     VideoPosterItem(
                         video = video,
+                        settings = settings,
                         onClick = {
                             val intent = Intent(context, com.codesrahul.streamplus.ui.player.PlayerActivity::class.java).apply {
                                 putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_URL, video.uri.toString())
@@ -423,101 +456,194 @@ fun LocalVideoList(viewModel: LocalViewModel, onBack: () -> Unit) {
 @Composable
 fun VideoPosterItem(
     video: LocalVideo,
+    settings: com.codesrahul.streamplus.data.settings.AppSettings,
     onClick: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val isGridLayout = settings.galleryLayout == "Grid"
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-    ) {
-        Card(
+    if (isGridLayout) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(0.72f), // Movie poster style
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                .clickable(onClick = onClick)
         ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                AsyncImage(
-                    model = video.uri,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-
-                // Fancy duration overlay
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(8.dp),
-                    color = Color.Black.copy(alpha = 0.75f),
-                    shape = RoundedCornerShape(6.dp)
-                ) {
-                    Text(
-                        text = formatDuration(video.duration),
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
-
-                // Glassy more menu
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(4.dp)
-                ) {
-                    Surface(
-                        onClick = { showMenu = true },
-                        color = Color.Black.copy(alpha = 0.3f),
-                        shape = CircleShape,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Filled.MoreVert, null, tint = Color.White, modifier = Modifier.size(18.dp))
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(0.72f), // Movie poster style
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    if (settings.showVideoThumbnail) {
+                        AsyncImage(
+                            model = video.uri,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.VideoFile, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary.copy(0.4f))
                         }
                     }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
+
+                    // Fancy duration overlay
+                    if (settings.showVideoDuration) {
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(8.dp),
+                            color = Color.Black.copy(alpha = 0.75f),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = formatDuration(video.duration),
+                                color = Color.White,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    // Glassy more menu
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(4.dp)
                     ) {
-                        DropdownMenuItem(
-                            text = { Text("Rename") },
-                            leadingIcon = { Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp)) },
-                            onClick = { showMenu = false; onRename() }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
-                            leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp)) },
-                            onClick = { showMenu = false; onDelete() }
+                        Surface(
+                            onClick = { showMenu = true },
+                            color = Color.Black.copy(alpha = 0.3f),
+                            shape = CircleShape,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Filled.MoreVert, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            }
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Rename") },
+                                leadingIcon = { Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp)) },
+                                onClick = { showMenu = false; onRename() }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                                leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp)) },
+                                onClick = { showMenu = false; onDelete() }
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = video.title,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                fontWeight = FontWeight.Bold,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+            if (settings.showVideoSize) {
+                Text(
+                    text = formatSize(video.size),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
+            }
+        }
+    } else {
+        // List Layout
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(100.dp, 60.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                if (settings.showVideoThumbnail) {
+                    AsyncImage(
+                        model = video.uri,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(Icons.Default.VideoFile, null, modifier = Modifier.align(Alignment.Center).size(24.dp), tint = MaterialTheme.colorScheme.primary.copy(0.4f))
+                }
+                
+                if (settings.showVideoDuration) {
+                    Surface(
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
+                        color = Color.Black.copy(alpha = 0.7f),
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = formatDuration(video.duration),
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                         )
                     }
                 }
             }
+            
+            Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+                Text(
+                    text = video.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (settings.showVideoSize) {
+                        Text(
+                            text = formatSize(video.size),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (settings.showVideoSize && settings.showVideoResolution) {
+                        Text(" • ", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (settings.showVideoResolution) {
+                        Text(
+                            text = "1080p", // Mock resolution
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            
+            IconButton(onClick = { showMenu = true }) {
+                Icon(Icons.Default.MoreVert, null)
+            }
+            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                DropdownMenuItem(text = { Text("Rename") }, onClick = { showMenu = false; onRename() })
+                DropdownMenuItem(text = { Text("Delete", color = MaterialTheme.colorScheme.error) }, onClick = { showMenu = false; onDelete() })
+            }
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Text(
-            text = video.title,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1,
-            fontWeight = FontWeight.Bold,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 4.dp)
-        )
-        Text(
-            text = formatSize(video.size),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-            modifier = Modifier.padding(horizontal = 4.dp)
-        )
     }
 }
 
@@ -527,94 +653,336 @@ fun VideoFolderItem(
     folder: VideoFolder,
     isSelected: Boolean,
     isSelectionMode: Boolean,
+    settings: com.codesrahul.streamplus.data.settings.AppSettings,
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
+    val isGridLayout = settings.galleryLayout == "Grid"
+
+    if (isGridLayout) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick
+                ),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer 
+                                 else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
             ),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer 
-                             else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1.1f)
-            ) {
-                if (folder.firstVideoUri != null) {
-                    AsyncImage(
-                        model = folder.firstVideoUri,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f))
-                                )
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Filled.Folder, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1.1f)
+                ) {
+                    if (folder.firstVideoUri != null) {
+                        AsyncImage(
+                            model = folder.firstVideoUri,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f))
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Filled.Folder, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
+                        }
+                    }
+
+                    // Item count badge
+                    if (settings.showFolderCount) {
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(8.dp),
+                            color = Color.Black.copy(alpha = 0.6f),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = folder.count.toString(),
+                                color = Color.White,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    if (isSelectionMode) {
+                        Checkbox(
+                            checked = isSelected,
+                            onCheckedChange = null,
+                            modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
+                        )
                     }
                 }
-
-                // Item count badge
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(8.dp),
-                    color = Color.Black.copy(alpha = 0.6f),
-                    shape = RoundedCornerShape(6.dp)
-                ) {
+                
+                Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        text = folder.count.toString(),
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelSmall,
+                        text = folder.name,
+                        style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-                }
-
-                if (isSelectionMode) {
-                    Checkbox(
-                        checked = isSelected,
-                        onCheckedChange = null,
-                        modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
-                    )
+                    if (settings.showFolderCount || settings.showFolderPath) {
+                         Text(
+                            text = buildString {
+                                if (settings.showFolderCount) append("${folder.count} items ")
+                                if (settings.showFolderCount && settings.showFolderPath) append("• ")
+                                if (settings.showFolderPath) append("/sdcard/Videos/${folder.name}") // Mock path
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
-            
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(
-                    text = folder.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (folder.totalSize > 0) {
+        }
+    } else {
+        // List Layout
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (folder.firstVideoUri != null) {
+                    AsyncImage(model = folder.firstVideoUri, contentDescription = null, contentScale = ContentScale.Crop)
+                } else {
+                    Icon(Icons.Default.Folder, null, tint = MaterialTheme.colorScheme.primary)
+                }
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(folder.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                if (settings.showFolderPath) {
+                    Text("/sdcard/Videos/${folder.name}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            if (settings.showFolderCount) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = CircleShape
+                ) {
                     Text(
-                        text = "${folder.count} items • ${formatSize(folder.totalSize)}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                        folder.count.toString(), 
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GallerySettingsBottomSheet(
+    settings: com.codesrahul.streamplus.data.settings.AppSettings,
+    viewModel: SettingsViewModel,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = Color(0xFF0F1217), // Deep dark background
+        dragHandle = { BottomSheetDefaults.DragHandle(color = Color.White.copy(0.2f)) },
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        tonalElevation = 8.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text(
+                "Gallery Settings", 
+                style = MaterialTheme.typography.headlineSmall, 
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Layout View
+            SettingsSectionHeader("Layout View")
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                GalleryOptionButton(
+                    label = "List", 
+                    isSelected = settings.galleryLayout == "List", 
+                    icon = Icons.Default.List,
+                    modifier = Modifier.weight(1f)
+                ) { viewModel.setGalleryLayout("List") }
+                GalleryOptionButton(
+                    label = "Grid", 
+                    isSelected = settings.galleryLayout == "Grid", 
+                    icon = Icons.Default.GridView,
+                    modifier = Modifier.weight(1f)
+                ) { viewModel.setGalleryLayout("Grid") }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Folder Sort
+            SettingsSectionHeader("Folder Sort")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GalleryChip("Name", settings.folderSortField == "Name") { viewModel.setFolderSortField("Name") }
+                    GalleryChip("Count", settings.folderSortField == "Count") { viewModel.setFolderSortField("Count") }
+                }
+                IconButton(
+                    onClick = { viewModel.setFolderSortAsc(!settings.folderSortAsc) },
+                    modifier = Modifier.background(Color.White.copy(0.05f), CircleShape).size(36.dp)
+                ) {
+                    Icon(
+                         imageVector = if (settings.folderSortAsc) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                         contentDescription = null,
+                         tint = Color(0xFF00E5FF),
+                         modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Video Sort
+            SettingsSectionHeader("Video Sort")
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GalleryChip("Name", settings.videoSortField == "Name", Modifier.weight(1f)) { viewModel.setVideoSortField("Name") }
+                    GalleryChip("Duration", settings.videoSortField == "Duration", Modifier.weight(1f)) { viewModel.setVideoSortField("Duration") }
+                }
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        GalleryChip("Size", settings.videoSortField == "Size") { viewModel.setVideoSortField("Size") }
+                        GalleryChip("Date", settings.videoSortField == "Date") { viewModel.setVideoSortField("Date") }
+                    }
+                    IconButton(
+                        onClick = { viewModel.setVideoSortAsc(!settings.videoSortAsc) },
+                        modifier = Modifier.background(Color.White.copy(0.05f), CircleShape).size(36.dp)
+                    ) {
+                        Icon(
+                             imageVector = if (settings.videoSortAsc) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                             contentDescription = null,
+                             tint = Color(0xFF00E5FF),
+                             modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Folder Display
+            SettingsSectionHeader("Folder Display")
+            GallerySwitchItem("Show Path", settings.showFolderPath) { viewModel.setShowFolderPath(it) }
+            GallerySwitchItem("Show Count", settings.showFolderCount) { viewModel.setShowFolderCount(it) }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Video Display
+            SettingsSectionHeader("Video Display")
+            GallerySwitchItem("Thumbnail", settings.showVideoThumbnail) { viewModel.setShowVideoThumbnail(it) }
+            GallerySwitchItem("Show Resolution", settings.showVideoResolution) { viewModel.setShowVideoResolution(it) }
+            GallerySwitchItem("Show Duration", settings.showVideoDuration) { viewModel.setShowVideoDuration(it) }
+            GallerySwitchItem("Show File Size", settings.showVideoSize) { viewModel.setShowVideoSize(it) }
+        }
+    }
+}
+
+@Composable
+fun SettingsSectionHeader(title: String) {
+    Text(
+        title, 
+        style = MaterialTheme.typography.labelLarge, 
+        color = Color.White.copy(0.6f),
+        modifier = Modifier.padding(bottom = 12.dp)
+    )
+}
+
+@Composable
+fun GalleryOptionButton(label: String, isSelected: Boolean, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        color = if (isSelected) Color(0xFF00E5FF).copy(0.15f) else Color.Transparent,
+        border = BorderStroke(1.dp, if (isSelected) Color(0xFF00E5FF) else Color.White.copy(0.1f)),
+        shape = RoundedCornerShape(12.dp),
+        modifier = modifier.height(48.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, null, tint = if (isSelected) Color(0xFF00E5FF) else Color.White, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(label, color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)
+        }
+    }
+}
+
+@Composable
+fun GalleryChip(label: String, isSelected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        color = if (isSelected) Color(0xFF00E5FF) else Color.White.copy(0.05f),
+        shape = RoundedCornerShape(20.dp),
+        modifier = modifier.height(36.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 16.dp)) {
+            Text(label, color = if (isSelected) Color.Black else Color.White, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun GallerySwitchItem(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!checked) }.padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, color = Color.White, style = MaterialTheme.typography.bodyLarge)
+        Switch(
+            checked = checked, 
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color(0xFF00E5FF),
+                checkedTrackColor = Color(0xFF00E5FF).copy(0.3f),
+                uncheckedThumbColor = Color.White.copy(0.6f),
+                uncheckedTrackColor = Color.White.copy(0.1f)
+            )
+        )
     }
 }
 

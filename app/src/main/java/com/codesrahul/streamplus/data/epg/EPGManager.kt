@@ -72,6 +72,9 @@ class EPGManager @Inject constructor() {
         var startTime: Long = 0
         var stopTime: Long = 0
 
+        val now = System.currentTimeMillis()
+        val limit = now + (24 * 60 * 60 * 1000) // Keep next 24 hours
+
         while (eventType != XmlPullParser.END_DOCUMENT) {
             when (eventType) {
                 XmlPullParser.START_TAG -> {
@@ -81,14 +84,17 @@ class EPGManager @Inject constructor() {
                             startTime = parseDate(parser.getAttributeValue(null, "start"))
                             stopTime = parseDate(parser.getAttributeValue(null, "stop"))
                         }
-                        "title" -> currentTitle = parser.nextText()
-                        "desc" -> currentDesc = parser.nextText()
+                        "title" -> currentTitle = try { parser.nextText() } catch (e: Exception) { null }
+                        "desc" -> currentDesc = try { parser.nextText() } catch (e: Exception) { null }
                     }
                 }
                 XmlPullParser.END_TAG -> {
                     if (parser.name == "programme" && currentChannelId != null && currentTitle != null) {
-                        val prog = EPGProgram(currentTitle, startTime, stopTime, currentDesc ?: "")
-                        localPrograms.getOrPut(currentChannelId) { mutableListOf() }.add(prog)
+                        // Only store programs that are currently active or upcoming in the next 24h
+                        if (stopTime > now && startTime < limit) {
+                            val prog = EPGProgram(currentTitle, startTime, stopTime, currentDesc ?: "")
+                            localPrograms.getOrPut(currentChannelId) { mutableListOf() }.add(prog)
+                        }
                         
                         currentChannelId = null
                         currentTitle = null
@@ -96,7 +102,7 @@ class EPGManager @Inject constructor() {
                     }
                 }
             }
-            eventType = parser.next()
+            eventType = try { parser.next() } catch (e: Exception) { XmlPullParser.END_DOCUMENT }
         }
         return localPrograms
     }

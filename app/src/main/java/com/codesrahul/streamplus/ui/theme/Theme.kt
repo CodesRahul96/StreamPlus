@@ -19,31 +19,31 @@ import com.codesrahul.streamplus.data.settings.ThemeMode
 import com.codesrahul.streamplus.data.settings.ThemeStyle
 
 private val DarkColorScheme = darkColorScheme(
-    primary = iOSBlueDark,
+    primary = OneUIBlueDark,
     onPrimary = Color.White,
-    secondary = iOSBlueDark,
-    background = iOSBgDark,
+    secondary = OneUIBlueDark,
+    background = OneUIBgDark,
     onBackground = Color.White,
-    surface = iOSBgDark,
+    surface = OneUIBgDark,
     onSurface = Color.White,
-    surfaceVariant = iOSSurfaceDark,
+    surfaceVariant = OneUISurfaceDark,
     onSurfaceVariant = Color.White,
-    outline = iOSDividerDark,
-    error = iOSRedDark
+    outline = OneUIDividerDark,
+    error = OneUIErrorDark
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = iOSBlueLight,
+    primary = OneUIBlueLight,
     onPrimary = Color.White,
-    secondary = iOSBlueLight,
-    background = iOSBgLight,
+    secondary = OneUIBlueLight,
+    background = OneUIBgLight,
     onBackground = Color.Black,
-    surface = iOSBgLight,
+    surface = OneUISurfaceLight,
     onSurface = Color.Black,
-    surfaceVariant = iOSSurfaceLight,
+    surfaceVariant = OneUISurfaceVariantLight,
     onSurfaceVariant = Color.Black,
-    outline = iOSDividerLight,
-    error = iOSRedLight
+    outline = OneUIDividerLight,
+    error = OneUIErrorLight
 )
 
 // Custom Schemes
@@ -76,8 +76,8 @@ fun StreamPlusTheme(
 
     val colorScheme = when (themeStyle) {
         ThemeStyle.DYNAMIC -> {
-            // For iOS style, we disable Android's Material You dynamic colors
-            // so we can enforce the Apple system color palette.
+            // For OneUI style, we disable Android's Material You dynamic colors
+            // so we can enforce the Samsung professional system color palette.
             if (darkTheme) DarkColorScheme else LightColorScheme
         }
         ThemeStyle.IGNITE -> if (darkTheme) IgniteDark else IgniteLight

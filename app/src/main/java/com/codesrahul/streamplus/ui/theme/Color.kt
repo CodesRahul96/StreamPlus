@@ -63,16 +63,16 @@ val CarbonPrimary = Color(0xFF212121)
 val CarbonSecondary = Color(0xFF424242)
 val CarbonTertiary = Color(0xFF757575)
 
-// iOS 16 System Colors
-val iOSBlueLight = Color(0xFF007AFF)
-val iOSBlueDark = Color(0xFF0A84FF)
-val iOSBgLight = Color(0xFFF2F2F7)
-val iOSBgDark = Color(0xFF000000)
-val iOSSurfaceLight = Color(0xFFFFFFFF)
-val iOSSurfaceDark = Color(0xFF1C1C1E)
-val iOSSurfaceVariantLight = Color(0xFFE5E5EA)
-val iOSSurfaceVariantDark = Color(0xFF2C2C2E)
-val iOSDividerLight = Color(0x203C3C43)
-val iOSDividerDark = Color(0x33545458)
-val iOSRedLight = Color(0xFFFF3B30)
-val iOSRedDark = Color(0xFFFF453A)
+// Samsung OneUI 8 System Colors (Professional Deep AMOLED)
+val OneUIBlueLight = Color(0xFF005B9F) // Deep professional blue
+val OneUIBlueDark = Color(0xFF1C68D9)  // Vibrant yet professional dark mode blue
+val OneUIBgLight = Color(0xFFF5F5F5)   // Standard android light grey bg
+val OneUIBgDark = Color(0xFF000000)    // Pure pitch black for AMOLED
+val OneUISurfaceLight = Color(0xFFFFFFFF)
+val OneUISurfaceDark = Color(0xFF151515) // Deep surface for cards
+val OneUISurfaceVariantLight = Color(0xFFEEEEEE)
+val OneUISurfaceVariantDark = Color(0xFF252525) // Elevated secondary surfaces
+val OneUIDividerLight = Color(0x1A000000)
+val OneUIDividerDark = Color(0x33FFFFFF)
+val OneUIErrorLight = Color(0xFFD32F2F)
+val OneUIErrorDark = Color(0xFFF44336)

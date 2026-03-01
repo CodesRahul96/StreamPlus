@@ -185,7 +185,7 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                         subtitle = version,
                         icon = Icons.Default.Info,
                         iconColor = TealSea,
-                        onClick = { /* Info */ },
+                        onClick = { showAboutDialog = true },
                         showDivider = true
                     )
                     SettingsClickableItem(
@@ -468,67 +468,141 @@ fun AboutDialog(onDismiss: () -> Unit) {
 
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 6.dp
+            shape = RoundedCornerShape(28.dp),
+            color = Color(0xFF1A1C1E), // Deep dark surface
+            tonalElevation = 8.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
         ) {
             Column(
                 modifier = Modifier
                     .padding(24.dp)
                     .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.Start
             ) {
-                // App Logo Badge
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(
-                            Brush.linearGradient(
-                                listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
+                // Header with App Icon and Name
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.PlayCircle, null, tint = Color.White, modifier = Modifier.size(48.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(Color(0xFF00E5FF), Color(0xFF00B8D4))
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayCircle,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        "StreamPlus",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
                 }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("StreamPlus", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
-                Text("v$version · Stable", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                
-                Spacer(modifier = Modifier.height(16.dp))
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Version Chip
+                Surface(
+                    color = Color.White.copy(alpha = 0.05f),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = Color(0xFF00E5FF),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Version $version",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.White.copy(alpha = 0.9f)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Description
                 Text(
-                    "StreamPlus is a modern, high-performance media player designed for IPTV and local media playback. It focuses on speed, stability, and a premium user experience.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    "StreamPlus is a modern video player app with playlist management and beautiful UI.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White.copy(alpha = 0.7f),
+                    lineHeight = androidx.compose.ui.unit.TextUnit(24f, androidx.compose.ui.unit.TextUnitType.Sp)
                 )
-                
+
                 Spacer(modifier = Modifier.height(24.dp))
-                Divider(modifier = Modifier.alpha(0.2f))
+
+                // Features Header
+                Text(
+                    "Features:",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF00E5FF)
+                )
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
-                Text("CRAFTED BY", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f), fontWeight = FontWeight.Bold)
-                Text("CodesRahul", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(
-                    onClick = {
-                        try {
-                            context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/CodesRahul96")))
-                        } catch (e: Exception) {}
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.Code, null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Visit GitHub")
+
+                // Feature List
+                val features = listOf(
+                    "Playlist Management",
+                    "Network Streaming",
+                    "Import/Export",
+                    "Customizable UI"
+                )
+
+                features.forEach { feature ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Color(0xFF00E5FF),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            feature,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.White.copy(alpha = 0.9f)
+                        )
+                    }
                 }
-                
-                TextButton(onClick = onDismiss, modifier = Modifier.padding(top = 8.dp)) {
-                    Text("Close")
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // Close Button
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text(
+                        "Close",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF00E5FF)
+                    )
                 }
             }
         }

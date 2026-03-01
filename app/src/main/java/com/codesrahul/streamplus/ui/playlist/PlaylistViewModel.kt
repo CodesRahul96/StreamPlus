@@ -27,10 +27,41 @@ class PlaylistViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val favorites = repository.getAllFavorites()
+        .map { list -> 
+            list.map { fav ->
+                M3UItem(
+                    name = fav.name,
+                    url = fav.url,
+                    logoUrl = fav.logoUrl,
+                    group = fav.groupTitle,
+                    playlistId = fav.playlistId,
+                    userAgent = fav.userAgent,
+                    headers = fav.headers,
+                    licenseUrl = fav.licenseUrl,
+                    drmScheme = fav.drmScheme,
+                    drmHeaders = fav.drmHeaders
+                )
+            }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val recentlyWatched = historyRepository.getAllHistory()
-        .map { entries -> entries.take(5) }
+        .map { entries -> 
+            entries.take(5).map { entry ->
+                M3UItem(
+                    name = entry.name,
+                    url = entry.url,
+                    logoUrl = entry.logoUrl ?: "",
+                    group = entry.group,
+                    playlistId = entry.playlistId,
+                    userAgent = entry.userAgent ?: "",
+                    headers = entry.headers,
+                    licenseUrl = entry.licenseUrl,
+                    drmScheme = entry.drmScheme,
+                    drmHeaders = entry.drmHeaders
+                )
+            }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _searchQuery = MutableStateFlow("")

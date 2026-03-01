@@ -412,6 +412,10 @@ fun PlayerScreen(
         }
     }
 
+    // Combined Time State
+    var currentTimeFormatted by remember { mutableStateOf("00:00") }
+    var durationFormatted by remember { mutableStateOf("00:00") }
+
     LaunchedEffect(settingsState.forceLandscape) {
         if (settingsState.forceLandscape) {
             activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
@@ -587,6 +591,19 @@ fun PlayerScreen(
         })
         
         player
+    }
+
+    // Ticker for Time and Progress
+    LaunchedEffect(exoPlayer, isControlsVisible) {
+        if (isControlsVisible) {
+            while (true) {
+                val pos = exoPlayer.currentPosition
+                val dur = exoPlayer.duration
+                currentTimeFormatted = formatElapsedTime(pos)
+                durationFormatted = if (dur == C.TIME_UNSET || dur <= 0) "00:00" else formatElapsedTime(dur)
+                kotlinx.coroutines.delay(500)
+            }
+        }
     }
 
     // --- Subtitle Picker (defined here to have access to exoPlayer) ---
@@ -1039,16 +1056,30 @@ fun PlayerScreen(
                 // Bind the stream title to the custom TextView in the controller layout
                 playerView.findViewById<android.widget.TextView>(com.codesrahul.streamplus.R.id.tv_player_title)?.text = streamTitle
                 
+                // Combined Time Update
+                playerView.findViewById<android.widget.TextView>(com.codesrahul.streamplus.R.id.tv_time_combined)?.text = 
+                    "$currentTimeFormatted / $durationFormatted"
+
                 playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.btn_close)?.setOnClickListener { (playerView.context as? android.app.Activity)?.finish() }
+                
+                playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.exo_speed_top)?.setOnClickListener { 
+                    val speeds = arrayOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
+                    android.app.AlertDialog.Builder(context, android.R.style.Theme_DeviceDefault_Light_Dialog_Alert)
+                        .setTitle("Select Speed")
+                        .setItems(speeds.map { "${it}x" }.toTypedArray()) { _, idx ->
+                            playbackSpeed = speeds[idx]
+                        }.show()
+                }
+
+                playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.exo_playlist_top)?.setOnClickListener { 
+                    android.widget.Toast.makeText(context, "Channel List coming soon", android.widget.Toast.LENGTH_SHORT).show()
+                }
+
                 playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.exo_settings)?.setOnClickListener { 
                     showSettingsSheet = true
                 }
                 
-                // Initialize Cast Button
-                val castButton = playerView.findViewById<androidx.mediarouter.app.MediaRouteButton>(com.codesrahul.streamplus.R.id.media_route_button)
-                castButton?.let {
-                    com.google.android.gms.cast.framework.CastButtonFactory.setUpMediaRouteButton(playerView.context, it)
-                }
+                
                 try {
                     val storedMode = settingsState.lastResizeMode
                     if (storedMode in 0..4) playerView.resizeMode = storedMode
@@ -1079,18 +1110,6 @@ fun PlayerScreen(
                     }
                 }
                 playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.btn_pip)?.setOnClickListener { onEnterPip() }
-                playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.btn_lock)?.visibility = android.view.View.GONE 
-                
-                playerView.setControllerVisibilityListener(object : androidx.media3.ui.PlayerView.ControllerVisibilityListener {
-                    override fun onVisibilityChanged(visibility: Int) { isControlsVisible = visibility == android.view.View.VISIBLE }
-                })
-                val logoView = playerView.findViewById<android.widget.ImageView>(com.codesrahul.streamplus.R.id.iv_channel_logo)
-                if (logoView != null && !channelLogo.isNullOrBlank() && !isInPip) {
-                    val req = ImageRequest.Builder(playerView.context).data(channelLogo).target(logoView).build()
-                    playerView.context.imageLoader.enqueue(req)
-                } else {
-                    logoView?.visibility = android.view.View.GONE
-                }
                 
                 // Hide controls in PiP
                 playerView.useController = !isInPip
@@ -1488,5 +1507,22 @@ fun SettingsSliderItem(icon: ImageVector, title: String, value: Float, onValueCh
                 inactiveTrackColor = Color.White.copy(alpha = 0.1f)
             )
         )
+    }
+}
+
+private fun formatElapsedTime(timeMs: Long): String {
+    if (timeMs < 0) return "00:00"
+    val totalSeconds = timeMs / 1000
+    val seconds = totalSeconds % 60
+    val minutes = (totalSeconds / 60) % 60
+    val hours = totalSeconds / 3600
+    return if (hours > 0) {
+        java.util.Locale.getDefault().let { locale ->
+            String.format(locale, "%d:%02d:%02d", hours, minutes, seconds)
+        }
+    } else {
+        java.util.Locale.getDefault().let { locale ->
+            String.format(locale, "%02d:%02d", minutes, seconds)
+        }
     }
 }

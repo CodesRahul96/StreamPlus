@@ -1,5 +1,7 @@
 package com.codesrahul.streamplus.ui.playlist
 
+import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -80,16 +82,16 @@ fun PlaylistScreen(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             containerColor = Color.Transparent,
             topBar = {
-                LargeTopAppBar(
+                TopAppBar(
                     title = {
                         Column {
                             Text("Playlists", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             if (playlists.isNotEmpty()) {
-                                Text("${playlists.size} sources", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("${playlists.size} sources", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     },
-                    colors = TopAppBarDefaults.largeTopAppBarColors(
+                    colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background,
                         scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
                     ),
@@ -340,23 +342,10 @@ fun PlaylistScreen(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                     contentPadding = PaddingValues(end = 16.dp)
                                 ) {
-                                    items(recentlyWatched, key = { "${it.name}|${it.group}|${it.playlistId}" }) { entry ->
+                                    items(recentlyWatched, key = { it.url + it.name }) { item ->
                                             RecentlyWatchedCard(
-                                                entry = entry,
-                                                onClick = { onChannelClick(
-                                                    M3UItem(
-                                                        name = entry.name,
-                                                        url = entry.url,
-                                                        logoUrl = entry.logoUrl ?: "",
-                                                        group = entry.group,
-                                                        userAgent = entry.userAgent ?: "",
-                                                        playlistId = entry.playlistId,
-                                                        headers = entry.headers,
-                                                        licenseUrl = entry.licenseUrl,
-                                                        drmScheme = entry.drmScheme,
-                                                        drmHeaders = entry.drmHeaders
-                                                    )
-                                                )}
+                                                entry = item,
+                                                onClick = { onChannelClick(item) }
                                             )
                                     }
                                 }
@@ -396,7 +385,7 @@ fun PlaylistScreen(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                     contentPadding = PaddingValues(end = 16.dp)
                                 ) {
-                                    items(favorites, key = { "${it.name}|${it.groupTitle}|${it.playlistId}" }) { fav ->
+                                    items(favorites, key = { "${it.name}|${it.group}|${it.playlistId}" }) { fav ->
                                         with(sharedTransitionScope) {
                                             FavouriteChannelCard(
                                                 favorite = fav,
@@ -404,26 +393,8 @@ fun PlaylistScreen(
                                                     rememberSharedContentState(key = "fav_${fav.name}_${fav.playlistId}"),
                                                     animatedVisibilityScope = animatedContentScope
                                                 ),
-                                                onClick = {
-                                                    onChannelClick(
-                                                        M3UItem(
-                                                            name = fav.name,
-                                                            url = fav.url, 
-                                                            logoUrl = fav.logoUrl,
-                                                            group = fav.groupTitle,
-                                                            playlistId = fav.playlistId,
-                                                            userAgent = fav.userAgent,
-                                                            headers = fav.headers,
-                                                            licenseUrl = fav.licenseUrl,
-                                                            drmScheme = fav.drmScheme,
-                                                            drmHeaders = fav.drmHeaders
-                                                        )
-                                                    )
-                                                },
-                                                onRemove = { viewModel.toggleFavorite(
-                                                    M3UItem(name = fav.name, url = fav.url, logoUrl = fav.logoUrl, group = fav.groupTitle),
-                                                    fav.playlistId
-                                                )}
+                                                onClick = { onChannelClick(fav) },
+                                                onRemove = { viewModel.toggleFavorite(fav, fav.playlistId) }
                                             )
                                         }
                                     }
@@ -487,6 +458,7 @@ fun PlaylistScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PlaylistItem(
     playlist: PlaylistEntity,
@@ -504,7 +476,8 @@ fun PlaylistItem(
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)),
         shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier.padding(12.dp).fillMaxWidth(),
@@ -549,7 +522,7 @@ fun PlaylistItem(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    modifier = Modifier.basicMarquee()
                 )
                 if (!hideUri) {
                     Spacer(modifier = Modifier.height(2.dp))
@@ -833,12 +806,14 @@ fun PlaylistDialog(
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SearchResultItem(channel: M3UItem, onClick: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             // Channel logo
@@ -858,7 +833,13 @@ fun SearchResultItem(channel: M3UItem, onClick: () -> Unit) {
             }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(channel.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    channel.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    modifier = Modifier.basicMarquee()
+                )
                 if (channel.group.isNotBlank()) {
                     Text(channel.group, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
@@ -868,16 +849,18 @@ fun SearchResultItem(channel: M3UItem, onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun RecentlyWatchedCard(entry: com.codesrahul.streamplus.data.local.HistoryEntity, onClick: () -> Unit) {
+fun RecentlyWatchedCard(entry: M3UItem, onClick: () -> Unit) {
     Surface(
         modifier = Modifier.width(140.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(52.dp)) {
-                if (!entry.logoUrl.isNullOrBlank()) {
+                if (entry.logoUrl.isNotBlank()) {
                     coil.compose.AsyncImage(
                         model = entry.logoUrl,
                         contentDescription = null,
@@ -891,14 +874,22 @@ fun RecentlyWatchedCard(entry: com.codesrahul.streamplus.data.local.HistoryEntit
                 }
             }
             Spacer(Modifier.height(6.dp))
-            Text(entry.name, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+            Text(
+                entry.name,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                modifier = Modifier.basicMarquee(),
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FavouriteChannelCard(
-    favorite: FavoriteEntity,
+    favorite: M3UItem,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
     onRemove: () -> Unit
@@ -906,7 +897,8 @@ fun FavouriteChannelCard(
     Surface(
         modifier = modifier.width(130.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Box {
             Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -933,8 +925,8 @@ fun FavouriteChannelCard(
                     favorite.name,
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Medium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1,
+                    modifier = Modifier.basicMarquee(),
                     textAlign = TextAlign.Center
                 )
             }

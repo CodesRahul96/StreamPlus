@@ -174,4 +174,48 @@ class SettingsViewModel @Inject constructor(
     fun setUseBoldTypeface(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setUseBoldTypeface(enabled) }
     }
+
+    fun setGalleryLayout(layout: String) {
+        viewModelScope.launch { settingsRepository.setGalleryLayout(layout) }
+    }
+
+    fun setFolderSortField(field: String) {
+        viewModelScope.launch { settingsRepository.setFolderSortField(field) }
+    }
+
+    fun setFolderSortAsc(asc: Boolean) {
+        viewModelScope.launch { settingsRepository.setFolderSortAsc(asc) }
+    }
+
+    fun setVideoSortField(field: String) {
+        viewModelScope.launch { settingsRepository.setVideoSortField(field) }
+    }
+
+    fun setVideoSortAsc(asc: Boolean) {
+        viewModelScope.launch { settingsRepository.setVideoSortAsc(asc) }
+    }
+
+    fun setShowFolderPath(show: Boolean) {
+        viewModelScope.launch { settingsRepository.setShowFolderPath(show) }
+    }
+
+    fun setShowFolderCount(show: Boolean) {
+        viewModelScope.launch { settingsRepository.setShowFolderCount(show) }
+    }
+
+    fun setShowVideoThumbnail(show: Boolean) {
+        viewModelScope.launch { settingsRepository.setShowVideoThumbnail(show) }
+    }
+
+    fun setShowVideoResolution(show: Boolean) {
+        viewModelScope.launch { settingsRepository.setShowVideoResolution(show) }
+    }
+
+    fun setShowVideoDuration(show: Boolean) {
+        viewModelScope.launch { settingsRepository.setShowVideoDuration(show) }
+    }
+
+    fun setShowVideoSize(show: Boolean) {
+        viewModelScope.launch { settingsRepository.setShowVideoSize(show) }
+    }
 }

@@ -62,7 +62,20 @@ data class AppSettings(
     
     // Accessibility
     val applyEmbeddedSubtitles: Boolean = true,
-    val useBoldTypeface: Boolean = false
+    val useBoldTypeface: Boolean = false,
+
+    // Gallery Settings
+    val galleryLayout: String = "Grid",
+    val folderSortField: String = "Name",
+    val folderSortAsc: Boolean = true,
+    val videoSortField: String = "Date",
+    val videoSortAsc: Boolean = false,
+    val showFolderPath: Boolean = true,
+    val showFolderCount: Boolean = true,
+    val showVideoThumbnail: Boolean = true,
+    val showVideoResolution: Boolean = true,
+    val showVideoDuration: Boolean = true,
+    val showVideoSize: Boolean = true
 )
 
 @Singleton
@@ -108,6 +121,19 @@ class SettingsRepository @Inject constructor(
         // Accessibility
         val APPLY_EMBEDDED_SUBTITLES = booleanPreferencesKey("apply_embedded_subtitles")
         val USE_BOLD_TYPEFACE = booleanPreferencesKey("use_bold_typeface")
+
+        // Gallery
+        val GALLERY_LAYOUT = stringPreferencesKey("gallery_layout")
+        val FOLDER_SORT_FIELD = stringPreferencesKey("folder_sort_field")
+        val FOLDER_SORT_ASC = booleanPreferencesKey("folder_sort_asc")
+        val VIDEO_SORT_FIELD = stringPreferencesKey("video_sort_field")
+        val VIDEO_SORT_ASC = booleanPreferencesKey("video_sort_asc")
+        val SHOW_FOLDER_PATH = booleanPreferencesKey("show_folder_path")
+        val SHOW_FOLDER_COUNT = booleanPreferencesKey("show_folder_count")
+        val SHOW_VIDEO_THUMBNAIL = booleanPreferencesKey("show_video_thumbnail")
+        val SHOW_VIDEO_RESOLUTION = booleanPreferencesKey("show_video_resolution")
+        val SHOW_VIDEO_DURATION = booleanPreferencesKey("show_video_duration")
+        val SHOW_VIDEO_SIZE = booleanPreferencesKey("show_video_size")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -153,7 +179,20 @@ class SettingsRepository @Inject constructor(
             
             // Accessibility
             applyEmbeddedSubtitles = prefs[Keys.APPLY_EMBEDDED_SUBTITLES] ?: true,
-            useBoldTypeface = prefs[Keys.USE_BOLD_TYPEFACE] ?: false
+            useBoldTypeface = prefs[Keys.USE_BOLD_TYPEFACE] ?: false,
+
+            // Gallery
+            galleryLayout = prefs[Keys.GALLERY_LAYOUT] ?: "Grid",
+            folderSortField = prefs[Keys.FOLDER_SORT_FIELD] ?: "Name",
+            folderSortAsc = prefs[Keys.FOLDER_SORT_ASC] ?: true,
+            videoSortField = prefs[Keys.VIDEO_SORT_FIELD] ?: "Date",
+            videoSortAsc = prefs[Keys.VIDEO_SORT_ASC] ?: false,
+            showFolderPath = prefs[Keys.SHOW_FOLDER_PATH] ?: true,
+            showFolderCount = prefs[Keys.SHOW_FOLDER_COUNT] ?: true,
+            showVideoThumbnail = prefs[Keys.SHOW_VIDEO_THUMBNAIL] ?: true,
+            showVideoResolution = prefs[Keys.SHOW_VIDEO_RESOLUTION] ?: true,
+            showVideoDuration = prefs[Keys.SHOW_VIDEO_DURATION] ?: true,
+            showVideoSize = prefs[Keys.SHOW_VIDEO_SIZE] ?: true
         )
     }
 
@@ -287,6 +326,50 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setUseBoldTypeface(enabled: Boolean) {
         context.dataStore.edit { it[Keys.USE_BOLD_TYPEFACE] = enabled }
+    }
+
+    suspend fun setGalleryLayout(layout: String) {
+        context.dataStore.edit { it[Keys.GALLERY_LAYOUT] = layout }
+    }
+
+    suspend fun setFolderSortField(field: String) {
+        context.dataStore.edit { it[Keys.FOLDER_SORT_FIELD] = field }
+    }
+
+    suspend fun setFolderSortAsc(asc: Boolean) {
+        context.dataStore.edit { it[Keys.FOLDER_SORT_ASC] = asc }
+    }
+
+    suspend fun setVideoSortField(field: String) {
+        context.dataStore.edit { it[Keys.VIDEO_SORT_FIELD] = field }
+    }
+
+    suspend fun setVideoSortAsc(asc: Boolean) {
+        context.dataStore.edit { it[Keys.VIDEO_SORT_ASC] = asc }
+    }
+
+    suspend fun setShowFolderPath(show: Boolean) {
+        context.dataStore.edit { it[Keys.SHOW_FOLDER_PATH] = show }
+    }
+
+    suspend fun setShowFolderCount(show: Boolean) {
+        context.dataStore.edit { it[Keys.SHOW_FOLDER_COUNT] = show }
+    }
+
+    suspend fun setShowVideoThumbnail(show: Boolean) {
+        context.dataStore.edit { it[Keys.SHOW_VIDEO_THUMBNAIL] = show }
+    }
+
+    suspend fun setShowVideoResolution(show: Boolean) {
+        context.dataStore.edit { it[Keys.SHOW_VIDEO_RESOLUTION] = show }
+    }
+
+    suspend fun setShowVideoDuration(show: Boolean) {
+        context.dataStore.edit { it[Keys.SHOW_VIDEO_DURATION] = show }
+    }
+
+    suspend fun setShowVideoSize(show: Boolean) {
+        context.dataStore.edit { it[Keys.SHOW_VIDEO_SIZE] = show }
     }
 
     suspend fun factoryReset() {

@@ -1,5 +1,4 @@
 # JNI and Android specific
--keep class !androidx.media3.**, !androidx.compose.** { *; }
 
 # Keep data classes and entity names for serialization/deserialization correctly (Room + Gson)
 -keepclasseswithmembers class * {
