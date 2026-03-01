@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.SharedTransitionScope
@@ -72,11 +73,14 @@ fun PlaylistScreen(
         uri?.let { viewModel.importLocalPlaylist(context, it) }
     }
 
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+
     PremiumBackground {
         Scaffold(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             containerColor = Color.Transparent,
             topBar = {
-                TopAppBar(
+                LargeTopAppBar(
                     title = {
                         Column {
                             Text("Playlists", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -85,7 +89,11 @@ fun PlaylistScreen(
                             }
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                    colors = TopAppBarDefaults.largeTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+                    ),
+                    scrollBehavior = scrollBehavior,
                     actions = {
                         IconButton(onClick = { showMenu = true }) {
                             Icon(Icons.Default.MoreVert, contentDescription = "Menu")
@@ -613,6 +621,7 @@ fun PlaylistDialog(
 
     if (showCustomUADialog) {
         AlertDialog(
+            shape = RoundedCornerShape(16.dp),
             onDismissRequest = { showCustomUADialog = false },
             title = { Text("Custom User Agent") },
             text = {
@@ -638,6 +647,7 @@ fun PlaylistDialog(
     }
 
     AlertDialog(
+        shape = RoundedCornerShape(16.dp),
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {

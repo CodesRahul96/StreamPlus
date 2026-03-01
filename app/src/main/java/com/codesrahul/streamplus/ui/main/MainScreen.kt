@@ -54,8 +54,10 @@ fun MainScreen() {
         Scaffold(
             bottomBar = {
                 NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 0.dp
+                    // iOS translucent frosted glass effect
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                    tonalElevation = 0.dp,
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
                 ) {
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentDestination = navBackStackEntry?.destination
@@ -66,7 +68,7 @@ fun MainScreen() {
                                 Icon(
                                     if (selected) item.selectedIcon else item.unselectedIcon,
                                     contentDescription = item.title,
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier.size(26.dp)
                                 )
                             },
                             label = if (!hideLabels) {
@@ -74,7 +76,7 @@ fun MainScreen() {
                                     Text(
                                         item.title,
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium
                                     )
                                 }
                             } else null,
@@ -90,12 +92,19 @@ fun MainScreen() {
                                 }
                             },
                             colors = NavigationBarItemDefaults.colors(
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                                // Remove the Android Material pill indicator
+                                indicatorColor = Color.Transparent,
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                             )
                         )
                     }
                 }
-            }
+            },
+            // Draw background behind the translucent bar
+            containerColor = MaterialTheme.colorScheme.background
         ) { innerPadding ->
             NavHost(
                 navController = navController,

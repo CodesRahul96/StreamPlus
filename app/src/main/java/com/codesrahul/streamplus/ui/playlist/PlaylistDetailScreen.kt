@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -56,13 +57,15 @@ fun PlaylistDetailScreen(
     val settingsState by hiltViewModel<SettingsViewModel>().settings.collectAsState(initial = AppSettings())
     
     val context = LocalContext.current
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
     PremiumBackground {
         Scaffold(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             containerColor = Color.Transparent,
             topBar = {
                 Column {
-                    TopAppBar(
+                    LargeTopAppBar(
                         title = {
                             Column {
                                 with(sharedTransitionScope) {
@@ -81,7 +84,11 @@ fun PlaylistDetailScreen(
                                 }
                             }
                         },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                        colors = TopAppBarDefaults.largeTopAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.background,
+                            scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+                        ),
+                        scrollBehavior = scrollBehavior,
                         navigationIcon = {
                             IconButton(onClick = onBack) {
                                 Icon(Icons.Default.ArrowBack, contentDescription = "Back")

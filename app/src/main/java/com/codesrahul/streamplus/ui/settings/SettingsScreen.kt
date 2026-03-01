@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -78,11 +79,14 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
     var showAboutDialog by remember { mutableStateOf(false) }
     var showHelpDialog by remember { mutableStateOf(false) }
 
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+
     com.codesrahul.streamplus.ui.components.PremiumBackground {
         Scaffold(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             containerColor = Color.Transparent,
             topBar = {
-                TopAppBar(
+                LargeTopAppBar(
                     title = {
                         Text("Settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     },
@@ -91,7 +95,11 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                    colors = TopAppBarDefaults.largeTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+                    ),
+                    scrollBehavior = scrollBehavior
                 )
             }
         ) { padding ->
@@ -460,7 +468,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
 
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(28.dp),
+            shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp
         ) {
@@ -531,7 +539,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
 fun HelpFaqDialog(onDismiss: () -> Unit) {
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(28.dp),
+            shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp
         ) {

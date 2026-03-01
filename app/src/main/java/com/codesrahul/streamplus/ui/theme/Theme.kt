@@ -19,15 +19,31 @@ import com.codesrahul.streamplus.data.settings.ThemeMode
 import com.codesrahul.streamplus.data.settings.ThemeStyle
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = iOSBlueDark,
+    onPrimary = Color.White,
+    secondary = iOSBlueDark,
+    background = iOSBgDark,
+    onBackground = Color.White,
+    surface = iOSBgDark,
+    onSurface = Color.White,
+    surfaceVariant = iOSSurfaceDark,
+    onSurfaceVariant = Color.White,
+    outline = iOSDividerDark,
+    error = iOSRedDark
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    primary = iOSBlueLight,
+    onPrimary = Color.White,
+    secondary = iOSBlueLight,
+    background = iOSBgLight,
+    onBackground = Color.Black,
+    surface = iOSBgLight,
+    onSurface = Color.Black,
+    surfaceVariant = iOSSurfaceLight,
+    onSurfaceVariant = Color.Black,
+    outline = iOSDividerLight,
+    error = iOSRedLight
 )
 
 // Custom Schemes
@@ -60,12 +76,9 @@ fun StreamPlusTheme(
 
     val colorScheme = when (themeStyle) {
         ThemeStyle.DYNAMIC -> {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val context = LocalContext.current
-                if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            } else {
-                if (darkTheme) DarkColorScheme else LightColorScheme
-            }
+            // For iOS style, we disable Android's Material You dynamic colors
+            // so we can enforce the Apple system color palette.
+            if (darkTheme) DarkColorScheme else LightColorScheme
         }
         ThemeStyle.IGNITE -> if (darkTheme) IgniteDark else IgniteLight
         ThemeStyle.FROSTY -> if (darkTheme) FrostyDark else FrostyLight
