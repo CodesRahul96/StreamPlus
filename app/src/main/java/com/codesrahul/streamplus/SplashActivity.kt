@@ -121,7 +121,7 @@ class SplashActivity : ComponentActivity() {
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Image(
-                                            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                                            painter = painterResource(id = R.drawable.app_logo_new),
                                             contentDescription = "StreamPlus Logo",
                                             modifier = Modifier
                                                 .size(115.dp)
