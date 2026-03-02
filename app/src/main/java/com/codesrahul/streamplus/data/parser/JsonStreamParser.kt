@@ -58,9 +58,9 @@ class JsonStreamParser : StreamParser {
             when (key.lowercase()) {
                 "name" -> name = reader.nextString()
                 "url", "link" -> url = reader.nextString()
-                "group" -> group = reader.nextString()
+                "group", "grouptitle" -> group = reader.nextString()
                 "logo" -> logo = reader.nextString()
-                "user-agent" -> headers["User-Agent"] = reader.nextString()
+                "user-agent", "useragent" -> headers["User-Agent"] = reader.nextString()
                 "referer" -> headers["Referer"] = reader.nextString()
                 "cookie" -> headers["Cookie"] = reader.nextString()
                 "drm_scheme", "drmscheme" -> drmScheme = reader.nextString()
