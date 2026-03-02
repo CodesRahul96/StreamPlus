@@ -13,7 +13,10 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:padding="16dp"
+        android:paddingStart="44dp"
+        android:paddingEnd="44dp"
+        android:paddingTop="24dp"
+        android:paddingBottom="16dp"
         app:layout_constraintTop_toTopOf="parent">
 
         <ImageButton
@@ -116,8 +119,10 @@
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="16dp"
-            android:paddingTop="8dp">
+            android:paddingStart="44dp"
+            android:paddingEnd="44dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="16dp">
 
             <!-- Combined Time Display -->
             <TextView

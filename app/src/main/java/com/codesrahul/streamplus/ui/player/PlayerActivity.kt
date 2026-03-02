@@ -1064,7 +1064,7 @@ fun PlayerScreen(
                 playerView.findViewById<android.widget.TextView>(com.codesrahul.streamplus.R.id.tv_time_combined)?.text = 
                     "$currentTimeFormatted / $durationFormatted"
 
-                playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.btn_close)?.setOnClickListener { (playerView.context as? android.app.Activity)?.finish() }
+                playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.btn_close)?.setOnClickListener { activityContext?.finish() }
                 
                 playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.exo_speed_top)?.setOnClickListener { 
                     val speeds = arrayOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
