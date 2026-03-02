@@ -32,8 +32,13 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        val startTab = intent.getStringExtra("START_TAB")
-                        com.codesrahul.streamplus.ui.main.MainScreen(initialTab = startTab)
+                        if (!settingsState.isLoaded) {
+                            // Render empty box to prevent MainScreen NavHost flash
+                            androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize())
+                        } else {
+                            val startTab = intent.getStringExtra("START_TAB")
+                            com.codesrahul.streamplus.ui.main.MainScreen(initialTab = startTab)
+                        }
                     }
                 }
         }

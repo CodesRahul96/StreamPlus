@@ -27,6 +27,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.launch
+import com.codesrahul.streamplus.utils.AppUpdater
 
 // Specific named color shades for icon containers (iOS-inspired)
 private val GreenApple  = Color(0xFF34C759)
@@ -77,6 +79,16 @@ fun SettingsScreen(
 fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
     var showAboutDialog by remember { mutableStateOf(false) }
     var showHelpDialog by remember { mutableStateOf(false) }
+    
+    // Update States
+    var isCheckingForUpdate by remember { mutableStateOf(false) }
+    var updateInfo by remember { mutableStateOf<AppUpdater.UpdateInfo?>(null) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    var isDownloading by remember { mutableStateOf(false) }
+    val downloadProgress by AppUpdater.downloadProgress.collectAsState()
+    
+    val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
 
@@ -180,7 +192,6 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                 // ── App ──────────────────────────────────────────────────
                 SettingsSectionHeader("App")
                 SettingsCard {
-                    val context = androidx.compose.ui.platform.LocalContext.current
                     val version = remember {
                         try {
                             context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.6"
@@ -194,6 +205,56 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                         onClick = { showAboutDialog = true },
                         showDivider = true
                     )
+                    
+                    if (isCheckingForUpdate) {
+                        ListItem(
+                            headlineContent = { Text("Checking for updates...") },
+                            trailingContent = { CircularProgressIndicator(modifier = Modifier.size(24.dp)) },
+                            leadingContent = {
+                                Surface(shape = RoundedCornerShape(10.dp), color = TealSea, modifier = Modifier.size(40.dp)) {
+                                    Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.SystemUpdate, null) }
+                                }
+                            }
+                        )
+                    } else if (isDownloading) {
+                        ListItem(
+                            headlineContent = { Text("Downloading Update...") },
+                            trailingContent = { Text("${(downloadProgress * 100).toInt()}%", style = MaterialTheme.typography.labelSmall) },
+                            supportingContent = {
+                                LinearProgressIndicator(
+                                    progress = { downloadProgress },
+                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                                )
+                            },
+                            leadingContent = {
+                                Surface(shape = RoundedCornerShape(10.dp), color = GreenApple, modifier = Modifier.size(40.dp)) {
+                                    Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.CloudDownload, null) }
+                                }
+                            }
+                        )
+                    } else {
+                        SettingsClickableItem(
+                            title = "Check for Updates",
+                            subtitle = "Download the latest version",
+                            icon = Icons.Default.SystemUpdate,
+                            iconColor = TealSea,
+                            onClick = { 
+                                scope.launch {
+                                    isCheckingForUpdate = true
+                                    val info = AppUpdater.checkForUpdate(context)
+                                    isCheckingForUpdate = false
+                                    if (info != null && info.isUpdateAvailable) {
+                                        updateInfo = info
+                                        showUpdateDialog = true
+                                    } else {
+                                        android.widget.Toast.makeText(context, "You are on the latest version", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            },
+                            showDivider = true
+                        )
+                    }
+
                     SettingsClickableItem(
                         title = "Share App",
                         subtitle = "Share StreamPlus with friends",
@@ -276,6 +337,30 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
     }
     if (showHelpDialog) {
         HelpFaqDialog(onDismiss = { showHelpDialog = false })
+    }
+    
+    if (showUpdateDialog && updateInfo != null) {
+        AlertDialog(
+            onDismissRequest = { showUpdateDialog = false },
+            title = { Text("Update Available: ${updateInfo!!.latestVersionName}") },
+            text = { Text(updateInfo!!.content) },
+            confirmButton = {
+                TextButton(onClick = { 
+                    showUpdateDialog = false
+                    isDownloading = true
+                    AppUpdater.downloadAndInstallUpdate(context, updateInfo!!.downloadUrl) {
+                        isDownloading = true
+                    }
+                }) {
+                    Text("Download & Install")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUpdateDialog = false }) {
+                    Text("Later")
+                }
+            }
+        )
     }
 }
 

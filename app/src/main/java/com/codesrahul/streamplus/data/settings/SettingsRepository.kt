@@ -70,7 +70,10 @@ data class AppSettings(
     val showVideoThumbnail: Boolean = true,
     val showVideoResolution: Boolean = true,
     val showVideoDuration: Boolean = true,
-    val showVideoSize: Boolean = true
+    val showVideoSize: Boolean = true,
+    
+    // Internal Loading State
+    val isLoaded: Boolean = false
 )
 
 @Singleton
@@ -183,7 +186,8 @@ class SettingsRepository @Inject constructor(
             showVideoThumbnail = prefs[Keys.SHOW_VIDEO_THUMBNAIL] ?: true,
             showVideoResolution = prefs[Keys.SHOW_VIDEO_RESOLUTION] ?: true,
             showVideoDuration = prefs[Keys.SHOW_VIDEO_DURATION] ?: true,
-            showVideoSize = prefs[Keys.SHOW_VIDEO_SIZE] ?: true
+            showVideoSize = prefs[Keys.SHOW_VIDEO_SIZE] ?: true,
+            isLoaded = true
         )
     }
 
