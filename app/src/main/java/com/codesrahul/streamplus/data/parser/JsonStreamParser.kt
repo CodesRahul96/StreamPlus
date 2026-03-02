@@ -57,13 +57,14 @@ class JsonStreamParser : StreamParser {
             val key = reader.nextName()
             when (key.lowercase()) {
                 "name" -> name = reader.nextString()
-                "url" -> url = reader.nextString()
+                "url", "link" -> url = reader.nextString()
                 "group" -> group = reader.nextString()
                 "logo" -> logo = reader.nextString()
                 "user-agent" -> headers["User-Agent"] = reader.nextString()
                 "referer" -> headers["Referer"] = reader.nextString()
-                "drm_scheme" -> drmScheme = reader.nextString()
-                "drm_license" -> drmLicense = reader.nextString()
+                "cookie" -> headers["Cookie"] = reader.nextString()
+                "drm_scheme", "drmscheme" -> drmScheme = reader.nextString()
+                "drm_license", "drmlicense" -> drmLicense = reader.nextString()
                 "headers" -> {
                     reader.beginObject()
                     while (reader.hasNext()) {
