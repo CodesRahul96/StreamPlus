@@ -11,6 +11,7 @@ import android.content.IntentSender
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -148,8 +149,11 @@ fun LocalVideoGrid(
         }
     }
 
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
+
     PremiumBackground {
             Scaffold(
+                modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
                 containerColor = Color.Transparent,
                 topBar = {
                     TopAppBar(
@@ -175,6 +179,7 @@ fun LocalVideoGrid(
                             actionIconContentColor = MaterialTheme.colorScheme.onSurface,
                             scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
                         ),
+                        scrollBehavior = scrollBehavior,
                         actions = {
                             if (isSelectionMode) {
                                 IconButton(onClick = {
@@ -355,8 +360,11 @@ fun LocalVideoList(
         )
     }
 
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
+
     PremiumBackground {
         Scaffold(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             containerColor = Color.Transparent,
             topBar = {
                 if (isSearchActive) {
@@ -381,6 +389,7 @@ fun LocalVideoList(
                             containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
                             scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
                         ),
+                        scrollBehavior = scrollBehavior,
                         navigationIcon = {
                             IconButton(onClick = { 
                                 isSearchActive = false
@@ -404,6 +413,7 @@ fun LocalVideoList(
                             containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
                             scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
                         ),
+                        scrollBehavior = scrollBehavior,
                         navigationIcon = {
                             IconButton(onClick = onBack) {
                                 Icon(Icons.Filled.ArrowBack, contentDescription = "Back")

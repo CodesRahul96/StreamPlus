@@ -86,7 +86,13 @@ class SplashActivity : ComponentActivity() {
                         playerIntent.putExtras(intent.extras ?: Bundle())
                         startActivity(playerIntent)
                     } else {
-                        startActivity(Intent(this@SplashActivity, MainActivity::class.java))
+                        val mainIntent = Intent(this@SplashActivity, MainActivity::class.java)
+                        when (splashAction) {
+                            "com.codesrahul.streamplus.ACTION_OPEN_PLAYLIST" -> mainIntent.putExtra("START_TAB", "playlist")
+                            "com.codesrahul.streamplus.ACTION_OPEN_GALLERY" -> mainIntent.putExtra("START_TAB", "local")
+                            "com.codesrahul.streamplus.ACTION_OPEN_DIRECT_STREAM" -> mainIntent.putExtra("START_TAB", "direct_play")
+                        }
+                        startActivity(mainIntent)
                     }
                     @Suppress("DEPRECATION")
                     overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)

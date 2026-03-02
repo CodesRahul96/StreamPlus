@@ -59,14 +59,16 @@ fun PlaylistDetailScreen(
     val settingsState by hiltViewModel<SettingsViewModel>().settings.collectAsState(initial = AppSettings())
     
     val context = LocalContext.current
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
 
     PremiumBackground {
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             containerColor = Color.Transparent,
             topBar = {
-                Column {
+                Column(
+                    modifier = Modifier.background(MaterialTheme.colorScheme.background.copy(alpha = 0.95f))
+                ) {
                     TopAppBar(
                         title = {
                             Column {

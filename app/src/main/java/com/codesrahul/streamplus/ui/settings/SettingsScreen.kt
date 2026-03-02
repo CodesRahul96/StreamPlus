@@ -78,7 +78,7 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
     var showAboutDialog by remember { mutableStateOf(false) }
     var showHelpDialog by remember { mutableStateOf(false) }
 
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
 
     com.codesrahul.streamplus.ui.components.PremiumBackground {
         Scaffold(

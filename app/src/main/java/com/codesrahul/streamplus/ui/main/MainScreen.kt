@@ -37,7 +37,7 @@ data class NavigationItem(
 )
 
 @Composable
-fun MainScreen() {
+fun MainScreen(initialTab: String? = null) {
     val settingsViewModel: SettingsViewModel = hiltViewModel()
     val navController = rememberNavController()
     val settingsState by settingsViewModel.settings.collectAsState(initial = com.codesrahul.streamplus.data.settings.AppSettings())
@@ -56,8 +56,7 @@ fun MainScreen() {
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surface,
                     contentColor = MaterialTheme.colorScheme.onSurface,
-                    tonalElevation = 8.dp,
-                    modifier = Modifier.padding(top = 1.dp) // Subtle visual separation
+                    tonalElevation = 8.dp
                 ) {
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentDestination = navBackStackEntry?.destination
@@ -107,7 +106,7 @@ fun MainScreen() {
         ) { innerPadding ->
             NavHost(
                 navController = navController,
-                startDestination = when (settingsState.defaultTab) {
+                startDestination = initialTab ?: when (settingsState.defaultTab) {
                     "playlist", "local", "direct_play" -> settingsState.defaultTab
                     else -> "playlist"
                 },

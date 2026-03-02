@@ -32,7 +32,8 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        com.codesrahul.streamplus.ui.main.MainScreen()
+                        val startTab = intent.getStringExtra("START_TAB")
+                        com.codesrahul.streamplus.ui.main.MainScreen(initialTab = startTab)
                     }
                 }
         }
