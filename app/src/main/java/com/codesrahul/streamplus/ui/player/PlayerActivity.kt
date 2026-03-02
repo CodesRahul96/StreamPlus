@@ -837,7 +837,7 @@ fun PlayerScreen(
             val lowerUrl = resolvedItem.url.lowercase()
             val inferredMimeType = when {
                 lowerUrl.contains(".m3u8") || lowerUrl.contains("type=hls") || lowerUrl.contains("/hls/") || lowerUrl.contains(".php?m3u=1") -> androidx.media3.common.MimeTypes.APPLICATION_M3U8
-                lowerUrl.contains(".mpd") || lowerUrl.contains("type=dash") || lowerUrl.contains("/dash/") || lowerUrl.contains("manifest.mpd") || lowerUrl.contains("index.mpd") -> androidx.media3.common.MimeTypes.APPLICATION_MPD
+                lowerUrl.contains(".mpd") || lowerUrl.contains("/mpd/") || lowerUrl.contains("type=dash") || lowerUrl.contains("/dash/") || lowerUrl.contains("manifest.mpd") || lowerUrl.contains("index.mpd") -> androidx.media3.common.MimeTypes.APPLICATION_MPD
                 lowerUrl.contains(".ism") || lowerUrl.contains("/manifest") -> androidx.media3.common.MimeTypes.APPLICATION_SS
                 else -> null
             }
@@ -867,7 +867,7 @@ fun PlayerScreen(
                         when {
                             inferredMimeType == androidx.media3.common.MimeTypes.APPLICATION_MPD -> C.WIDEVINE_UUID
                             !effectiveLicenseUrl.isNullOrBlank() && (effectiveLicenseUrl.contains("proxy/lic/widevine") || effectiveLicenseUrl.contains("lic/wv")) -> C.WIDEVINE_UUID
-                            resolvedItem.url.contains(".mpd") -> C.WIDEVINE_UUID
+                            resolvedItem.url.contains(".mpd") || resolvedItem.url.contains("/mpd/") -> C.WIDEVINE_UUID
                             else -> null
                         }
                     }
