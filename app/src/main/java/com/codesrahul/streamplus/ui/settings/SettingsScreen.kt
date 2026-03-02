@@ -1,7 +1,6 @@
 package com.codesrahul.streamplus.ui.settings
 
 import com.codesrahul.streamplus.data.settings.ThemeMode
-import com.codesrahul.streamplus.data.settings.ThemeStyle
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -88,16 +87,23 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
             topBar = {
                 LargeTopAppBar(
                     title = {
-                        Text("Settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Settings", 
+                            style = MaterialTheme.typography.headlineLarge, 
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
                         }
                     },
                     colors = TopAppBarDefaults.largeTopAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background,
-                        scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.primary,
+                        scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
                     ),
                     scrollBehavior = scrollBehavior
                 )
@@ -335,7 +341,7 @@ fun AppInfoFooter() {
                 .clip(CircleShape)
                 .clickable {
                     try {
-                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/CodesRahul96"))
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://www.codesrahul.in"))
                         context.startActivity(intent)
                     } catch (e: Exception) {}
                 }
@@ -402,7 +408,10 @@ fun AccessibilitySettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                        scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
+                    )
                 )
             }
         ) { padding ->

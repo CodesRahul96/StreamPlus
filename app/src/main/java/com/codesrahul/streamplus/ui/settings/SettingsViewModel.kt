@@ -47,10 +47,6 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.setThemeMode(mode) }
     }
 
-    fun setThemeStyle(style: com.codesrahul.streamplus.data.settings.ThemeStyle) {
-        viewModelScope.launch { settingsRepository.setThemeStyle(style) }
-    }
-
     fun setDynamicTheme(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setDynamicTheme(enabled) }
     }

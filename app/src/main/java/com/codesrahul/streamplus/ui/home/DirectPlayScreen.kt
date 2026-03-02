@@ -120,12 +120,15 @@ fun DirectPlayScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            "Network Stream",
+                            "Direct Stream",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                        scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
+                    ),
                     actions = {
                         IconButton(onClick = { onNavigateToHistory?.invoke() }) {
                             Icon(Icons.Default.History, contentDescription = "History")

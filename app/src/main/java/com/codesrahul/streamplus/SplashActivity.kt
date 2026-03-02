@@ -11,6 +11,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -31,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -83,6 +88,8 @@ class SplashActivity : ComponentActivity() {
                     } else {
                         startActivity(Intent(this@SplashActivity, MainActivity::class.java))
                     }
+                    @Suppress("DEPRECATION")
+                    overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
                     finish()
                 }
 
@@ -120,13 +127,27 @@ class SplashActivity : ComponentActivity() {
                                     )
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
-                                        Image(
-                                            painter = painterResource(id = R.drawable.app_logo_new),
-                                            contentDescription = "StreamPlus Logo",
+                                        Box(
                                             modifier = Modifier
                                                 .size(115.dp)
-                                                .clip(CircleShape)
-                                        )
+                                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(32.dp))
+                                                .background(
+                                                    Brush.linearGradient(
+                                                        listOf(
+                                                            MaterialTheme.colorScheme.primary,
+                                                            MaterialTheme.colorScheme.tertiary
+                                                        )
+                                                    )
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.PlayCircle,
+                                                contentDescription = "StreamPlus Logo",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(65.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }

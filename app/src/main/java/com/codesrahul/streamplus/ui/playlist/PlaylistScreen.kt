@@ -85,15 +85,17 @@ fun PlaylistScreen(
                 TopAppBar(
                     title = {
                         Column {
-                            Text("Playlists", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Text("Playlists", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
                             if (playlists.isNotEmpty()) {
                                 Text("${playlists.size} sources", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background,
-                        scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
                     ),
                     scrollBehavior = scrollBehavior,
                     actions = {
@@ -105,7 +107,7 @@ fun PlaylistScreen(
                             onDismissRequest = { showMenu = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Add URL") },
+                                text = { Text("Add Playlist URL") },
                                 onClick = {
                                     showMenu = false
                                     showAddDialog = true
@@ -113,7 +115,7 @@ fun PlaylistScreen(
                                 leadingIcon = { Icon(Icons.Default.AddLink, null, modifier = Modifier.size(20.dp)) }
                             )
                             DropdownMenuItem(
-                                text = { Text("Import M3U File") },
+                                text = { Text("Add Local Playlist") },
                                 onClick = {
                                     showMenu = false
                                     filePickerLauncher.launch("*/*")
@@ -143,7 +145,8 @@ fun PlaylistScreen(
                                         showFabMenu = false
                                         filePickerLauncher.launch("*/*") 
                                     },
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    contentColor = MaterialTheme.colorScheme.primary,
                                     shape = CircleShape
                                 ) {
                                     Icon(Icons.Default.UploadFile, contentDescription = "Import File")
@@ -155,10 +158,11 @@ fun PlaylistScreen(
                                         showFabMenu = false
                                         showAddDialog = true 
                                     },
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    contentColor = MaterialTheme.colorScheme.primary,
                                     shape = CircleShape
                                 ) {
-                                    Icon(Icons.Default.AddLink, contentDescription = "Add URL")
+                                    Icon(Icons.Default.AddLink, contentDescription = "Add Playlist URL")
                                 }
                             }
                         }
@@ -474,10 +478,10 @@ fun PlaylistItem(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)),
-        shape = RoundedCornerShape(20.dp),
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Row(
             modifier = Modifier.padding(12.dp).fillMaxWidth(),

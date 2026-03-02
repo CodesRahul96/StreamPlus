@@ -169,7 +169,12 @@ fun LocalVideoGrid(
                                 }
                             }
                         },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                            titleContentColor = MaterialTheme.colorScheme.onSurface,
+                            actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+                            scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
+                        ),
                         actions = {
                             if (isSelectionMode) {
                                 IconButton(onClick = {
@@ -372,7 +377,10 @@ fun LocalVideoList(
                                 )
                             )
                         },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                            scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
+                        ),
                         navigationIcon = {
                             IconButton(onClick = { 
                                 isSearchActive = false
@@ -392,7 +400,10 @@ fun LocalVideoList(
                                 }
                             }
                         },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                            scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
+                        ),
                         navigationIcon = {
                             IconButton(onClick = onBack) {
                                 Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
@@ -934,8 +945,8 @@ fun SettingsSectionHeader(title: String) {
 fun GalleryOptionButton(label: String, isSelected: Boolean, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        color = if (isSelected) Color(0xFF00E5FF).copy(0.15f) else Color.Transparent,
-        border = BorderStroke(1.dp, if (isSelected) Color(0xFF00E5FF) else Color.White.copy(0.1f)),
+        color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent,
+        border = androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
         shape = RoundedCornerShape(12.dp),
         modifier = modifier.height(48.dp)
     ) {
@@ -944,9 +955,9 @@ fun GalleryOptionButton(label: String, isSelected: Boolean, icon: ImageVector, m
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, null, tint = if (isSelected) Color(0xFF00E5FF) else Color.White, modifier = Modifier.size(18.dp))
+            Icon(icon, null, tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text(label, color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)
+            Text(label, color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)
         }
     }
 }
@@ -955,12 +966,12 @@ fun GalleryOptionButton(label: String, isSelected: Boolean, icon: ImageVector, m
 fun GalleryChip(label: String, isSelected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        color = if (isSelected) Color(0xFF00E5FF) else Color.White.copy(0.05f),
+        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(20.dp),
         modifier = modifier.height(36.dp)
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 16.dp)) {
-            Text(label, color = if (isSelected) Color.Black else Color.White, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            Text(label, color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -972,16 +983,10 @@ fun GallerySwitchItem(label: String, checked: Boolean, onCheckedChange: (Boolean
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, color = Color.White, style = MaterialTheme.typography.bodyLarge)
+        Text(label, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyLarge)
         Switch(
             checked = checked, 
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color(0xFF00E5FF),
-                checkedTrackColor = Color(0xFF00E5FF).copy(0.3f),
-                uncheckedThumbColor = Color.White.copy(0.6f),
-                uncheckedTrackColor = Color.White.copy(0.1f)
-            )
+            onCheckedChange = onCheckedChange
         )
     }
 }

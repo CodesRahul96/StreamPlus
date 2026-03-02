@@ -17,16 +17,11 @@ import javax.inject.Singleton
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 enum class ThemeMode {
-    SYSTEM, LIGHT, DARK
-}
-
-enum class ThemeStyle {
-    DYNAMIC, IGNITE, FROSTY, GROVE, MIDNIGHT, SUNSET, OCEAN, CARBON, AMOLED
+    SYSTEM, LIGHT, DARK, PITCH_BLACK
 }
 
 data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val themeStyle: ThemeStyle = ThemeStyle.DYNAMIC,
     val dynamicTheme: Boolean = false,
     val hidePlaylistUri: Boolean = false,
     val hideChannelImage: Boolean = false,
@@ -84,7 +79,6 @@ class SettingsRepository @Inject constructor(
 ) {
     private object Keys {
         val THEME_MODE = stringPreferencesKey("theme_mode")
-        val THEME_STYLE = stringPreferencesKey("theme_style")
         val DYNAMIC_THEME = booleanPreferencesKey("dynamic_theme")
         val HIDE_PLAYLIST_URI = booleanPreferencesKey("hide_playlist_uri")
         val HIDE_CHANNEL_IMAGE = booleanPreferencesKey("hide_channel_image")
@@ -141,9 +135,6 @@ class SettingsRepository @Inject constructor(
             themeMode = try {
                 ThemeMode.valueOf(prefs[Keys.THEME_MODE] ?: ThemeMode.SYSTEM.name)
             } catch (e: Exception) { ThemeMode.SYSTEM },
-            themeStyle = try {
-                ThemeStyle.valueOf(prefs[Keys.THEME_STYLE] ?: ThemeStyle.DYNAMIC.name)
-            } catch (e: Exception) { ThemeStyle.DYNAMIC },
             dynamicTheme = prefs[Keys.DYNAMIC_THEME] ?: true,
             hidePlaylistUri = prefs[Keys.HIDE_PLAYLIST_URI] ?: false,
             hideChannelImage = prefs[Keys.HIDE_CHANNEL_IMAGE] ?: false,
@@ -198,10 +189,6 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { it[Keys.THEME_MODE] = mode.name }
-    }
-
-    suspend fun setThemeStyle(style: ThemeStyle) {
-        context.dataStore.edit { it[Keys.THEME_STYLE] = style.name }
     }
 
     suspend fun setDynamicTheme(enabled: Boolean) {

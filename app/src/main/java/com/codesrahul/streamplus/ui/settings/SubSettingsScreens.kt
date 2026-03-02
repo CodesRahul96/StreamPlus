@@ -1,7 +1,6 @@
 package com.codesrahul.streamplus.ui.settings
  
 import com.codesrahul.streamplus.data.settings.ThemeMode
-import com.codesrahul.streamplus.data.settings.ThemeStyle
 
 import android.content.Intent
 import android.graphics.Bitmap
@@ -60,7 +59,12 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.primary,
+                        scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
+                    )
                 )
             }
         ) { padding ->
@@ -81,13 +85,14 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         options = ThemeMode.values().toList(),
                         selectedOption = settingsState.themeMode,
                         onOptionSelected = { viewModel.setThemeMode(it) },
-                        labelProvider = { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } },
+                        labelProvider = { it.name.lowercase().replaceFirstChar { c -> c.uppercase() }.replace("_", " ") },
                         iconProvider = { mode ->
                             Icon(
                                 imageVector = when(mode) {
                                     ThemeMode.SYSTEM -> Icons.Default.SettingsSuggest
                                     ThemeMode.LIGHT -> Icons.Default.LightMode
                                     ThemeMode.DARK -> Icons.Default.DarkMode
+                                    ThemeMode.PITCH_BLACK -> Icons.Default.NightsStay
                                 },
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
@@ -101,90 +106,13 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                             ThemeMode.SYSTEM -> "Follows device"
                             ThemeMode.LIGHT -> "Always Light"
                             ThemeMode.DARK -> "Always Dark"
+                            ThemeMode.PITCH_BLACK -> "Pitch Black OLED"
                         },
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
                 }
 
-                // Color Themes Section
-                SettingsCard {
-                    SettingsItemHeader(
-                        title = "Color Themes",
-                        subtitle = "Select one of the 9 premium themes",
-                        icon = Icons.Default.Palette
-                    )
-                    
-                    val themes = com.codesrahul.streamplus.data.settings.ThemeStyle.values()
-                    
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        themes.forEach { style ->
-                            val isSelected = settingsState.themeStyle == style
-                            val themeColor = when(style) {
-                                com.codesrahul.streamplus.data.settings.ThemeStyle.DYNAMIC -> Color(0xFF00BCD4)
-                                com.codesrahul.streamplus.data.settings.ThemeStyle.IGNITE -> Color(0xFFFF5722)
-                                com.codesrahul.streamplus.data.settings.ThemeStyle.FROSTY -> Color(0xFF03A9F4)
-                                com.codesrahul.streamplus.data.settings.ThemeStyle.GROVE -> Color(0xFF4CAF50)
-                                com.codesrahul.streamplus.data.settings.ThemeStyle.MIDNIGHT -> Color(0xFF0D47A1)
-                                com.codesrahul.streamplus.data.settings.ThemeStyle.SUNSET -> Color(0xFFFF5722)
-                                com.codesrahul.streamplus.data.settings.ThemeStyle.OCEAN -> Color(0xFF006064)
-                                com.codesrahul.streamplus.data.settings.ThemeStyle.CARBON -> Color(0xFF212121)
-                                com.codesrahul.streamplus.data.settings.ThemeStyle.AMOLED -> Color(0xFF050505)
-                            }
-                            
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .clickable { viewModel.setThemeStyle(style) },
-                                color = if (isSelected) themeColor.copy(alpha = 0.15f) else Color.Transparent,
-                                border = BorderStroke(
-                                    width = if (isSelected) 2.dp else 1.dp,
-                                    color = if (isSelected) themeColor else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                                )
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Surface(
-                                        shape = androidx.compose.foundation.shape.CircleShape,
-                                        color = themeColor,
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        if (isSelected) {
-                                            Box(contentAlignment = Alignment.Center) {
-                                                Icon(
-                                                    Icons.Default.Check, 
-                                                    contentDescription = null, 
-                                                    tint = Color.White,
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-                                    Spacer(modifier = Modifier.width(16.dp))
-                                    Text(
-                                        text = when(style) {
-                                            com.codesrahul.streamplus.data.settings.ThemeStyle.DYNAMIC -> "🌊 Dynamic Wave"
-                                            com.codesrahul.streamplus.data.settings.ThemeStyle.IGNITE -> "🔥 Ignite Blaze"
-                                            com.codesrahul.streamplus.data.settings.ThemeStyle.FROSTY -> "❄️ Frosty Aura"
-                                            com.codesrahul.streamplus.data.settings.ThemeStyle.GROVE -> "🌿 Enchanted Grove"
-                                            com.codesrahul.streamplus.data.settings.ThemeStyle.MIDNIGHT -> "🌑 Midnight Deep"
-                                            com.codesrahul.streamplus.data.settings.ThemeStyle.SUNSET -> "🌅 Sunset Glow"
-                                            com.codesrahul.streamplus.data.settings.ThemeStyle.OCEAN -> "🌊 Ocean Depths"
-                                            com.codesrahul.streamplus.data.settings.ThemeStyle.CARBON -> "⬛ Carbon Stealth"
-                                            com.codesrahul.streamplus.data.settings.ThemeStyle.AMOLED -> "⚫ Pitch Black AMOLED"
-                                        },
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) themeColor else MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
 
                 // UI Customization Section
                 SettingsCard {
@@ -263,7 +191,7 @@ fun ThemeModeDialog(currentMode: ThemeMode, onSelect: (ThemeMode) -> Unit, onDis
                             onClick = null
                         )
                         Text(
-                            text = mode.name,
+                            text = mode.name.lowercase().replaceFirstChar { it.uppercase() }.replace("_", " "),
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.padding(start = 16.dp)
                         )
@@ -277,46 +205,6 @@ fun ThemeModeDialog(currentMode: ThemeMode, onSelect: (ThemeMode) -> Unit, onDis
     )
 }
 
-@Composable
-fun ThemeStyleDialog(currentStyle: com.codesrahul.streamplus.data.settings.ThemeStyle, onSelect: (com.codesrahul.streamplus.data.settings.ThemeStyle) -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Theme Style") },
-        text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                com.codesrahul.streamplus.data.settings.ThemeStyle.values().forEach { style ->
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .selectable(
-                                selected = (style == currentStyle),
-                                onClick = {
-                                    onSelect(style)
-                                    onDismiss()
-                                }
-                            )
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = (style == currentStyle),
-                            onClick = null
-                        )
-                        Text(
-                            text = if (style == com.codesrahul.streamplus.data.settings.ThemeStyle.DYNAMIC) "Dynamic (Material You)" 
-                                   else style.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() },
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(start = 16.dp)
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    )
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -412,7 +300,12 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.primary,
+                        scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
+                    )
                 )
             }
         ) { padding ->
@@ -694,7 +587,12 @@ fun GeneralSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.primary,
+                        scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
+                    )
                 )
             }
         ) { padding ->
@@ -803,7 +701,10 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                        scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
+                    )
                 )
             }
         ) { padding ->
@@ -867,6 +768,15 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         icon = Icons.Default.Repeat,
                         checked = settingsState.repeatMode,
                         onCheckedChange = { viewModel.setRepeatMode(it) },
+                        showDivider = true
+                    )
+
+                    SettingsSwitchItem(
+                        title = "Force Landscape Mode",
+                        subtitle = "Always play videos in landscape orientation",
+                        icon = Icons.Default.ScreenRotation,
+                        checked = settingsState.forceLandscape,
+                        onCheckedChange = { viewModel.setForceLandscape(it) },
                         showDivider = true
                     )
 
@@ -1023,7 +933,10 @@ fun ShortcutsSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                        scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
+                    )
                 )
             }
         ) { padding ->

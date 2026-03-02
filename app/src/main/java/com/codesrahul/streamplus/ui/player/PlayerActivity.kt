@@ -417,8 +417,12 @@ fun PlayerScreen(
     var durationFormatted by remember { mutableStateOf("00:00") }
 
     LaunchedEffect(settingsState.forceLandscape) {
+        activity?.requestedOrientation = if (settingsState.forceLandscape) {
+            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        } else {
+            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER
+        }
         if (settingsState.forceLandscape) {
-            activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             activity?.let { hideSystemUI(it) }
         }
     }

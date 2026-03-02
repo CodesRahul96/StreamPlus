@@ -56,7 +56,8 @@ fun MainScreen() {
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surface,
                     contentColor = MaterialTheme.colorScheme.onSurface,
-                    tonalElevation = 8.dp
+                    tonalElevation = 8.dp,
+                    modifier = Modifier.padding(top = 1.dp) // Subtle visual separation
                 ) {
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentDestination = navBackStackEntry?.destination
@@ -74,8 +75,8 @@ fun MainScreen() {
                                 {
                                     Text(
                                         item.title,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
                                     )
                                 }
                             } else null,
@@ -111,8 +112,18 @@ fun MainScreen() {
                     else -> "playlist"
                 },
                 modifier = Modifier.padding(innerPadding),
-                enterTransition = { fadeIn(animationSpec = tween(300)) },
-                exitTransition  = { fadeOut(animationSpec = tween(300)) }
+                enterTransition = { 
+                    fadeIn(animationSpec = tween(300)) + slideInHorizontally(
+                        initialOffsetX = { fullWidth -> fullWidth / 8 },
+                        animationSpec = tween(300)
+                    ) 
+                },
+                exitTransition = { 
+                    fadeOut(animationSpec = tween(300)) + slideOutHorizontally(
+                        targetOffsetX = { fullWidth -> -fullWidth / 8 },
+                        animationSpec = tween(300)
+                    )
+                }
             ) {
                 composable("playlist") {
                     val context = androidx.compose.ui.platform.LocalContext.current

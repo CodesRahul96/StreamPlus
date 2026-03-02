@@ -26,18 +26,30 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
             containerColor = Color.Transparent,
             topBar = { 
                 TopAppBar(
+                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
                     title = { 
                         Text(
                             "StreamPlus",
-                            style = MaterialTheme.typography.headlineMedium,
+                            style = MaterialTheme.typography.headlineLarge,
                             fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.onSurface
                         ) 
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.primary,
+                        scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
+                    ),
                     actions = {
-                        IconButton(onClick = { onNavigate("settings") }) {
-                            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.primary)
+                        Surface(
+                            shape = androidx.compose.foundation.shape.CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.padding(end = 16.dp)
+                        ) {
+                            IconButton(onClick = { onNavigate("settings") }) {
+                                Icon(Icons.Default.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.primary)
+                            }
                         }
                     }
                 ) 
@@ -70,7 +82,7 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
                 val cardItems = listOf(
                     Triple("My Playlists", "Browse and watch remote M3U lists", "playlist"),
                     Triple("Local Files", "Play videos from your device storage", "local"),
-                    Triple("Network Stream", "Stream directly from URL with headers", "direct_play"),
+                    Triple("Direct Stream", "Stream directly from URL with headers", "direct_play"),
                     Triple("Watch History", "Resume recently played streams", "history")
                 )
 
@@ -86,12 +98,12 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
                         title = title,
                         subtitle = sub,
                         icon = icon,
-                        delay = index * 100,
+                        delay = index * 80,
                         onClick = { onNavigate(route) }
                     )
                 }
                 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(100.dp)) // Extra padding for floating nav bar
             }
         }
     }
@@ -119,17 +131,18 @@ fun HomeDashboardCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick),
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f))
+            shape = MaterialTheme.shapes.large,
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
             Row(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier.padding(20.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
-                    shape = androidx.compose.foundation.shape.CircleShape,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                     modifier = Modifier.size(56.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -141,17 +154,19 @@ fun HomeDashboardCard(
                         )
                     }
                 }
-                Spacer(modifier = Modifier.width(20.dp))
+                Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
                         title, 
-                        style = MaterialTheme.typography.titleLarge, 
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                        style = MaterialTheme.typography.titleMedium, 
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         subtitle, 
                         style = MaterialTheme.typography.bodyMedium, 
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

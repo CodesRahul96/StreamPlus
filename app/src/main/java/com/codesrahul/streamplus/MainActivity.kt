@@ -25,8 +25,7 @@ class MainActivity : ComponentActivity() {
                 val settingsState by viewModel.settings.collectAsState(initial = com.codesrahul.streamplus.data.settings.AppSettings())
 
                 com.codesrahul.streamplus.ui.theme.StreamPlusTheme(
-                    themeMode = settingsState.themeMode,
-                    themeStyle = settingsState.themeStyle
+                    themeMode = settingsState.themeMode
                 ) {
                     // A surface container using the 'background' color from the theme
                     Surface(
