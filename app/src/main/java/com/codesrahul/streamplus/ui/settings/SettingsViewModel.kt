@@ -99,6 +99,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.factoryReset() }
     }
 
+    fun setDefaultAspectRatio(mode: Int) {
+        viewModelScope.launch { settingsRepository.setDefaultAspectRatio(mode) }
+    }
+
     fun setDecoderPriority(priority: Int) {
         viewModelScope.launch { settingsRepository.setDecoderPriority(priority) }
     }

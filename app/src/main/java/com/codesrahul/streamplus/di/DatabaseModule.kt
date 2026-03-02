@@ -20,11 +20,18 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
+        val MIGRATION_11_12 = object : androidx.room.migration.Migration(11, 12) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE playlists ADD COLUMN isPinned INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+        
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             "stream_doctor_db"
-        ).fallbackToDestructiveMigration()
+        ).addMigrations(MIGRATION_11_12)
+            .fallbackToDestructiveMigration()
             .build()
     }
 

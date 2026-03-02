@@ -176,6 +176,9 @@ class PlayerActivity : AppCompatActivity() {
 
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            window.attributes.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        }
 
         var streamUrl = intent.getStringExtra(EXTRA_STREAM_URL) ?: ""
         val streamTitle = intent.getStringExtra(EXTRA_STREAM_TITLE) ?: "Unknown Stream"
@@ -372,6 +375,14 @@ fun PlayerScreen(
     // Lock State
     var isLocked by remember { mutableStateOf(false) }
     var isControlsVisible by remember { mutableStateOf(true) }
+    
+    // Aspect Ratio State Tracking
+    var sessionResizeMode by remember { mutableStateOf<Int?>(null) }
+    
+    // Reset session override if default setting changes or finally loads from DataStore
+    LaunchedEffect(settingsState.defaultAspectRatio) {
+        sessionResizeMode = null
+    }
     
     // Helper to dim overlays after delay
     LaunchedEffect(showGestureOverlay) {
@@ -1083,25 +1094,31 @@ fun PlayerScreen(
                     showSettingsSheet = true
                 }
                 
+                val defaultExoMode = when (settingsState.defaultAspectRatio) {
+                    1 -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL
+                    2 -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                    else -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+                }
                 
-                try {
-                    val storedMode = settingsState.lastResizeMode
-                    if (storedMode in 0..4) playerView.resizeMode = storedMode
-                } catch (e: Exception) {}
+                val targetMode = sessionResizeMode ?: defaultExoMode
+                if (playerView.resizeMode != targetMode) {
+                    playerView.resizeMode = targetMode
+                }
+
                 playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.exo_resize_mode_button)?.setOnClickListener {
-                    playerView.resizeMode = when (playerView.resizeMode) {
+                    val newMode = when (playerView.resizeMode) {
                         androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL
                         androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                         else -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
                     }
-                    val msg = when(playerView.resizeMode) {
+                    sessionResizeMode = newMode
+                    playerView.resizeMode = newMode
+                    val msg = when(newMode) {
                         androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL -> "Fill"
                         androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM -> "Zoom"
                         else -> "Fit"
                     }
                     android.widget.Toast.makeText(playerView.context, "Resize Mode: $msg", android.widget.Toast.LENGTH_SHORT).show()
-                    val activity = playerView.context as? ComponentActivity
-                    activity?.lifecycleScope?.launch { settingsRepository.setLastResizeMode(playerView.resizeMode) }
                 }
                 playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.btn_landscape)?.setOnClickListener {
                     activityContext?.let { act ->

@@ -113,6 +113,12 @@ class PlaylistViewModel @Inject constructor(
         viewModelScope.launch { repository.insertPlaylist(playlist) }
     }
 
+    fun togglePin(playlist: PlaylistEntity) {
+        viewModelScope.launch { 
+            repository.insertPlaylist(playlist.copy(isPinned = !playlist.isPinned)) 
+        }
+    }
+
     fun deletePlaylist(playlist: PlaylistEntity) {
         viewModelScope.launch { repository.deletePlaylist(playlist) }
     }

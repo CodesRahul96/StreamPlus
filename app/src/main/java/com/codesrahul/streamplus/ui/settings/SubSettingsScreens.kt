@@ -689,6 +689,7 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
     var showQualityDialog by remember { mutableStateOf(false) }
     var showAudioDialog by remember { mutableStateOf(false) }
     var showBufferDialog by remember { mutableStateOf(false) }
+    var showAspectRatioDialog by remember { mutableStateOf(false) }
 
     com.codesrahul.streamplus.ui.components.PremiumBackground {
         Scaffold(
@@ -735,6 +736,15 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         subtitle = "${settingsState.networkBufferSize} seconds",
                         icon = Icons.Default.Waves,
                         onClick = { showBufferDialog = true },
+                        showDivider = true
+                    )
+                    
+                    val aspectOptions = listOf("Fit", "Fill", "Zoom")
+                    SettingsClickableItem(
+                        title = "Default Aspect Ratio",
+                        subtitle = aspectOptions.getOrElse(settingsState.defaultAspectRatio) { "Fit" },
+                        icon = Icons.Default.AspectRatio,
+                        onClick = { showAspectRatioDialog = true },
                         showDivider = true
                     )
                     
@@ -911,6 +921,46 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             },
             confirmButton = {
                 TextButton(onClick = { showBufferDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showAspectRatioDialog) {
+        val aspectOptions = listOf("Fit", "Fill", "Zoom")
+        AlertDialog(
+            onDismissRequest = { showAspectRatioDialog = false },
+            title = { Text("Default Aspect Ratio") },
+            text = {
+                Column {
+                    aspectOptions.forEachIndexed { index, option ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = (index == settingsState.defaultAspectRatio),
+                                    onClick = {
+                                        viewModel.setDefaultAspectRatio(index)
+                                        showAspectRatioDialog = false
+                                    }
+                                )
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (index == settingsState.defaultAspectRatio),
+                                onClick = null
+                            )
+                            Text(
+                                text = option,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 16.dp)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAspectRatioDialog = false }) { Text("Cancel") }
             }
         )
     }

@@ -12,5 +12,6 @@ data class PlaylistEntity(
     val type: String = "URL", // URL or FILE
     val icon: String = "default",
     val color: Int = -16777216,
-    val epgUrl: String? = null
+    val epgUrl: String? = null,
+    val isPinned: Boolean = false
 )

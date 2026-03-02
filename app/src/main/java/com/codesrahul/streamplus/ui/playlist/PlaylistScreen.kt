@@ -242,12 +242,13 @@ fun PlaylistScreen(
                 }
             } else {
                 val sortedPlaylists = remember(playlists, settingsState.playlistSortOrder) {
-                    when (settingsState.playlistSortOrder) {
-                        "Name"       -> playlists.sortedBy { it.name }
-                        "Category"   -> playlists.sortedBy { it.icon }
+                    val baseSorted = when (settingsState.playlistSortOrder) {
+                        "Name"       -> playlists.sortedBy { it.name.lowercase() }
+                        "Category"   -> playlists.sortedBy { it.icon.lowercase() }
                         "Added Date" -> playlists.sortedByDescending { it.id }
                         else         -> playlists
                     }
+                    baseSorted.sortedByDescending { it.isPinned }
                 }
                 LazyColumn(
                     modifier = Modifier.padding(padding),
@@ -418,8 +419,9 @@ fun PlaylistScreen(
                                     animatedVisibilityScope = animatedContentScope
                                 ),
                                 onClick = { onPlaylistClick(playlist.id) },
-                            onEdit = { showEditDialog = playlist }
-                        )
+                                onEdit = { showEditDialog = playlist },
+                                onPinToggle = { viewModel.togglePin(playlist) }
+                            )
                         }
                     }
                 }
@@ -469,7 +471,8 @@ fun PlaylistItem(
     settingsState: AppSettings,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    onPinToggle: () -> Unit
 ) {
     val hideUri = settingsState.hidePlaylistUri
     val resolvedIcon = if (playlist.icon == "default") settingsState.defaultPlaylistIcon.lowercase() else playlist.icon.lowercase()
@@ -538,6 +541,15 @@ fun PlaylistItem(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+            }
+            
+            IconButton(onClick = onPinToggle, modifier = Modifier.size(40.dp)) {
+                Icon(
+                    Icons.Default.PushPin,
+                    contentDescription = "Pin",
+                    tint = if (playlist.isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.size(18.dp)
+                )
             }
             
             IconButton(onClick = onEdit, modifier = Modifier.size(40.dp)) {

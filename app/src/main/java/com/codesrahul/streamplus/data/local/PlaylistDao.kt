@@ -9,10 +9,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PlaylistDao {
-    @Query("SELECT * FROM playlists")
+    @Query("SELECT * FROM playlists ORDER BY isPinned DESC, id ASC")
     fun getAllPlaylists(): Flow<List<PlaylistEntity>>
 
-    @Query("SELECT * FROM playlists")
+    @Query("SELECT * FROM playlists ORDER BY isPinned DESC, id ASC")
     suspend fun getAllPlaylistsList(): List<PlaylistEntity>
 
     @Query("SELECT * FROM playlists WHERE id = :id")

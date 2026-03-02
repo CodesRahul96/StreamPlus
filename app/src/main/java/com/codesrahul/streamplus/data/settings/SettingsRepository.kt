@@ -35,7 +35,7 @@ data class AppSettings(
     val brightnessGestures: Boolean = false,
     val resumePlaying: Boolean = false,
     val playlistCache: Boolean = false,
-    val lastResizeMode: Int = 0, // 0=Fit,1=Fill,2=Zoom
+    val defaultAspectRatio: Int = 0, // 0=Fit,1=Fill,2=Zoom
     val decoderPriority: Int = 0, // 0=Device, 1=App, 2=DeviceOnly
     val dolbyVision: Boolean = false,
     val disableFrameRateCheck: Boolean = false,
@@ -92,7 +92,7 @@ class SettingsRepository @Inject constructor(
         val BRIGHTNESS_GESTURES = booleanPreferencesKey("brightness_gestures")
         val RESUME_PLAYING = booleanPreferencesKey("resume_playing")
         val PLAYLIST_CACHE = booleanPreferencesKey("playlist_cache")
-        val LAST_RESIZE_MODE = intPreferencesKey("last_resize_mode")
+        val DEFAULT_ASPECT_RATIO = intPreferencesKey("default_aspect_ratio")
         val DECODER_PRIORITY = intPreferencesKey("decoder_priority")
         val DOLBY_VISION = booleanPreferencesKey("dolby_vision")
         val DISABLE_FRAME_RATE_CHECK = booleanPreferencesKey("disable_frame_rate_check")
@@ -148,7 +148,7 @@ class SettingsRepository @Inject constructor(
             brightnessGestures = prefs[Keys.BRIGHTNESS_GESTURES] ?: false,
             resumePlaying = prefs[Keys.RESUME_PLAYING] ?: false,
             playlistCache = prefs[Keys.PLAYLIST_CACHE] ?: false,
-            lastResizeMode = prefs[Keys.LAST_RESIZE_MODE] ?: 0,
+            defaultAspectRatio = prefs[Keys.DEFAULT_ASPECT_RATIO] ?: 0,
             decoderPriority = prefs[Keys.DECODER_PRIORITY] ?: 0,
             dolbyVision = prefs[Keys.DOLBY_VISION] ?: false,
             disableFrameRateCheck = prefs[Keys.DISABLE_FRAME_RATE_CHECK] ?: false,
@@ -239,8 +239,8 @@ class SettingsRepository @Inject constructor(
         context.dataStore.edit { it[Keys.PLAYLIST_CACHE] = enabled }
     }
 
-    suspend fun setLastResizeMode(mode: Int) {
-        context.dataStore.edit { it[Keys.LAST_RESIZE_MODE] = mode }
+    suspend fun setDefaultAspectRatio(mode: Int) {
+        context.dataStore.edit { it[Keys.DEFAULT_ASPECT_RATIO] = mode }
     }
 
     suspend fun setDecoderPriority(priority: Int) {
