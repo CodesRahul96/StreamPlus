@@ -297,7 +297,7 @@ class M3UStreamParser : StreamParser {
              if (explicitScheme == "com.microsoft.playready") return "playready"
              return explicitScheme
         }
-        if (url.contains(".mpd") || url.contains(".mpd?")) return "widevine"
+        if (url.contains(".mpd") || url.contains(".mpd?") || url.contains("/mpd/")) return "widevine"
         // Let DrmResolver handle the default based on license URL content
         return null
     }
