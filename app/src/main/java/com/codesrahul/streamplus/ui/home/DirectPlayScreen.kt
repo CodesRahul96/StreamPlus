@@ -88,6 +88,15 @@ fun DirectPlayScreen(
         hdrs["Referer"]?.let  { v  -> referer = v }
         hdrs["Cookie"]?.let   { v  -> cookie  = v }
         hdrs["Origin"]?.let   { v  -> origin  = v }
+        hdrs["DRM-Scheme"]?.let { v ->
+            drmScheme = when {
+                v.contains("widevine", ignoreCase = true) -> "Widevine"
+                v.contains("clearkey", ignoreCase = true) -> "ClearKey"
+                v.contains("playready", ignoreCase = true) -> "PlayReady"
+                else -> drmScheme
+            }
+        }
+        hdrs["DRM-LicenseUrl"]?.let { v -> drmLicenseUrl = v }
         if (hdrs.any { (k, _) -> k != "User-Agent" }) showAdvanced = true
     }
 
@@ -204,6 +213,15 @@ fun DirectPlayScreen(
                                 hdrs["Referer"]?.let { v -> referer = v; showAdvanced = true }
                                 hdrs["Cookie"]?.let  { v -> cookie  = v; showAdvanced = true }
                                 hdrs["Origin"]?.let  { v -> origin  = v; showAdvanced = true }
+                                hdrs["DRM-Scheme"]?.let { v ->
+                                    drmScheme = when {
+                                        v.contains("widevine", ignoreCase = true) -> "Widevine"
+                                        v.contains("clearkey", ignoreCase = true) -> "ClearKey"
+                                        v.contains("playready", ignoreCase = true) -> "PlayReady"
+                                        else -> drmScheme
+                                    }
+                                }
+                                hdrs["DRM-LicenseUrl"]?.let { v -> drmLicenseUrl = v; showAdvanced = true }
                             } else {
                                 streamUrl = raw
                             }

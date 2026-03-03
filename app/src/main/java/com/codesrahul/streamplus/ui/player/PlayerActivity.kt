@@ -52,6 +52,14 @@ import android.media.audiofx.DynamicsProcessing
 import androidx.compose.material3.ExperimentalMaterial3Api
 import dagger.hilt.android.AndroidEntryPoint
 import okhttp3.OkHttpClient
+import okhttp3.CookieJar
+import okhttp3.Cookie
+import okhttp3.HttpUrl
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
+import javax.net.ssl.SSLContext
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
 
 import com.codesrahul.streamplus.domain.model.M3UItem
 import java.util.UUID
@@ -195,6 +203,8 @@ class PlayerActivity : AppCompatActivity() {
         val drmHeaders = intent.getSerializableExtra(EXTRA_DRM_HEADERS) as? Map<String, String> ?: emptyMap()
         val playlistId = intent.getIntExtra(EXTRA_PLAYLIST_ID, -1)
         val groupTitle = intent.getStringExtra(EXTRA_STREAM_GROUP) ?: "Default"
+        
+        Log.d("PlayerActivity", ">>> Intent received: URL=$streamUrl, Title=$streamTitle, Cookie=$cookie, UA=$userAgent, DRM=$drmScheme")
 
         updatePipParams()
 
@@ -471,14 +481,7 @@ fun PlayerScreen(
     }
 
     val exoPlayer = remember(resolvedItem, settingsState.skipSslVerification, settingsState.decoderPriority, settingsState.enableTunneling) {
-        val okHttpClient = if (settingsState.skipSslVerification) {
-            getUnsafeOkHttpClient()
-        } else {
-            okHttpClientProvider.get().newBuilder()
-                .followRedirects(true)
-                .followSslRedirects(true)
-                .build()
-        }
+        val okHttpClient = okHttpClientProvider.get()
 
         val okHttpDataSourceFactory = OkHttpDataSource.Factory(okHttpClient).apply {
             val finalHeaders = mutableMapOf<String, String>()
@@ -522,7 +525,7 @@ fun PlayerScreen(
                 
                 Log.d("PlayerScreen", "DRM Session Manager - Headers: ${allHeaders.keys}")
                 
-                val callback = UnifiedMediaDrmCallback(okHttpDataSourceFactory, okHttpClient, allHeaders)
+                val callback = UnifiedMediaDrmCallback(dConf.licenseUri?.toString(), okHttpDataSourceFactory, okHttpClient, allHeaders)
                 
                 val drmBuilder = DefaultDrmSessionManager.Builder()
                     .setUuidAndExoMediaDrmProvider(dConf.uuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
@@ -856,19 +859,26 @@ fun PlayerScreen(
             // DRM CONFIGURATION
             val effectiveScheme = resolvedItem.drmScheme?.lowercase() ?: ""
             val effectiveLicenseUrl = resolvedItem.licenseUrl
+            val hasDrmHeaders = resolvedItem.drmHeaders.isNotEmpty()
+
+            // Only enter DRM mode when we have something actionable:
+            //  - an explicit license URL, OR
+            //  - non-empty DRM headers (e.g. X-ClearKey-Data), OR
+            //  - a scheme WITH a license URL (scheme alone without a URL is always an error)
+            val shouldConfigureDrm = !effectiveLicenseUrl.isNullOrBlank() || hasDrmHeaders
             
-            if (effectiveScheme.isNotBlank() || !effectiveLicenseUrl.isNullOrBlank() || resolvedItem.drmHeaders.isNotEmpty()) {
+            if (shouldConfigureDrm) {
                 val uuid = when {
                     effectiveScheme.contains("widevine") -> C.WIDEVINE_UUID
                     effectiveScheme.contains("playready") -> C.PLAYREADY_UUID
                     effectiveScheme.contains("clearkey") -> C.CLEARKEY_UUID
                     else -> {
-                        // Inferred from MIME, URL or presence of DRM headers
+                        // Only use Widevine if a license URL is actually present
+                        // Do NOT auto-assign Widevine for .mpd URLs without a license server
                         when {
-                            inferredMimeType == androidx.media3.common.MimeTypes.APPLICATION_MPD -> C.WIDEVINE_UUID
                             !effectiveLicenseUrl.isNullOrBlank() && (effectiveLicenseUrl.contains("proxy/lic/widevine") || effectiveLicenseUrl.contains("lic/wv")) -> C.WIDEVINE_UUID
-                            resolvedItem.url.contains(".mpd") || resolvedItem.url.contains("/mpd/") -> C.WIDEVINE_UUID
-                            else -> null
+                            !effectiveLicenseUrl.isNullOrBlank() -> C.WIDEVINE_UUID // Has a license URL, assume Widevine
+                            else -> null // No license URL → no DRM, play as-is
                         }
                     }
                 }
@@ -1285,6 +1295,7 @@ fun PlayerScreen(
             }
         }
     }
+}
 
     // --- Modern Settings Bottom Sheet ---
     if (showSettingsSheet) {
@@ -1364,28 +1375,9 @@ fun PlayerScreen(
             }
         }
     }
-    }
 }
 
-private fun getUnsafeOkHttpClient(): OkHttpClient {
-    return try {
-        val trustAllCerts = arrayOf<javax.net.ssl.TrustManager>(
-            object : javax.net.ssl.X509TrustManager {
-                override fun checkClientTrusted(chain: Array<java.security.cert.X509Certificate>, authType: String) {}
-                override fun checkServerTrusted(chain: Array<java.security.cert.X509Certificate>, authType: String) {}
-                override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
-            }
-        )
-        val sslContext = javax.net.ssl.SSLContext.getInstance("SSL")
-        sslContext.init(null, trustAllCerts, java.security.SecureRandom())
-        OkHttpClient.Builder()
-            .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as javax.net.ssl.X509TrustManager)
-            .hostnameVerifier { _, _ -> true }
-            .build()
-    } catch (e: Exception) {
-        throw RuntimeException(e)
-    }
-}
+// getUnsafeOkHttpClient removed - using unified OkHttpClient from NetworkModule
 
 private fun showSettingsDialog(context: Context, player: ExoPlayer, currentBoost: Float, onBoostChange: (Float) -> Unit, onLoadSubtitle: () -> Unit) {
     val items = arrayOf("Quality", "Audio Tracks", "Subtitles", "Audio Boost (${(currentBoost * 100).toInt()}%)", "Load External Subtitle")
