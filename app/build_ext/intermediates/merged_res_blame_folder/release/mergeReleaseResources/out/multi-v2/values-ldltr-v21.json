@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.codesrahul.streamplus.app-mergeReleaseResources-80:/values-ldltr-v21/values-ldltr-v21.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\VICTUS\\.gradle\\caches\\transforms-4\\caeb09f704e21488bbe3f3acd44d6df4\\transformed\\appcompat-1.7.0\\res\\values-ldltr-v21\\values-ldltr-v21.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "112",
+                        "endOffsets": "163"
+                    }
+                }
+            ]
+        }
+    ]
+}

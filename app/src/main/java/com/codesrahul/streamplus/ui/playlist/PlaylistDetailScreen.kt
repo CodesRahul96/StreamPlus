@@ -196,17 +196,20 @@ fun PlaylistDetailScreen(
                             verticalArrangement   = Arrangement.spacedBy(12.dp),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            items(filteredChannels.size, key = { index -> 
-                                val channel = filteredChannels[index]
-                                "${channel.url}_${channel.name}_$index" 
-                            }) { index ->
+                            items(filteredChannels.size) { index ->
                                 val channel = filteredChannels[index]
                                 val currentProgram = viewModel.getCurrentProgram(channel.epgId)
+                                
+                                val playlistId = playlist?.id
+                                val isFav = remember(channel.name, channel.group, playlistId, favoriteIdentities) {
+                                    "${channel.name}|${channel.group}|$playlistId" in favoriteIdentities
+                                }
+
                                 ChannelItem(
                                     channel = channel,
                                     hideImage = settingsState.hideChannelImage,
                                     currentProgram = currentProgram?.title,
-                                    isFavorite = "${channel.name}|${channel.group}|${playlist?.id}" in favoriteIdentities,
+                                    isFavorite = isFav,
                                     onToggleFavorite = { viewModel.toggleFavorite(channel) }
                                 ) {
                                     if (isLoading) return@ChannelItem
@@ -282,17 +285,21 @@ fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onT
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(0.67f) // Movie poster ratio
+            .aspectRatio(0.67f)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (channel.logoUrl.isNotBlank() && !hideImage) {
+                val context = LocalContext.current
+                val imageRequest = remember(channel.logoUrl) {
+                    ImageRequest.Builder(context).data(channel.logoUrl).crossfade(true).build()
+                }
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current).data(channel.logoUrl).crossfade(true).build(),
+                    model = imageRequest,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -303,11 +310,10 @@ fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onT
                 }
             }
             
-            // Gradient Overlay for Title
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent, Color.Black.copy(alpha = 0.8f))))
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent, Color.Black.copy(alpha = 0.9f))))
             )
             
             Column(
@@ -319,7 +325,7 @@ fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onT
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    modifier = Modifier.basicMarquee()
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             
@@ -347,38 +353,38 @@ fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
         ),
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            // Logo / placeholder
             if (channel.logoUrl.isNotBlank() && !hideImage) {
+                val context = LocalContext.current
+                val imageRequest = remember(channel.logoUrl) {
+                    ImageRequest.Builder(context).data(channel.logoUrl).crossfade(true).build()
+                }
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(channel.logoUrl)
-                        .crossfade(true)
-                        .build(),
+                    model = imageRequest,
                     contentDescription = null,
                     modifier = Modifier
                         .fillMaxWidth()
                         .fillMaxHeight(0.70f)
                         .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
-                        .background(Color.White),
+                        .background(Color.White.copy(alpha = 0.9f)),
                     contentScale = ContentScale.Fit
                 )
             } else {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight(0.68f)
+                        .fillMaxHeight(0.70f)
                         .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
                         .background(
                             Brush.linearGradient(
                                 listOf(
-                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                                    MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                                    MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
                                 )
                             )
                         ),
@@ -387,69 +393,73 @@ fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String
                     Icon(
                         Icons.Default.Tv,
                         contentDescription = null,
-                        modifier = Modifier.size(36.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        modifier = Modifier.size(40.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                     )
                 }
             }
 
-            // DRM badge
             if (!channel.drmScheme.isNullOrBlank()) {
                 Surface(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(6.dp),
-                    shape = RoundedCornerShape(4.dp),
-                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.9f)
+                        .padding(8.dp),
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)
                 ) {
                     Text(
                         "DRM",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                     )
                 }
             }
 
-            // Heart / Favorites button
             if (onToggleFavorite != null) {
-                IconButton(
-                    onClick = onToggleFavorite,
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
                     modifier = Modifier
                         .align(Alignment.TopEnd)
+                        .padding(6.dp)
                         .size(32.dp)
-                        .padding(4.dp)
                 ) {
-                    Icon(
-                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = if (isFavorite) "Remove from favourites" else "Add to favourites",
-                        tint = if (isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    IconButton(
+                        onClick = onToggleFavorite,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = if (isFavorite) "Remove from favourites" else "Add to favourites",
+                            tint = if (isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
 
-            // Channel name at bottom
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Transparent, MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
-                        ),
-                        RoundedCornerShape(bottomStart = 18.dp, bottomEnd = 18.dp)
-                    )
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .fillMaxHeight(0.30f)
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+                    .padding(horizontal = 10.dp)
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally, 
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
                     Text(
                         text = channel.name,
                         style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
-                        modifier = Modifier.basicMarquee(),
+                        overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center
                     )
                     if (!currentProgram.isNullOrBlank()) {
@@ -459,7 +469,8 @@ fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String
                             color = MaterialTheme.colorScheme.primary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 2.dp)
                         )
                     }
                 }

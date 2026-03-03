@@ -41,25 +41,55 @@ fun Modifier.shimmerEffect(): Modifier = composed {
 
 @Composable
 fun ShimmerChannelItem() {
-    Column(
+    androidx.compose.material3.Card(
         modifier = Modifier
-            .padding(8.dp)
-            .width(120.dp)
+            .fillMaxWidth()
+            .aspectRatio(0.85f),
+        shape = RoundedCornerShape(18.dp),
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        ),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),
+        elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .size(100.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .shimmerEffect()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(0.7f)
-                .height(14.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .shimmerEffect()
-        )
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.70f)
+                    .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
+                    .shimmerEffect()
+            )
+            
+            Box(
+                modifier = Modifier
+                    .align(androidx.compose.ui.Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.30f)
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Column(
+                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally, 
+                    modifier = Modifier.fillMaxWidth().align(androidx.compose.ui.Alignment.Center)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.8f)
+                            .height(12.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .shimmerEffect()
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.5f)
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .shimmerEffect()
+                    )
+                }
+            }
+        }
     }
 }
 

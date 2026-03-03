@@ -19,6 +19,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -1311,6 +1313,7 @@ fun PlayerScreen(
                     .fillMaxWidth()
                     .padding(bottom = 32.dp)
                     .navigationBarsPadding()
+                    .verticalScroll(androidx.compose.foundation.rememberScrollState())
             ) {
                 Text(
                     "Player Settings",

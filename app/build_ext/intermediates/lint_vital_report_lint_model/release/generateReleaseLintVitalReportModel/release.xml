@@ -1,0 +1,33 @@
+<variant
+    name="release"
+    useSupportLibraryVectorDrawables="true"
+    package="com.codesrahul.streamplus"
+    minSdkVersion="24"
+    targetSdkVersion="34"
+    shrinking="true"
+    mergedManifest="build_ext\intermediates\merged_manifest\release\processReleaseMainManifest\AndroidManifest.xml"
+    manifestMergeReport="build_ext\outputs\logs\manifest-merger-release-report.txt"
+    proguardFiles="build_ext\intermediates\default_proguard_files\global\proguard-android-optimize.txt-8.4.2;proguard-rules.pro"
+    partialResultsDir="build_ext\intermediates\lint_vital_partial_results\release\lintVitalAnalyzeRelease\out">
+  <buildFeatures
+      namespacing="REQUIRED"/>
+  <sourceProviders>
+    <sourceProvider
+        manifests="src\main\AndroidManifest.xml"
+        javaDirectories="src\main\java;src\release\java;src\main\kotlin;src\release\kotlin"
+        resDirectories="src\main\res;src\release\res"
+        assetsDirectories="src\main\assets;src\release\assets"/>
+  </sourceProviders>
+  <testSourceProviders>
+  </testSourceProviders>
+  <testFixturesSourceProviders>
+  </testFixturesSourceProviders>
+  <artifact
+      classOutputs="build_ext\intermediates\javac\release\compileReleaseJavaWithJavac\classes;build_ext\tmp\kotlin-classes\release;build_ext\kotlinToolingMetadata;build_ext\intermediates\hilt\component_classes\release;build_ext\generated\ksp\release\resources;build_ext\intermediates\compile_and_runtime_not_namespaced_r_class_jar\release\processReleaseResources\R.jar"
+      type="MAIN"
+      applicationId="com.codesrahul.streamplus"
+      generatedSourceFolders="build_ext\generated\ksp\release\java;build_ext\generated\ksp\release\kotlin;build_ext\generated\ap_generated_sources\release\out"
+      generatedResourceFolders="build_ext\generated\res\processReleaseGoogleServices;build_ext\generated\res\injectCrashlyticsMappingFileIdRelease;build_ext\generated\res\resValues\release"
+      desugaredMethodsFiles="C:\Users\VICTUS\.gradle\caches\transforms-4\047b7ed9b2c363a5570ffec1812d6544\transformed\D8BackportedDesugaredMethods.txt">
+  </artifact>
+</variant>

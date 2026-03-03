@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- By default, allow cleartext because IPTV streams often use HTTP IPs -->
+    <!-- However, we can enforce HTTPS for known secure domains if we had our own API -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+    
+    <!-- Example: Enforce HTTPS strictly for any custom backends/auth endpoints -->
+    <!--
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">api.yourdomain.com</domain>
+    </domain-config>
+    -->
+</network-security-config>
