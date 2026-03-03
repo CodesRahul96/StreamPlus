@@ -147,9 +147,13 @@ class M3UStreamParser : StreamParser {
                         if (scheme != null) currentDrmScheme = scheme
                         if (license != null) currentDrmLicense = license
                     }
-                } else if (trimmed.startsWith("#EXTHTTP:") || trimmed.startsWith("# EXTHTTP:")) {
+                } else if (trimmed.startsWith("#EXTHTTP", true)) {
                     try {
-                        val json = trimmed.substringAfter("HTTP:")
+                        val json = if (trimmed.contains("{")) {
+                            trimmed.substring(trimmed.indexOf("{")).trim()
+                        } else {
+                            trimmed.substringAfter("HTTP:").trim()
+                        }
                         val jsonDb = JSONObject(json)
                         val iter = jsonDb.keys()
                         while (iter.hasNext()) {
@@ -164,6 +168,16 @@ class M3UStreamParser : StreamParser {
                             }
                         }
                     } catch (e: Exception) { Log.e("M3UParser", "Error parsing EXTHTTP", e) }
+                } else if (trimmed.startsWith("#EXT-X-SESSION-DATA:") || trimmed.startsWith("# EXT-X-SESSION-DATA:")) {
+                    val info = trimmed.substringAfter("DATA:")
+                    parseProps(info) { k, v ->
+                        if (k == "DATA-ID" && v.contains("cookie", true)) {
+                            // Some providers use session data for cookies
+                        }
+                        if (k == "VALUE") {
+                            // Potential header value
+                        }
+                    }
                 } else if (trimmed.startsWith("#EXT-X-STREAM-INF:")) {
                     // Treat variants as valid items if the user imports them directly
                     val info = trimmed.substringAfter(":")
@@ -256,14 +270,26 @@ class M3UStreamParser : StreamParser {
     private fun parseKodiProp(prop: String, headers: MutableMap<String, String>, onDrm: (String?, String?) -> Unit) {
         val parts = prop.split("=", limit = 2)
         if (parts.size == 2) {
-            val key = parts[0].trim().lowercase()
-            val value = parts[1].trim()
+            val key = parts[0].trim().lowercase().removePrefix("inputstream.adaptive.")
+            val rawValue = parts[1].trim().removeSurrounding("\"")
+            val value = if (rawValue.contains("%")) {
+                try { java.net.URLDecoder.decode(rawValue, "UTF-8") } catch (e: Exception) { rawValue }
+            } else rawValue
+
             when(key) {
-                "inputstream.adaptive.license_type", "inputstream.adaptive.license_scheme" -> onDrm(value, null)
-                "inputstream.adaptive.license_key" -> onDrm(null, value)
-                "inputstream.adaptive.manifest_headers", 
-                "inputstream.adaptive.license_headers", 
-                "inputstream.adaptive.stream_headers" -> {
+                "license_type", "license_scheme" -> {
+                    val scheme = when {
+                        value.lowercase().contains("widevine") -> "widevine"
+                        value.lowercase().contains("playready") -> "playready"
+                        value.lowercase().contains("clearkey") -> "clearkey"
+                        else -> value
+                    }
+                    onDrm(scheme, null)
+                }
+                "license_key" -> onDrm(null, value)
+                "manifest_headers", 
+                "license_headers", 
+                "stream_headers" -> {
                     // key=value&key2=value2
                     value.split("&").forEach { 
                         val kv = it.split("=", limit = 2)
@@ -292,13 +318,18 @@ class M3UStreamParser : StreamParser {
     }
     
     private fun detectDrmScheme(url: String, explicitScheme: String?, explicitLicense: String?): String? {
-        if (!explicitScheme.isNullOrBlank()) {
-             if (explicitScheme == "com.widevine.alpha") return "widevine"
-             if (explicitScheme == "com.microsoft.playready") return "playready"
-             return explicitScheme // Return explicitly if scheme is populated (like "clearkey")
-        }
-        if (url.contains(".mpd") || url.contains(".mpd?") || url.contains("/mpd/")) return "widevine"
-        // Let DrmResolver handle the default based on license URL content
+        val s = explicitScheme?.lowercase() ?: ""
+        if (s.contains("widevine") || s.contains("com.widevine.alpha")) return "widevine"
+        if (s.contains("playready") || s.contains("com.microsoft.playready")) return "playready"
+        if (s.contains("clearkey")) return "clearkey"
+        
+        // Infer from license URL only (not from stream URL — .mpd streams are not always DRM-protected)
+        val l = explicitLicense?.lowercase() ?: ""
+        if (l.contains("widevine") || l.endsWith("/wv") || l.contains("/widevine")) return "widevine"
+        if (l.contains("playready")) return "playready"
+        
+        // Only infer widevine if a license URL is also present (i.e., actual DRM is being used)
+        // Do NOT auto-set widevine just because it's a .mpd file — those can be unprotected DASH
         return null
     }
 

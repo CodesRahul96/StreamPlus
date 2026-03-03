@@ -30,30 +30,7 @@ data class SampleStream(
     val drmLicense: String? = null
 )
 
-val sampleData = listOf(
-    SampleCategory("Clear DASH", listOf(
-        SampleStream("Angel One", "https://cwip-shaka-proxy.appspot.com/no_auth/angel_one.mpd"),
-        SampleStream("Big Buck Bunny", "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd")
-    )),
-    SampleCategory("Widevine DASH (MP4, H264)", listOf(
-        SampleStream("Tears of Steel (SD)", "https://storage.googleapis.com/wvmedia/cenc/h264/tears/tears_sd.mpd", "widevine", "https://proxy.uat.widevine.com/proxy?provider=widevine_test"),
-        SampleStream("Tears of Steel (HD)", "https://storage.googleapis.com/wvmedia/cenc/h264/tears/tears_hd.mpd", "widevine", "https://proxy.uat.widevine.com/proxy?provider=widevine_test")
-    )),
-    SampleCategory("HLS", listOf(
-        SampleStream("Apple BipBop Basic", "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8"),
-        SampleStream("Big Buck Bunny", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8")
-    )),
-    SampleCategory("SmoothStreaming", listOf(
-        SampleStream("Super Speed Racing", "https://playready.directtaps.net/smoothstreaming/SSWSS720H264/SuperSpeedRacing.ism/Manifest")
-    )),
-    SampleCategory("SonGharLive", listOf(
-        SampleStream("SL M3U (Cookies)", "https://raw.githubusercontent.com/Sflex0719/SonGharLive/main/SL.m3u"),
-        SampleStream("SL JSON (Categories)", "https://raw.githubusercontent.com/Sflex0719/SonGharLive/main/sl.json"),
-        SampleStream("JTV Worker", "https://jtv.pfy.workers.dev"),
-        SampleStream("Z5 Worker", "https://z5.pfy.workers.dev"),
-        SampleStream("ZTV Worker", "https://ztv.pfy.workers.dev")
-    ))
-)
+val sampleData = emptyList<SampleCategory>()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

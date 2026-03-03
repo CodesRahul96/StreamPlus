@@ -18,7 +18,7 @@ interface PlaylistRepository {
     suspend fun deletePlaylist(playlist: PlaylistEntity)
 
     // Network
-    suspend fun loadPlaylist(url: String, userAgent: String? = null): List<M3UItem>
+    suspend fun loadPlaylist(url: String, userAgent: String? = null, forceRefresh: Boolean = false): List<M3UItem>
 
     // Favorites
     fun getAllFavorites(): Flow<List<FavoriteEntity>>

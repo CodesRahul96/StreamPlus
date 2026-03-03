@@ -8,8 +8,10 @@ import com.codesrahul.streamplus.domain.model.M3UItem
 import com.codesrahul.streamplus.domain.repository.PlaylistRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -25,7 +27,7 @@ class PlaylistDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val playlistId: String = savedStateHandle.get<String>("playlistId") ?: ""
+    val playlistId: String = savedStateHandle.get<String>("playlistId") ?: ""
     private val _playlist = MutableStateFlow<com.codesrahul.streamplus.data.local.PlaylistEntity?>(null)
     val playlist = _playlist.asStateFlow()
 
@@ -34,6 +36,9 @@ class PlaylistDetailViewModel @Inject constructor(
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
+
+    private val _error = MutableSharedFlow<String>()
+    val error = _error.asSharedFlow()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
@@ -98,7 +103,7 @@ class PlaylistDetailViewModel @Inject constructor(
     }
 
     fun refresh() {
-        viewModelScope.launch { playlist.value?.let { loadChannels(it.url, it.userAgent) } }
+        viewModelScope.launch { playlist.value?.let { loadChannels(it.url, it.userAgent, forceRefresh = true) } }
     }
 
     fun setSearchQuery(query: String) { _searchQuery.value = query }
@@ -131,14 +136,15 @@ class PlaylistDetailViewModel @Inject constructor(
 
     private var loadChannelsJob: kotlinx.coroutines.Job? = null
 
-    private fun loadChannels(url: String, userAgent: String?) {
+    private fun loadChannels(url: String, userAgent: String?, forceRefresh: Boolean = false) {
         loadChannelsJob?.cancel()
         loadChannelsJob = viewModelScope.launch {
             _isLoading.value = true
             try {
-                _channels.value = repository.loadPlaylist(url, userAgent)
+                _channels.value = repository.loadPlaylist(url, userAgent, forceRefresh)
             } catch (e: Exception) {
                 e.printStackTrace()
+                _error.emit(e.message ?: "Failed to refresh playlist: Network error")
             } finally {
                 _isLoading.value = false
             }

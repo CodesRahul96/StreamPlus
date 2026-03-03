@@ -58,6 +58,14 @@ fun PlaylistDetailScreen(
     val favoriteIdentities by viewModel.favoriteIdentities.collectAsState()
     val settingsState by hiltViewModel<SettingsViewModel>().settings.collectAsState(initial = AppSettings())
     
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.error.collect { errorMessage ->
+            snackbarHostState.showSnackbar(errorMessage)
+        }
+    }
+    
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
 
@@ -65,6 +73,7 @@ fun PlaylistDetailScreen(
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             containerColor = Color.Transparent,
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 Column(
                     modifier = Modifier.background(MaterialTheme.colorScheme.background.copy(alpha = 0.95f))
@@ -72,15 +81,16 @@ fun PlaylistDetailScreen(
                     TopAppBar(
                         title = {
                             Column {
+                                val sharedKey = remember(viewModel.playlistId) { "playlist_${viewModel.playlistId}" }
                                 with(sharedTransitionScope) {
                                     Text(
                                         playlist?.name ?: "Playlist",
                                         style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.sharedElement(
-                                            rememberSharedContentState(key = "playlist_${playlist?.id}"),
+                                        modifier = if (playlist != null) Modifier.sharedElement(
+                                            rememberSharedContentState(key = sharedKey),
                                             animatedVisibilityScope = animatedContentScope
-                                        )
+                                        ) else Modifier
                                     )
                                 }
                                 if (!isLoading && viewModel.channels.value.isNotEmpty()) {

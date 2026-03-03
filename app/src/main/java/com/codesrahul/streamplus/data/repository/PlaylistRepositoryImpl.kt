@@ -99,26 +99,28 @@ class PlaylistRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun loadPlaylist(url: String, userAgent: String?): List<M3UItem> = withContext(Dispatchers.IO) {
+    override suspend fun loadPlaylist(url: String, userAgent: String?, forceRefresh: Boolean): List<M3UItem> = withContext(Dispatchers.IO) {
         if (url.isBlank()) return@withContext emptyList()
         
         val settings = settingsRepository.settings.first()
         val playlistEntity = playlistDao.getAllPlaylistsList().find { it.url == url }
         val playlistId = playlistEntity?.id ?: -1
 
-        // Check memory cache first
-        if (settings.playlistCache) {
-            playlistCache[url]?.let { return@withContext it }
-        }
-
         // Check disk cache if enabled OR if network fails
         val cachedChannels = if (playlistId != -1) {
             channelDao.getChannelsByPlaylist(playlistId).map { it.toDomain() }
         } else emptyList()
 
-        if (settings.playlistCache && cachedChannels.isNotEmpty()) {
-            playlistCache[url] = cachedChannels
-            return@withContext cachedChannels
+        if (!forceRefresh) {
+            // Check memory cache first
+            if (settings.playlistCache) {
+                playlistCache[url]?.let { return@withContext it }
+            }
+
+            if (settings.playlistCache && cachedChannels.isNotEmpty()) {
+                playlistCache[url] = cachedChannels
+                return@withContext cachedChannels
+            }
         }
 
         val result = if (url.startsWith("content://") || url.startsWith("file://")) {
@@ -147,6 +149,7 @@ class PlaylistRepositoryImpl @Inject constructor(
                 }
             } catch (e: Exception) {
                 android.util.Log.e("PlaylistRepo", "Error loading remote playlist: $url", e)
+                if (forceRefresh) throw e
                 Pair(cachedChannels, null) // Fallback to disk cache on error
             }
         }

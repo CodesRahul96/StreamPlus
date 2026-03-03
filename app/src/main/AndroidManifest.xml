@@ -46,6 +46,7 @@
         <activity
             android:name=".ui.player.PlayerActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
+            android:exported="true"
             android:label="Player"
             android:launchMode="singleTask"
             android:supportsPictureInPicture="true"

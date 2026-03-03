@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:ns1="http://schemas.android.com/tools">
+    <color name="black">#FF000000</color>
+    <color name="primary">#9C27B0</color>
+    <color name="primary_variant">#7B1FA2</color>
+    <color name="purple_200">#E1BEE7</color>
+    <color name="purple_500">#9C27B0</color>
+    <color name="purple_700">#7B1FA2</color>
+    <color name="secondary">#2979FF</color>
+    <color name="teal_200">#82B1FF</color>
+    <color name="teal_700">#2979FF</color>
+    <color name="white">#FFFFFFFF</color>
+    <string name="app_name">StreamPlus</string>
+    <string name="com.google.firebase.crashlytics.mapping_file_id" ns1:ignore="UnusedResources,TypographyDashes" translatable="false">00000000000000000000000000000000</string>
+    <string name="gcm_defaultSenderId" translatable="false">861723500804</string>
+    <string name="google_api_key" translatable="false">AIzaSyChKXUQW7vx2XLzNUOSgNRSw6KvoxJxbU8</string>
+    <string name="google_app_id" translatable="false">1:861723500804:android:d169e5b48b8fc828a37051</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyChKXUQW7vx2XLzNUOSgNRSw6KvoxJxbU8</string>
+    <string name="google_storage_bucket" translatable="false">device-streaming-f8b66ddc.firebasestorage.app</string>
+    <string name="project_id" translatable="false">device-streaming-f8b66ddc</string>
+    <string name="shortcut_gallery">Gallery</string>
+    <string name="shortcut_playlist">Playlist</string>
+    <string name="shortcut_stream">Direct Stream</string>
+    <style name="Theme.M3UValidator" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorPrimaryDark">@color/purple_700</item>
+        <item name="colorAccent">@color/teal_200</item>
+        <item name="android:statusBarColor">@color/purple_700</item>
+        <item name="mediaRouteButtonStyle">@style/Widget.MediaRouter.MediaRouteButton</item>
+        <item name="mediaRouteTheme">@style/ThemeOverlay.MediaRouter.Dark</item>
+        <item name="android:colorBackground">@android:color/black</item>
+    </style>
+</resources>

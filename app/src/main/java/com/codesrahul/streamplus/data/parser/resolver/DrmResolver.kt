@@ -6,9 +6,7 @@ class DrmResolver : StreamResolver {
 
     override fun resolve(item: M3UItem): M3UItem {
         val originalScheme = item.drmScheme
-        val originalLicense = item.licenseUrl
-        val url = item.url.lowercase()
-        
+
         var scheme = originalScheme
         
         // 1. Auto-detect scheme from URL/License if not set
@@ -16,11 +14,11 @@ class DrmResolver : StreamResolver {
             scheme = when {
                 // ClearKey Header format (KID:KEY) - hex or base64 without http
                 item.licenseUrl?.contains(":") == true && !item.licenseUrl.startsWith("http") -> "clearkey"
-                
-                // Dash almost always uses Widevine
-                url.contains(".mpd") -> "widevine"
-                
+
                 // HLS or others with a License URL
+                // NOTE: Do NOT auto-assign widevine for .mpd URLs without a license server.
+                // Jio/Hotstar DASH streams use CDN cookie auth, not Widevine — assigning widevine
+                // here causes ExoPlayer to fail with "No license URL" on those channels.
                 item.licenseUrl?.isNotEmpty() == true -> {
                     val lUrl = item.licenseUrl.lowercase()
                     when {

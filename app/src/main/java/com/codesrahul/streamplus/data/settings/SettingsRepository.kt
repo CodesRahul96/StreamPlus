@@ -34,7 +34,7 @@ data class AppSettings(
     val volumeGestures: Boolean = false,
     val brightnessGestures: Boolean = false,
     val resumePlaying: Boolean = false,
-    val playlistCache: Boolean = false,
+    val playlistCache: Boolean = true,
     val defaultAspectRatio: Int = 0, // 0=Fit,1=Fill,2=Zoom
     val decoderPriority: Int = 0, // 0=Device, 1=App, 2=DeviceOnly
     val dolbyVision: Boolean = false,
@@ -150,7 +150,7 @@ class SettingsRepository @Inject constructor(
             volumeGestures = prefs[Keys.VOLUME_GESTURES] ?: false,
             brightnessGestures = prefs[Keys.BRIGHTNESS_GESTURES] ?: false,
             resumePlaying = prefs[Keys.RESUME_PLAYING] ?: false,
-            playlistCache = prefs[Keys.PLAYLIST_CACHE] ?: false,
+            playlistCache = prefs[Keys.PLAYLIST_CACHE] ?: true,
             defaultAspectRatio = prefs[Keys.DEFAULT_ASPECT_RATIO] ?: 0,
             decoderPriority = prefs[Keys.DECODER_PRIORITY] ?: 0,
             dolbyVision = prefs[Keys.DOLBY_VISION] ?: false,
