@@ -446,33 +446,33 @@ public final class DaggerM3UValidatorApp_HiltComponents_SingletonC {
     private static final class LazyClassKeyProvider {
       static String com_codesrahul_streamplus_ui_playlist_PlaylistViewModel = "com.codesrahul.streamplus.ui.playlist.PlaylistViewModel";
 
-      static String com_codesrahul_streamplus_ui_settings_SettingsViewModel = "com.codesrahul.streamplus.ui.settings.SettingsViewModel";
+      static String com_codesrahul_streamplus_ui_home_HistoryViewModel = "com.codesrahul.streamplus.ui.home.HistoryViewModel";
 
       static String com_codesrahul_streamplus_ui_playlist_PlaylistDetailViewModel = "com.codesrahul.streamplus.ui.playlist.PlaylistDetailViewModel";
 
-      static String com_codesrahul_streamplus_ui_local_LocalViewModel = "com.codesrahul.streamplus.ui.local.LocalViewModel";
+      static String com_codesrahul_streamplus_ui_settings_SettingsViewModel = "com.codesrahul.streamplus.ui.settings.SettingsViewModel";
 
       static String com_codesrahul_streamplus_ui_validator_ValidatorViewModel = "com.codesrahul.streamplus.ui.validator.ValidatorViewModel";
 
-      static String com_codesrahul_streamplus_ui_home_HistoryViewModel = "com.codesrahul.streamplus.ui.home.HistoryViewModel";
+      static String com_codesrahul_streamplus_ui_local_LocalViewModel = "com.codesrahul.streamplus.ui.local.LocalViewModel";
 
       @KeepFieldType
       PlaylistViewModel com_codesrahul_streamplus_ui_playlist_PlaylistViewModel2;
 
       @KeepFieldType
-      SettingsViewModel com_codesrahul_streamplus_ui_settings_SettingsViewModel2;
+      HistoryViewModel com_codesrahul_streamplus_ui_home_HistoryViewModel2;
 
       @KeepFieldType
       PlaylistDetailViewModel com_codesrahul_streamplus_ui_playlist_PlaylistDetailViewModel2;
 
       @KeepFieldType
-      LocalViewModel com_codesrahul_streamplus_ui_local_LocalViewModel2;
+      SettingsViewModel com_codesrahul_streamplus_ui_settings_SettingsViewModel2;
 
       @KeepFieldType
       ValidatorViewModel com_codesrahul_streamplus_ui_validator_ValidatorViewModel2;
 
       @KeepFieldType
-      HistoryViewModel com_codesrahul_streamplus_ui_home_HistoryViewModel2;
+      LocalViewModel com_codesrahul_streamplus_ui_local_LocalViewModel2;
     }
   }
 
@@ -530,35 +530,35 @@ public final class DaggerM3UValidatorApp_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_codesrahul_streamplus_ui_playlist_PlaylistDetailViewModel = "com.codesrahul.streamplus.ui.playlist.PlaylistDetailViewModel";
-
       static String com_codesrahul_streamplus_ui_home_HistoryViewModel = "com.codesrahul.streamplus.ui.home.HistoryViewModel";
-
-      static String com_codesrahul_streamplus_ui_local_LocalViewModel = "com.codesrahul.streamplus.ui.local.LocalViewModel";
 
       static String com_codesrahul_streamplus_ui_validator_ValidatorViewModel = "com.codesrahul.streamplus.ui.validator.ValidatorViewModel";
 
-      static String com_codesrahul_streamplus_ui_playlist_PlaylistViewModel = "com.codesrahul.streamplus.ui.playlist.PlaylistViewModel";
+      static String com_codesrahul_streamplus_ui_playlist_PlaylistDetailViewModel = "com.codesrahul.streamplus.ui.playlist.PlaylistDetailViewModel";
+
+      static String com_codesrahul_streamplus_ui_local_LocalViewModel = "com.codesrahul.streamplus.ui.local.LocalViewModel";
 
       static String com_codesrahul_streamplus_ui_settings_SettingsViewModel = "com.codesrahul.streamplus.ui.settings.SettingsViewModel";
 
-      @KeepFieldType
-      PlaylistDetailViewModel com_codesrahul_streamplus_ui_playlist_PlaylistDetailViewModel2;
+      static String com_codesrahul_streamplus_ui_playlist_PlaylistViewModel = "com.codesrahul.streamplus.ui.playlist.PlaylistViewModel";
 
       @KeepFieldType
       HistoryViewModel com_codesrahul_streamplus_ui_home_HistoryViewModel2;
 
       @KeepFieldType
-      LocalViewModel com_codesrahul_streamplus_ui_local_LocalViewModel2;
-
-      @KeepFieldType
       ValidatorViewModel com_codesrahul_streamplus_ui_validator_ValidatorViewModel2;
 
       @KeepFieldType
-      PlaylistViewModel com_codesrahul_streamplus_ui_playlist_PlaylistViewModel2;
+      PlaylistDetailViewModel com_codesrahul_streamplus_ui_playlist_PlaylistDetailViewModel2;
+
+      @KeepFieldType
+      LocalViewModel com_codesrahul_streamplus_ui_local_LocalViewModel2;
 
       @KeepFieldType
       SettingsViewModel com_codesrahul_streamplus_ui_settings_SettingsViewModel2;
+
+      @KeepFieldType
+      PlaylistViewModel com_codesrahul_streamplus_ui_playlist_PlaylistViewModel2;
     }
 
     private static final class SwitchingProvider<T> implements Provider<T> {
