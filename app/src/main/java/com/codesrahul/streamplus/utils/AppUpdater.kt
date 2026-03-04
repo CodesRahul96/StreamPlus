@@ -128,14 +128,20 @@ object AppUpdater {
 
         val onComplete = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
-                val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
-                if (id == downloadId) {
-                    installApk(context, destinationFile)
-                    context.unregisterReceiver(this)
+                try {
+                    val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+                    if (id == downloadId) {
+                        installApk(context, destinationFile)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    android.widget.Toast.makeText(context, "Update install failed: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                } finally {
+                    try { context.unregisterReceiver(this) } catch (_: Exception) {}
                 }
             }
         }
-        
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(onComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), Context.RECEIVER_EXPORTED)
         } else {
