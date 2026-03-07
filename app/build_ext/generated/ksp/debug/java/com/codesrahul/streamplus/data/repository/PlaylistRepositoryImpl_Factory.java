@@ -8,6 +8,7 @@ import com.codesrahul.streamplus.data.local.HistoryDao;
 import com.codesrahul.streamplus.data.local.PlaylistDao;
 import com.codesrahul.streamplus.data.network.StreamChecker;
 import com.codesrahul.streamplus.data.settings.SettingsRepository;
+import com.codesrahul.streamplus.domain.repository.XtreamRepository;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
 import dagger.internal.QualifierMetadata;
@@ -49,12 +50,15 @@ public final class PlaylistRepositoryImpl_Factory implements Factory<PlaylistRep
 
   private final Provider<EPGManager> epgManagerProvider;
 
+  private final Provider<XtreamRepository> xtreamRepositoryProvider;
+
   public PlaylistRepositoryImpl_Factory(Provider<Context> contextProvider,
       Provider<StreamChecker> streamCheckerProvider, Provider<PlaylistDao> playlistDaoProvider,
       Provider<FavoriteDao> favoriteDaoProvider, Provider<ChannelDao> channelDaoProvider,
       Provider<HistoryDao> historyDaoProvider, Provider<OkHttpClient> clientProvider,
       Provider<SettingsRepository> settingsRepositoryProvider,
-      Provider<EPGManager> epgManagerProvider) {
+      Provider<EPGManager> epgManagerProvider,
+      Provider<XtreamRepository> xtreamRepositoryProvider) {
     this.contextProvider = contextProvider;
     this.streamCheckerProvider = streamCheckerProvider;
     this.playlistDaoProvider = playlistDaoProvider;
@@ -64,11 +68,12 @@ public final class PlaylistRepositoryImpl_Factory implements Factory<PlaylistRep
     this.clientProvider = clientProvider;
     this.settingsRepositoryProvider = settingsRepositoryProvider;
     this.epgManagerProvider = epgManagerProvider;
+    this.xtreamRepositoryProvider = xtreamRepositoryProvider;
   }
 
   @Override
   public PlaylistRepositoryImpl get() {
-    return newInstance(contextProvider.get(), streamCheckerProvider.get(), playlistDaoProvider.get(), favoriteDaoProvider.get(), channelDaoProvider.get(), historyDaoProvider.get(), clientProvider.get(), settingsRepositoryProvider.get(), epgManagerProvider.get());
+    return newInstance(contextProvider.get(), streamCheckerProvider.get(), playlistDaoProvider.get(), favoriteDaoProvider.get(), channelDaoProvider.get(), historyDaoProvider.get(), clientProvider.get(), settingsRepositoryProvider.get(), epgManagerProvider.get(), xtreamRepositoryProvider.get());
   }
 
   public static PlaylistRepositoryImpl_Factory create(Provider<Context> contextProvider,
@@ -76,14 +81,15 @@ public final class PlaylistRepositoryImpl_Factory implements Factory<PlaylistRep
       Provider<FavoriteDao> favoriteDaoProvider, Provider<ChannelDao> channelDaoProvider,
       Provider<HistoryDao> historyDaoProvider, Provider<OkHttpClient> clientProvider,
       Provider<SettingsRepository> settingsRepositoryProvider,
-      Provider<EPGManager> epgManagerProvider) {
-    return new PlaylistRepositoryImpl_Factory(contextProvider, streamCheckerProvider, playlistDaoProvider, favoriteDaoProvider, channelDaoProvider, historyDaoProvider, clientProvider, settingsRepositoryProvider, epgManagerProvider);
+      Provider<EPGManager> epgManagerProvider,
+      Provider<XtreamRepository> xtreamRepositoryProvider) {
+    return new PlaylistRepositoryImpl_Factory(contextProvider, streamCheckerProvider, playlistDaoProvider, favoriteDaoProvider, channelDaoProvider, historyDaoProvider, clientProvider, settingsRepositoryProvider, epgManagerProvider, xtreamRepositoryProvider);
   }
 
   public static PlaylistRepositoryImpl newInstance(Context context, StreamChecker streamChecker,
       PlaylistDao playlistDao, FavoriteDao favoriteDao, ChannelDao channelDao,
       HistoryDao historyDao, OkHttpClient client, SettingsRepository settingsRepository,
-      EPGManager epgManager) {
-    return new PlaylistRepositoryImpl(context, streamChecker, playlistDao, favoriteDao, channelDao, historyDao, client, settingsRepository, epgManager);
+      EPGManager epgManager, XtreamRepository xtreamRepository) {
+    return new PlaylistRepositoryImpl(context, streamChecker, playlistDao, favoriteDao, channelDao, historyDao, client, settingsRepository, epgManager, xtreamRepository);
   }
 }

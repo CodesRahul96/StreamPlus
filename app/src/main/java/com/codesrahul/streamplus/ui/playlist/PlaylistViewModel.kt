@@ -104,7 +104,25 @@ class PlaylistViewModel @Inject constructor(
     fun addPlaylist(name: String, url: String, userAgent: String, icon: String = "default", color: Int = -16777216, epgUrl: String? = null) {
         viewModelScope.launch {
             repository.insertPlaylist(
-                PlaylistEntity(name = name, url = url, userAgent = userAgent, icon = icon, color = color, epgUrl = epgUrl)
+                PlaylistEntity(name = name, url = url, userAgent = userAgent, icon = icon, color = color, epgUrl = epgUrl, isXtream = false)
+            )
+        }
+    }
+
+    fun addXtreamPlaylist(name: String, serverUrl: String, username: String, password: String, icon: String = "default", color: Int = -16777216) {
+        viewModelScope.launch {
+            repository.insertPlaylist(
+                PlaylistEntity(
+                    name = name,
+                    url = serverUrl, // Use serverUrl as the main URL identifier
+                    userAgent = "IPTVSmartersPlayer",
+                    icon = icon,
+                    color = color,
+                    isXtream = true,
+                    serverUrl = serverUrl,
+                    username = username,
+                    password = password
+                )
             )
         }
     }

@@ -38,17 +38,17 @@ public final class AppDatabase_Impl extends AppDatabase {
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
-    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(12) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(13) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
-        db.execSQL("CREATE TABLE IF NOT EXISTS `playlists` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `url` TEXT NOT NULL, `userAgent` TEXT NOT NULL, `type` TEXT NOT NULL, `icon` TEXT NOT NULL, `color` INTEGER NOT NULL, `epgUrl` TEXT, `isPinned` INTEGER NOT NULL)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `playlists` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `url` TEXT NOT NULL, `userAgent` TEXT NOT NULL, `type` TEXT NOT NULL, `icon` TEXT NOT NULL, `color` INTEGER NOT NULL, `epgUrl` TEXT, `isPinned` INTEGER NOT NULL, `isXtream` INTEGER NOT NULL, `serverUrl` TEXT, `username` TEXT, `password` TEXT)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `history_table` (`name` TEXT NOT NULL, `group` TEXT NOT NULL, `playlistId` INTEGER NOT NULL, `url` TEXT NOT NULL, `logoUrl` TEXT, `userAgent` TEXT, `headers` TEXT NOT NULL, `cookie` TEXT, `referer` TEXT, `origin` TEXT, `licenseUrl` TEXT, `drmScheme` TEXT, `drmHeaders` TEXT NOT NULL, `lastPosition` INTEGER NOT NULL, `duration` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, PRIMARY KEY(`name`, `group`, `playlistId`))");
         db.execSQL("CREATE TABLE IF NOT EXISTS `favorites` (`name` TEXT NOT NULL, `groupTitle` TEXT NOT NULL, `playlistId` INTEGER NOT NULL, `url` TEXT NOT NULL, `logoUrl` TEXT NOT NULL, `userAgent` TEXT NOT NULL, `headers` TEXT NOT NULL, `licenseUrl` TEXT, `drmScheme` TEXT, `drmHeaders` TEXT NOT NULL, `addedAt` INTEGER NOT NULL, PRIMARY KEY(`name`, `groupTitle`, `playlistId`))");
         db.execSQL("CREATE TABLE IF NOT EXISTS `channels` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `playlistId` INTEGER NOT NULL, `name` TEXT NOT NULL, `url` TEXT NOT NULL, `group` TEXT NOT NULL, `logoUrl` TEXT NOT NULL, `userAgent` TEXT NOT NULL, `headers` TEXT NOT NULL, `licenseUrl` TEXT, `drmScheme` TEXT, `drmHeaders` TEXT NOT NULL, `epgId` TEXT, `isVod` INTEGER NOT NULL, FOREIGN KEY(`playlistId`) REFERENCES `playlists`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_channels_playlistId` ON `channels` (`playlistId`)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_channels_url` ON `channels` (`url`)");
         db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '15757767f46f446bb2462ffaa48daa22')");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8dca47a0a438608a665d0bda3eaf33f7')");
       }
 
       @Override
@@ -101,7 +101,7 @@ public final class AppDatabase_Impl extends AppDatabase {
       @NonNull
       public RoomOpenHelper.ValidationResult onValidateSchema(
           @NonNull final SupportSQLiteDatabase db) {
-        final HashMap<String, TableInfo.Column> _columnsPlaylists = new HashMap<String, TableInfo.Column>(9);
+        final HashMap<String, TableInfo.Column> _columnsPlaylists = new HashMap<String, TableInfo.Column>(13);
         _columnsPlaylists.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsPlaylists.put("name", new TableInfo.Column("name", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsPlaylists.put("url", new TableInfo.Column("url", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
@@ -111,6 +111,10 @@ public final class AppDatabase_Impl extends AppDatabase {
         _columnsPlaylists.put("color", new TableInfo.Column("color", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsPlaylists.put("epgUrl", new TableInfo.Column("epgUrl", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsPlaylists.put("isPinned", new TableInfo.Column("isPinned", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsPlaylists.put("isXtream", new TableInfo.Column("isXtream", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsPlaylists.put("serverUrl", new TableInfo.Column("serverUrl", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsPlaylists.put("username", new TableInfo.Column("username", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsPlaylists.put("password", new TableInfo.Column("password", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         final HashSet<TableInfo.ForeignKey> _foreignKeysPlaylists = new HashSet<TableInfo.ForeignKey>(0);
         final HashSet<TableInfo.Index> _indicesPlaylists = new HashSet<TableInfo.Index>(0);
         final TableInfo _infoPlaylists = new TableInfo("playlists", _columnsPlaylists, _foreignKeysPlaylists, _indicesPlaylists);
@@ -195,7 +199,7 @@ public final class AppDatabase_Impl extends AppDatabase {
         }
         return new RoomOpenHelper.ValidationResult(true, null);
       }
-    }, "15757767f46f446bb2462ffaa48daa22", "3f4351e18a06623bb7ae504f3006f406");
+    }, "8dca47a0a438608a665d0bda3eaf33f7", "8a78aa6b56e7cb8cd371f661579ca952");
     final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
     final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
     return _helper;

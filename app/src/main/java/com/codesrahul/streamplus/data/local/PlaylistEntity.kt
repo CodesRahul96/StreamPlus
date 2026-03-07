@@ -13,5 +13,10 @@ data class PlaylistEntity(
     val icon: String = "default",
     val color: Int = -16777216,
     val epgUrl: String? = null,
-    val isPinned: Boolean = false
+    val isPinned: Boolean = false,
+    // Xtream Codes API Fields
+    val isXtream: Boolean = false,
+    val serverUrl: String? = null,
+    val username: String? = null,
+    val password: String? = null
 )

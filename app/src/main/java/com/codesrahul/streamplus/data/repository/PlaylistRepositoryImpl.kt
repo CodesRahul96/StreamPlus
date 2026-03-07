@@ -40,7 +40,8 @@ class PlaylistRepositoryImpl @Inject constructor(
     private val historyDao: com.codesrahul.streamplus.data.local.HistoryDao,
     private val client: okhttp3.OkHttpClient,
     private val settingsRepository: SettingsRepository,
-    private val epgManager: EPGManager
+    private val epgManager: EPGManager,
+    private val xtreamRepository: com.codesrahul.streamplus.domain.repository.XtreamRepository
 ) : PlaylistRepository {
 
     private val playlistCache = java.util.concurrent.ConcurrentHashMap<String, List<M3UItem>>()
@@ -99,12 +100,16 @@ class PlaylistRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun loadPlaylist(url: String, userAgent: String?, forceRefresh: Boolean): List<M3UItem> = withContext(Dispatchers.IO) {
+    override suspend fun loadPlaylist(url: String, userAgent: String?, forceRefresh: Boolean, playlistId: Int): List<M3UItem> = withContext(Dispatchers.IO) {
         if (url.isBlank()) return@withContext emptyList()
         
         val settings = settingsRepository.settings.first()
-        val playlistEntity = playlistDao.getAllPlaylistsList().find { it.url == url }
-        val playlistId = playlistEntity?.id ?: -1
+        val playlistEntity = if (playlistId != -1) {
+            playlistDao.getPlaylist(playlistId).first()
+        } else {
+            playlistDao.getAllPlaylistsList().find { it.url == url }
+        }
+        val actualPlaylistId = playlistEntity?.id ?: -1
 
         // Check disk cache if enabled OR if network fails
         val cachedChannels = if (playlistId != -1) {
@@ -118,12 +123,85 @@ class PlaylistRepositoryImpl @Inject constructor(
             }
 
             if (settings.playlistCache && cachedChannels.isNotEmpty()) {
-                playlistCache[url] = cachedChannels
-                return@withContext cachedChannels
+                // If Xtream, ensure we aren't using .m3u8 stale URLs from old versions
+                if (playlistEntity?.isXtream == true && cachedChannels.any { it.url.endsWith(".m3u8") }) {
+                    android.util.Log.d("PlaylistRepo", "Stale Xtream .m3u8 URLs detected in cache, forcing refresh")
+                } else {
+                    playlistCache[url] = cachedChannels
+                    return@withContext cachedChannels
+                }
             }
         }
 
-        val result = if (url.startsWith("content://") || url.startsWith("file://")) {
+        val result = if (playlistEntity?.isXtream == true) {
+            try {
+                val serverBaseUrl = playlistEntity.serverUrl?.removeSuffix("/") ?: ""
+                val username = playlistEntity.username ?: ""
+                val password = playlistEntity.password ?: ""
+
+                // Fetch data concurrently for better performance
+                val liveCategoriesTask = async { xtreamRepository.getLiveCategories(serverBaseUrl, username, password) }
+                val liveStreamsTask = async { xtreamRepository.getLiveStreams(serverBaseUrl, username, password) }
+                val vodCategoriesTask = async { xtreamRepository.getVodCategories(serverBaseUrl, username, password) }
+                val vodStreamsTask = async { xtreamRepository.getVodStreams(serverBaseUrl, username, password) }
+
+                val liveCategoriesResult = liveCategoriesTask.await()
+                val liveStreamsResult = liveStreamsTask.await()
+                val vodCategoriesResult = vodCategoriesTask.await()
+                val vodStreamsResult = vodStreamsTask.await()
+
+                val items = mutableListOf<M3UItem>()
+                val xtreamUa = "IPTVSmartersPlayer"
+
+                // Create category maps
+                val liveCatMap = liveCategoriesResult.getOrNull()?.associate { it.categoryId.trim() to it.categoryName } ?: emptyMap()
+                val vodCatMap = vodCategoriesResult.getOrNull()?.associate { it.categoryId.trim() to it.categoryName } ?: emptyMap()
+
+                android.util.Log.d("PlaylistRepo", "Xtream Loaded: ${liveCatMap.size} live cats, ${vodCatMap.size} vod cats")
+
+                // Map Live Streams
+                liveStreamsResult.getOrNull()?.forEach { stream ->
+                    val catId = stream.categoryId?.trim()
+                    val categoryName = if (catId != null) liveCatMap[catId] ?: catId else "Live"
+                    
+                    items.add(
+                        M3UItem(
+                            name = stream.name ?: "Unknown channel",
+                            url = "$serverBaseUrl/live/$username/$password/${stream.streamId}.ts",
+                            logoUrl = stream.streamIcon ?: "",
+                            group = categoryName,
+                            playlistId = actualPlaylistId,
+                            userAgent = xtreamUa
+                        )
+                    )
+                }
+
+                // Map VOD Streams
+                vodStreamsResult.getOrNull()?.forEach { stream ->
+                    val catId = stream.categoryId?.trim()
+                    val categoryName = if (catId != null) vodCatMap[catId] ?: catId else "VOD"
+
+                    items.add(
+                        M3UItem(
+                            name = stream.name ?: "Unknown VOD",
+                            url = "$serverBaseUrl/movie/$username/$password/${stream.streamId}.${stream.containerExtension ?: "mp4"}",
+                            logoUrl = stream.streamIcon ?: "",
+                            group = categoryName,
+                            playlistId = actualPlaylistId,
+                            userAgent = xtreamUa
+                        )
+                    )
+                }
+                
+                Pair(items, null)
+            } catch (e: Exception) {
+                android.util.Log.e("PlaylistRepo", "Error loading Xtream playlist: $url", e)
+                // If it's a 401, we MUST NOT return the stale cache because the cache itself 
+                // might be contaminated with bad credentials or old formats causing the player to 401 later.
+                if (forceRefresh || e.message?.contains("401") == true) throw e
+                Pair(cachedChannels, null)
+            }
+        } else if (url.startsWith("content://") || url.startsWith("file://")) {
             try {
                 context.contentResolver.openInputStream(Uri.parse(url))?.use { inputStream ->
                     resolveUniversal(inputStream, url)
@@ -162,18 +240,18 @@ class PlaylistRepositoryImpl @Inject constructor(
                 playlistCache[url] = items
             }
             // Update disk cache
-            if (playlistId != -1) {
-                channelDao.deleteChannelsByPlaylist(playlistId)
-                channelDao.insertChannels(items.map { it.toEntity(playlistId) })
+            if (actualPlaylistId != -1) {
+                channelDao.deleteChannelsByPlaylist(actualPlaylistId)
+                channelDao.insertChannels(items.map { it.toEntity(actualPlaylistId) })
             }
         }
 
         // Auto-save and auto-load detected EPG URL
-        if (!detectedEpgUrl.isNullOrBlank() && playlistId != -1) {
+        if (!detectedEpgUrl.isNullOrBlank() && actualPlaylistId != -1) {
             val existingEpgUrl = playlistEntity?.epgUrl
             if (existingEpgUrl.isNullOrBlank() || existingEpgUrl != detectedEpgUrl) {
                 android.util.Log.d("PlaylistRepo", "Auto-saving detected EPG URL: $detectedEpgUrl")
-                playlistDao.updateEpgUrl(playlistId, detectedEpgUrl)
+                playlistDao.updateEpgUrl(actualPlaylistId, detectedEpgUrl)
             }
             // Always load EPG on playlist refresh to keep guide data fresh
             epgManager.loadEPG(detectedEpgUrl)

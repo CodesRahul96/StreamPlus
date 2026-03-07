@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -58,6 +59,7 @@ fun PlaylistScreen(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
+    var showXtreamDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf<PlaylistEntity?>(null) }
     val playlists by viewModel.playlists.collectAsState()
     val favorites by viewModel.favorites.collectAsState()
@@ -116,6 +118,14 @@ fun PlaylistScreen(
                                 leadingIcon = { Icon(Icons.Default.AddLink, null, modifier = Modifier.size(20.dp)) }
                             )
                             DropdownMenuItem(
+                                text = { Text("Login with Xtream Codes") },
+                                onClick = {
+                                    showMenu = false
+                                    showXtreamDialog = true
+                                },
+                                leadingIcon = { Icon(Icons.Default.AccountCircle, null, modifier = Modifier.size(20.dp)) }
+                            )
+                            DropdownMenuItem(
                                 text = { Text("Add Local Playlist") },
                                 onClick = {
                                     showMenu = false
@@ -151,6 +161,19 @@ fun PlaylistScreen(
                                     shape = CircleShape
                                 ) {
                                     Icon(Icons.Default.UploadFile, contentDescription = "Import File")
+                                }
+                                
+                                // Add Xtream API Button
+                                SmallFloatingActionButton(
+                                    onClick = { 
+                                        showFabMenu = false
+                                        showXtreamDialog = true 
+                                    },
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    contentColor = MaterialTheme.colorScheme.primary,
+                                    shape = CircleShape
+                                ) {
+                                    Icon(Icons.Default.AccountCircle, contentDescription = "Login with Xtream Codes")
                                 }
                                 
                                 // Add URL Button
@@ -461,6 +484,16 @@ fun PlaylistScreen(
                 viewModel.deletePlaylist(playlist)
                 showEditDialog = null
             }
+        )
+    }
+    
+    if (showXtreamDialog) {
+        XtreamLoginDialog(
+            onConfirm = { name, server, user, pass, icon, color ->
+                viewModel.addXtreamPlaylist(name, server, user, pass, icon, color)
+                showXtreamDialog = false
+            },
+            onDismiss = { showXtreamDialog = false }
         )
     }
 }
@@ -963,4 +996,83 @@ fun FavouriteChannelCard(
             }
         }
     }
+}
+
+@Composable
+fun XtreamLoginDialog(
+    onConfirm: (String, String, String, String, String, Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var serverUrl by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.AccountCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Login to API", fontWeight = FontWeight.Bold)
+            }
+        },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Provider Name") },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = serverUrl,
+                    onValueChange = { serverUrl = it },
+                    label = { Text("Server URL (http://example.com:port)") },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = { Text("Username") },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (name.isNotBlank() && serverUrl.isNotBlank() && username.isNotBlank() && password.isNotBlank()) {
+                        val colors = listOf(Color(0xFFE57373), Color(0xFF81C784), Color(0xFF64B5F6), Color(0xFFFFD54F), Color(0xFFBA68C8))
+                        val randomColorStr = colors.random().toArgb()
+                        onConfirm(name.trim(), serverUrl.trim(), username.trim(), password.trim(), "default", randomColorStr)
+                    }
+                },
+                enabled = name.isNotBlank() && serverUrl.isNotBlank() && username.isNotBlank() && password.isNotBlank(),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("Login", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        shape = RoundedCornerShape(24.dp)
+    )
 }

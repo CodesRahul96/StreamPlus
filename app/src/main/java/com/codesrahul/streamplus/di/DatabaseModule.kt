@@ -26,11 +26,20 @@ object DatabaseModule {
             }
         }
         
+        val MIGRATION_12_13 = object : androidx.room.migration.Migration(12, 13) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE playlists ADD COLUMN isXtream INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE playlists ADD COLUMN serverUrl TEXT")
+                db.execSQL("ALTER TABLE playlists ADD COLUMN username TEXT")
+                db.execSQL("ALTER TABLE playlists ADD COLUMN password TEXT")
+            }
+        }
+        
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             "stream_doctor_db"
-        ).addMigrations(MIGRATION_11_12)
+        ).addMigrations(MIGRATION_11_12, MIGRATION_12_13)
             .fallbackToDestructiveMigration()
             .build()
     }

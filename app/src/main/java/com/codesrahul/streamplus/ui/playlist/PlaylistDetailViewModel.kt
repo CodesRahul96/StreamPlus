@@ -86,7 +86,7 @@ class PlaylistDetailViewModel @Inject constructor(
                         val prevUrl = _playlist.value?.url
                         _playlist.value = entity
                         if (prevUrl != entity.url) {
-                            loadChannels(entity.url, entity.userAgent)
+                            loadChannels(entity.url, entity.userAgent, playlistId = entity.id)
                             entity.epgUrl?.let { epgManager.loadEPG(it) }
                         }
                     }
@@ -103,7 +103,7 @@ class PlaylistDetailViewModel @Inject constructor(
     }
 
     fun refresh() {
-        viewModelScope.launch { playlist.value?.let { loadChannels(it.url, it.userAgent, forceRefresh = true) } }
+        viewModelScope.launch { playlist.value?.let { loadChannels(it.url, it.userAgent, forceRefresh = true, playlistId = it.id) } }
     }
 
     fun setSearchQuery(query: String) { _searchQuery.value = query }
@@ -136,12 +136,12 @@ class PlaylistDetailViewModel @Inject constructor(
 
     private var loadChannelsJob: kotlinx.coroutines.Job? = null
 
-    private fun loadChannels(url: String, userAgent: String?, forceRefresh: Boolean = false) {
+    private fun loadChannels(url: String, userAgent: String?, forceRefresh: Boolean = false, playlistId: Int = -1) {
         loadChannelsJob?.cancel()
         loadChannelsJob = viewModelScope.launch {
             _isLoading.value = true
             try {
-                _channels.value = repository.loadPlaylist(url, userAgent, forceRefresh)
+                _channels.value = repository.loadPlaylist(url, userAgent, forceRefresh, playlistId)
             } catch (e: Exception) {
                 e.printStackTrace()
                 _error.emit(e.message ?: "Failed to refresh playlist: Network error")

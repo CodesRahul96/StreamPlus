@@ -45,7 +45,7 @@ public final class PlaylistDao_Impl implements PlaylistDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `playlists` (`id`,`name`,`url`,`userAgent`,`type`,`icon`,`color`,`epgUrl`,`isPinned`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `playlists` (`id`,`name`,`url`,`userAgent`,`type`,`icon`,`color`,`epgUrl`,`isPinned`,`isXtream`,`serverUrl`,`username`,`password`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -65,6 +65,23 @@ public final class PlaylistDao_Impl implements PlaylistDao {
         }
         final int _tmp = entity.isPinned() ? 1 : 0;
         statement.bindLong(9, _tmp);
+        final int _tmp_1 = entity.isXtream() ? 1 : 0;
+        statement.bindLong(10, _tmp_1);
+        if (entity.getServerUrl() == null) {
+          statement.bindNull(11);
+        } else {
+          statement.bindString(11, entity.getServerUrl());
+        }
+        if (entity.getUsername() == null) {
+          statement.bindNull(12);
+        } else {
+          statement.bindString(12, entity.getUsername());
+        }
+        if (entity.getPassword() == null) {
+          statement.bindNull(13);
+        } else {
+          statement.bindString(13, entity.getPassword());
+        }
       }
     };
     this.__deletionAdapterOfPlaylistEntity = new EntityDeletionOrUpdateAdapter<PlaylistEntity>(__db) {
@@ -175,6 +192,10 @@ public final class PlaylistDao_Impl implements PlaylistDao {
           final int _cursorIndexOfColor = CursorUtil.getColumnIndexOrThrow(_cursor, "color");
           final int _cursorIndexOfEpgUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "epgUrl");
           final int _cursorIndexOfIsPinned = CursorUtil.getColumnIndexOrThrow(_cursor, "isPinned");
+          final int _cursorIndexOfIsXtream = CursorUtil.getColumnIndexOrThrow(_cursor, "isXtream");
+          final int _cursorIndexOfServerUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "serverUrl");
+          final int _cursorIndexOfUsername = CursorUtil.getColumnIndexOrThrow(_cursor, "username");
+          final int _cursorIndexOfPassword = CursorUtil.getColumnIndexOrThrow(_cursor, "password");
           final List<PlaylistEntity> _result = new ArrayList<PlaylistEntity>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final PlaylistEntity _item;
@@ -202,7 +223,29 @@ public final class PlaylistDao_Impl implements PlaylistDao {
             final int _tmp;
             _tmp = _cursor.getInt(_cursorIndexOfIsPinned);
             _tmpIsPinned = _tmp != 0;
-            _item = new PlaylistEntity(_tmpId,_tmpName,_tmpUrl,_tmpUserAgent,_tmpType,_tmpIcon,_tmpColor,_tmpEpgUrl,_tmpIsPinned);
+            final boolean _tmpIsXtream;
+            final int _tmp_1;
+            _tmp_1 = _cursor.getInt(_cursorIndexOfIsXtream);
+            _tmpIsXtream = _tmp_1 != 0;
+            final String _tmpServerUrl;
+            if (_cursor.isNull(_cursorIndexOfServerUrl)) {
+              _tmpServerUrl = null;
+            } else {
+              _tmpServerUrl = _cursor.getString(_cursorIndexOfServerUrl);
+            }
+            final String _tmpUsername;
+            if (_cursor.isNull(_cursorIndexOfUsername)) {
+              _tmpUsername = null;
+            } else {
+              _tmpUsername = _cursor.getString(_cursorIndexOfUsername);
+            }
+            final String _tmpPassword;
+            if (_cursor.isNull(_cursorIndexOfPassword)) {
+              _tmpPassword = null;
+            } else {
+              _tmpPassword = _cursor.getString(_cursorIndexOfPassword);
+            }
+            _item = new PlaylistEntity(_tmpId,_tmpName,_tmpUrl,_tmpUserAgent,_tmpType,_tmpIcon,_tmpColor,_tmpEpgUrl,_tmpIsPinned,_tmpIsXtream,_tmpServerUrl,_tmpUsername,_tmpPassword);
             _result.add(_item);
           }
           return _result;
@@ -238,6 +281,10 @@ public final class PlaylistDao_Impl implements PlaylistDao {
           final int _cursorIndexOfColor = CursorUtil.getColumnIndexOrThrow(_cursor, "color");
           final int _cursorIndexOfEpgUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "epgUrl");
           final int _cursorIndexOfIsPinned = CursorUtil.getColumnIndexOrThrow(_cursor, "isPinned");
+          final int _cursorIndexOfIsXtream = CursorUtil.getColumnIndexOrThrow(_cursor, "isXtream");
+          final int _cursorIndexOfServerUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "serverUrl");
+          final int _cursorIndexOfUsername = CursorUtil.getColumnIndexOrThrow(_cursor, "username");
+          final int _cursorIndexOfPassword = CursorUtil.getColumnIndexOrThrow(_cursor, "password");
           final List<PlaylistEntity> _result = new ArrayList<PlaylistEntity>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final PlaylistEntity _item;
@@ -265,7 +312,29 @@ public final class PlaylistDao_Impl implements PlaylistDao {
             final int _tmp;
             _tmp = _cursor.getInt(_cursorIndexOfIsPinned);
             _tmpIsPinned = _tmp != 0;
-            _item = new PlaylistEntity(_tmpId,_tmpName,_tmpUrl,_tmpUserAgent,_tmpType,_tmpIcon,_tmpColor,_tmpEpgUrl,_tmpIsPinned);
+            final boolean _tmpIsXtream;
+            final int _tmp_1;
+            _tmp_1 = _cursor.getInt(_cursorIndexOfIsXtream);
+            _tmpIsXtream = _tmp_1 != 0;
+            final String _tmpServerUrl;
+            if (_cursor.isNull(_cursorIndexOfServerUrl)) {
+              _tmpServerUrl = null;
+            } else {
+              _tmpServerUrl = _cursor.getString(_cursorIndexOfServerUrl);
+            }
+            final String _tmpUsername;
+            if (_cursor.isNull(_cursorIndexOfUsername)) {
+              _tmpUsername = null;
+            } else {
+              _tmpUsername = _cursor.getString(_cursorIndexOfUsername);
+            }
+            final String _tmpPassword;
+            if (_cursor.isNull(_cursorIndexOfPassword)) {
+              _tmpPassword = null;
+            } else {
+              _tmpPassword = _cursor.getString(_cursorIndexOfPassword);
+            }
+            _item = new PlaylistEntity(_tmpId,_tmpName,_tmpUrl,_tmpUserAgent,_tmpType,_tmpIcon,_tmpColor,_tmpEpgUrl,_tmpIsPinned,_tmpIsXtream,_tmpServerUrl,_tmpUsername,_tmpPassword);
             _result.add(_item);
           }
           return _result;
@@ -298,6 +367,10 @@ public final class PlaylistDao_Impl implements PlaylistDao {
           final int _cursorIndexOfColor = CursorUtil.getColumnIndexOrThrow(_cursor, "color");
           final int _cursorIndexOfEpgUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "epgUrl");
           final int _cursorIndexOfIsPinned = CursorUtil.getColumnIndexOrThrow(_cursor, "isPinned");
+          final int _cursorIndexOfIsXtream = CursorUtil.getColumnIndexOrThrow(_cursor, "isXtream");
+          final int _cursorIndexOfServerUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "serverUrl");
+          final int _cursorIndexOfUsername = CursorUtil.getColumnIndexOrThrow(_cursor, "username");
+          final int _cursorIndexOfPassword = CursorUtil.getColumnIndexOrThrow(_cursor, "password");
           final PlaylistEntity _result;
           if (_cursor.moveToFirst()) {
             final int _tmpId;
@@ -324,7 +397,29 @@ public final class PlaylistDao_Impl implements PlaylistDao {
             final int _tmp;
             _tmp = _cursor.getInt(_cursorIndexOfIsPinned);
             _tmpIsPinned = _tmp != 0;
-            _result = new PlaylistEntity(_tmpId,_tmpName,_tmpUrl,_tmpUserAgent,_tmpType,_tmpIcon,_tmpColor,_tmpEpgUrl,_tmpIsPinned);
+            final boolean _tmpIsXtream;
+            final int _tmp_1;
+            _tmp_1 = _cursor.getInt(_cursorIndexOfIsXtream);
+            _tmpIsXtream = _tmp_1 != 0;
+            final String _tmpServerUrl;
+            if (_cursor.isNull(_cursorIndexOfServerUrl)) {
+              _tmpServerUrl = null;
+            } else {
+              _tmpServerUrl = _cursor.getString(_cursorIndexOfServerUrl);
+            }
+            final String _tmpUsername;
+            if (_cursor.isNull(_cursorIndexOfUsername)) {
+              _tmpUsername = null;
+            } else {
+              _tmpUsername = _cursor.getString(_cursorIndexOfUsername);
+            }
+            final String _tmpPassword;
+            if (_cursor.isNull(_cursorIndexOfPassword)) {
+              _tmpPassword = null;
+            } else {
+              _tmpPassword = _cursor.getString(_cursorIndexOfPassword);
+            }
+            _result = new PlaylistEntity(_tmpId,_tmpName,_tmpUrl,_tmpUserAgent,_tmpType,_tmpIcon,_tmpColor,_tmpEpgUrl,_tmpIsPinned,_tmpIsXtream,_tmpServerUrl,_tmpUsername,_tmpPassword);
           } else {
             _result = null;
           }

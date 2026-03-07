@@ -13,6 +13,7 @@ import com.codesrahul.streamplus.data.local.FavoriteDao;
 import com.codesrahul.streamplus.data.local.HistoryDao;
 import com.codesrahul.streamplus.data.local.PlaylistDao;
 import com.codesrahul.streamplus.data.network.StreamChecker;
+import com.codesrahul.streamplus.data.remote.XtreamApiService;
 import com.codesrahul.streamplus.data.repository.HistoryRepository;
 import com.codesrahul.streamplus.data.repository.PlaylistRepositoryImpl;
 import com.codesrahul.streamplus.data.settings.SettingsRepository;
@@ -23,7 +24,11 @@ import com.codesrahul.streamplus.di.DatabaseModule_ProvideHistoryDaoFactory;
 import com.codesrahul.streamplus.di.DatabaseModule_ProvidePlaylistDaoFactory;
 import com.codesrahul.streamplus.di.NetworkModule;
 import com.codesrahul.streamplus.di.NetworkModule_ProvideOkHttpClientFactory;
+import com.codesrahul.streamplus.di.NetworkModule_ProvideRetrofitFactory;
+import com.codesrahul.streamplus.di.NetworkModule_ProvideXtreamApiServiceFactory;
+import com.codesrahul.streamplus.di.NetworkModule_ProvideXtreamRepositoryFactory;
 import com.codesrahul.streamplus.domain.repository.PlaylistRepository;
+import com.codesrahul.streamplus.domain.repository.XtreamRepository;
 import com.codesrahul.streamplus.ui.home.HistoryViewModel;
 import com.codesrahul.streamplus.ui.home.HistoryViewModel_HiltModules;
 import com.codesrahul.streamplus.ui.local.LocalViewModel;
@@ -67,6 +72,7 @@ import java.util.Map;
 import java.util.Set;
 import javax.annotation.processing.Generated;
 import okhttp3.OkHttpClient;
+import retrofit2.Retrofit;
 
 @DaggerGenerated
 @Generated(
@@ -444,35 +450,35 @@ public final class DaggerM3UValidatorApp_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
+      static String com_codesrahul_streamplus_ui_local_LocalViewModel = "com.codesrahul.streamplus.ui.local.LocalViewModel";
+
       static String com_codesrahul_streamplus_ui_playlist_PlaylistViewModel = "com.codesrahul.streamplus.ui.playlist.PlaylistViewModel";
-
-      static String com_codesrahul_streamplus_ui_validator_ValidatorViewModel = "com.codesrahul.streamplus.ui.validator.ValidatorViewModel";
-
-      static String com_codesrahul_streamplus_ui_home_HistoryViewModel = "com.codesrahul.streamplus.ui.home.HistoryViewModel";
 
       static String com_codesrahul_streamplus_ui_playlist_PlaylistDetailViewModel = "com.codesrahul.streamplus.ui.playlist.PlaylistDetailViewModel";
 
+      static String com_codesrahul_streamplus_ui_home_HistoryViewModel = "com.codesrahul.streamplus.ui.home.HistoryViewModel";
+
       static String com_codesrahul_streamplus_ui_settings_SettingsViewModel = "com.codesrahul.streamplus.ui.settings.SettingsViewModel";
 
-      static String com_codesrahul_streamplus_ui_local_LocalViewModel = "com.codesrahul.streamplus.ui.local.LocalViewModel";
+      static String com_codesrahul_streamplus_ui_validator_ValidatorViewModel = "com.codesrahul.streamplus.ui.validator.ValidatorViewModel";
+
+      @KeepFieldType
+      LocalViewModel com_codesrahul_streamplus_ui_local_LocalViewModel2;
 
       @KeepFieldType
       PlaylistViewModel com_codesrahul_streamplus_ui_playlist_PlaylistViewModel2;
 
       @KeepFieldType
-      ValidatorViewModel com_codesrahul_streamplus_ui_validator_ValidatorViewModel2;
+      PlaylistDetailViewModel com_codesrahul_streamplus_ui_playlist_PlaylistDetailViewModel2;
 
       @KeepFieldType
       HistoryViewModel com_codesrahul_streamplus_ui_home_HistoryViewModel2;
 
       @KeepFieldType
-      PlaylistDetailViewModel com_codesrahul_streamplus_ui_playlist_PlaylistDetailViewModel2;
-
-      @KeepFieldType
       SettingsViewModel com_codesrahul_streamplus_ui_settings_SettingsViewModel2;
 
       @KeepFieldType
-      LocalViewModel com_codesrahul_streamplus_ui_local_LocalViewModel2;
+      ValidatorViewModel com_codesrahul_streamplus_ui_validator_ValidatorViewModel2;
     }
   }
 
@@ -530,32 +536,32 @@ public final class DaggerM3UValidatorApp_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_codesrahul_streamplus_ui_validator_ValidatorViewModel = "com.codesrahul.streamplus.ui.validator.ValidatorViewModel";
-
-      static String com_codesrahul_streamplus_ui_local_LocalViewModel = "com.codesrahul.streamplus.ui.local.LocalViewModel";
-
-      static String com_codesrahul_streamplus_ui_playlist_PlaylistViewModel = "com.codesrahul.streamplus.ui.playlist.PlaylistViewModel";
-
       static String com_codesrahul_streamplus_ui_home_HistoryViewModel = "com.codesrahul.streamplus.ui.home.HistoryViewModel";
+
+      static String com_codesrahul_streamplus_ui_validator_ValidatorViewModel = "com.codesrahul.streamplus.ui.validator.ValidatorViewModel";
 
       static String com_codesrahul_streamplus_ui_settings_SettingsViewModel = "com.codesrahul.streamplus.ui.settings.SettingsViewModel";
 
+      static String com_codesrahul_streamplus_ui_playlist_PlaylistViewModel = "com.codesrahul.streamplus.ui.playlist.PlaylistViewModel";
+
+      static String com_codesrahul_streamplus_ui_local_LocalViewModel = "com.codesrahul.streamplus.ui.local.LocalViewModel";
+
       static String com_codesrahul_streamplus_ui_playlist_PlaylistDetailViewModel = "com.codesrahul.streamplus.ui.playlist.PlaylistDetailViewModel";
-
-      @KeepFieldType
-      ValidatorViewModel com_codesrahul_streamplus_ui_validator_ValidatorViewModel2;
-
-      @KeepFieldType
-      LocalViewModel com_codesrahul_streamplus_ui_local_LocalViewModel2;
-
-      @KeepFieldType
-      PlaylistViewModel com_codesrahul_streamplus_ui_playlist_PlaylistViewModel2;
 
       @KeepFieldType
       HistoryViewModel com_codesrahul_streamplus_ui_home_HistoryViewModel2;
 
       @KeepFieldType
+      ValidatorViewModel com_codesrahul_streamplus_ui_validator_ValidatorViewModel2;
+
+      @KeepFieldType
       SettingsViewModel com_codesrahul_streamplus_ui_settings_SettingsViewModel2;
+
+      @KeepFieldType
+      PlaylistViewModel com_codesrahul_streamplus_ui_playlist_PlaylistViewModel2;
+
+      @KeepFieldType
+      LocalViewModel com_codesrahul_streamplus_ui_local_LocalViewModel2;
 
       @KeepFieldType
       PlaylistDetailViewModel com_codesrahul_streamplus_ui_playlist_PlaylistDetailViewModel2;
@@ -692,6 +698,12 @@ public final class DaggerM3UValidatorApp_HiltComponents_SingletonC {
 
     private Provider<EPGManager> ePGManagerProvider;
 
+    private Provider<Retrofit> provideRetrofitProvider;
+
+    private Provider<XtreamApiService> provideXtreamApiServiceProvider;
+
+    private Provider<XtreamRepository> provideXtreamRepositoryProvider;
+
     private Provider<PlaylistRepositoryImpl> playlistRepositoryImplProvider;
 
     private Provider<PlaylistRepository> bindPlaylistRepositoryProvider;
@@ -732,6 +744,9 @@ public final class DaggerM3UValidatorApp_HiltComponents_SingletonC {
       this.provideAppDatabaseProvider = DoubleCheck.provider(new SwitchingProvider<AppDatabase>(singletonCImpl, 3));
       this.historyRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<HistoryRepository>(singletonCImpl, 2));
       this.ePGManagerProvider = DoubleCheck.provider(new SwitchingProvider<EPGManager>(singletonCImpl, 5));
+      this.provideRetrofitProvider = DoubleCheck.provider(new SwitchingProvider<Retrofit>(singletonCImpl, 8));
+      this.provideXtreamApiServiceProvider = DoubleCheck.provider(new SwitchingProvider<XtreamApiService>(singletonCImpl, 7));
+      this.provideXtreamRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<XtreamRepository>(singletonCImpl, 6));
       this.playlistRepositoryImplProvider = new SwitchingProvider<>(singletonCImpl, 4);
       this.bindPlaylistRepositoryProvider = DoubleCheck.provider((Provider) playlistRepositoryImplProvider);
     }
@@ -782,10 +797,19 @@ public final class DaggerM3UValidatorApp_HiltComponents_SingletonC {
           return (T) DatabaseModule_ProvideAppDatabaseFactory.provideAppDatabase(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
           case 4: // com.codesrahul.streamplus.data.repository.PlaylistRepositoryImpl 
-          return (T) new PlaylistRepositoryImpl(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.streamChecker(), singletonCImpl.playlistDao(), singletonCImpl.favoriteDao(), singletonCImpl.channelDao(), singletonCImpl.historyDao(), singletonCImpl.provideOkHttpClientProvider.get(), singletonCImpl.settingsRepositoryProvider.get(), singletonCImpl.ePGManagerProvider.get());
+          return (T) new PlaylistRepositoryImpl(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.streamChecker(), singletonCImpl.playlistDao(), singletonCImpl.favoriteDao(), singletonCImpl.channelDao(), singletonCImpl.historyDao(), singletonCImpl.provideOkHttpClientProvider.get(), singletonCImpl.settingsRepositoryProvider.get(), singletonCImpl.ePGManagerProvider.get(), singletonCImpl.provideXtreamRepositoryProvider.get());
 
           case 5: // com.codesrahul.streamplus.data.epg.EPGManager 
           return (T) new EPGManager();
+
+          case 6: // com.codesrahul.streamplus.domain.repository.XtreamRepository 
+          return (T) NetworkModule_ProvideXtreamRepositoryFactory.provideXtreamRepository(singletonCImpl.networkModule, singletonCImpl.provideXtreamApiServiceProvider.get());
+
+          case 7: // com.codesrahul.streamplus.data.remote.XtreamApiService 
+          return (T) NetworkModule_ProvideXtreamApiServiceFactory.provideXtreamApiService(singletonCImpl.networkModule, singletonCImpl.provideRetrofitProvider.get());
+
+          case 8: // retrofit2.Retrofit 
+          return (T) NetworkModule_ProvideRetrofitFactory.provideRetrofit(singletonCImpl.networkModule, singletonCImpl.provideOkHttpClientProvider.get());
 
           default: throw new AssertionError(id);
         }
