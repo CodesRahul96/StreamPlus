@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import com.codesrahul.streamplus.ui.util.tvFocusable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -411,8 +412,9 @@ fun PlayerScreen(
         }
     }
 
+    // Auto-hide controls when locked
     LaunchedEffect(isControlsVisible, isLocked) {
-        if (isControlsVisible && !isLocked) {
+        if (isControlsVisible && isLocked) {
             kotlinx.coroutines.delay(4000)
             isControlsVisible = false
         }
@@ -426,9 +428,12 @@ fun PlayerScreen(
         activity?.let { hideSystemUI(it) }
     }
 
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
     // Sync immersive mode with controls visibility
-    LaunchedEffect(isControlsVisible) {
-        if (!isControlsVisible) {
+    LaunchedEffect(isControlsVisible, isLandscape) {
+        if (!isControlsVisible || isLandscape) {
             activity?.let { hideSystemUI(it) }
         } else {
             activity?.let { showSystemUI(it) }
@@ -1036,6 +1041,7 @@ fun PlayerScreen(
 
                     override fun onSingleTapConfirmed(e: android.view.MotionEvent): Boolean {
                         if (isLocked) {
+                            // When locked, a single tap toggles the large Unlock icon overlay (isControlsVisible)
                             isControlsVisible = !isControlsVisible
                             return true
                         }
@@ -1144,15 +1150,20 @@ fun PlayerScreen(
                 }
                 playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.btn_pip)?.setOnClickListener { onEnterPip() }
                 
-                // Hide controls in PiP
-                playerView.useController = !isInPip
-                if (isInPip) playerView.hideController()
+                // Add a listener to sync our Compose state with the actual ExoPlayer controller visibility
+                playerView.setControllerVisibilityListener(androidx.media3.ui.PlayerView.ControllerVisibilityListener { visibility ->
+                    isControlsVisible = (visibility == android.view.View.VISIBLE)
+                })
+
+                // Hide controls in PiP and Lock Mode
+                playerView.useController = !isInPip && !isLocked
+                if (isInPip || isLocked) playerView.hideController()
             }
         )
 
         // Robust Lock Mode Overlay
         AnimatedVisibility(
-            visible = isLocked && !isInPip,
+            visible = isLocked && !isInPip && isControlsVisible,
             enter = fadeIn() + scaleIn(),
             exit = fadeOut() + scaleOut(),
             modifier = Modifier.align(Alignment.Center)
@@ -1160,6 +1171,7 @@ fun PlayerScreen(
             Surface(
                 onClick = { 
                     isLocked = false
+                    isControlsVisible = true // Show regular Exo controls immediately when unlocked
                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                     android.widget.Toast.makeText(context, "Controls Unlocked", android.widget.Toast.LENGTH_SHORT).show()
                 },
@@ -1179,7 +1191,7 @@ fun PlayerScreen(
             }
         }
 
-        // Small Lock Toggle Overlay (Only visible when controls are visible)
+        // Small Lock Toggle Overlay (Only visible when controls are visible AND unlocked)
         AnimatedVisibility(
             visible = isControlsVisible && !isLocked && !isInPip,
             enter = fadeIn() + slideInHorizontally(),
@@ -1189,7 +1201,8 @@ fun PlayerScreen(
             Surface(
                 onClick = { 
                     isLocked = true
-                    isControlsVisible = false
+                    // When locking, we temporarily keep isControlsVisible = true so the unlock button is shown right away,
+                    // and it will auto-hide in 4s via the LaunchedEffect.
                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                     android.widget.Toast.makeText(context, "Controls Locked", android.widget.Toast.LENGTH_SHORT).show()
                 },
@@ -1492,7 +1505,7 @@ fun SettingsItem(icon: ImageVector, title: String, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         color = Color.Transparent,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().tvFocusable(cornerRadius = 8.dp)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),

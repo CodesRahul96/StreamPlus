@@ -44,6 +44,7 @@ import com.codesrahul.streamplus.ui.components.PremiumBackground
 import com.codesrahul.streamplus.ui.settings.SettingsViewModel
 import com.codesrahul.streamplus.ui.player.PlayerActivity
 import com.codesrahul.streamplus.util.UserAgentManager
+import com.codesrahul.streamplus.ui.util.tvFocusable
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
@@ -480,6 +481,7 @@ fun PlaylistItem(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .tvFocusable(cornerRadius = 16.dp)
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
@@ -790,6 +792,7 @@ fun PlaylistDialog(
                                 .size(36.dp)
                                 .clip(CircleShape)
                                 .background(if (colorInt == -16777216) MaterialTheme.colorScheme.onSurface else Color(colorInt))
+                                .tvFocusable(cornerRadius = 18.dp)
                                 .clickable { color = colorInt }
                                 .border(
                                     width = if (isSelected) 3.dp else 0.dp,
@@ -826,7 +829,7 @@ fun PlaylistDialog(
 @Composable
 fun SearchResultItem(channel: M3UItem, onClick: () -> Unit) {
     Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth().tvFocusable(cornerRadius = 12.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
         border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
@@ -869,7 +872,7 @@ fun SearchResultItem(channel: M3UItem, onClick: () -> Unit) {
 @Composable
 fun RecentlyWatchedCard(entry: M3UItem, onClick: () -> Unit) {
     Surface(
-        modifier = Modifier.width(140.dp).clickable(onClick = onClick),
+        modifier = Modifier.width(140.dp).tvFocusable(cornerRadius = 14.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
         border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
@@ -911,7 +914,7 @@ fun FavouriteChannelCard(
     onRemove: () -> Unit
 ) {
     Surface(
-        modifier = modifier.width(130.dp).clickable(onClick = onClick),
+        modifier = modifier.width(130.dp).tvFocusable(cornerRadius = 14.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
         border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))

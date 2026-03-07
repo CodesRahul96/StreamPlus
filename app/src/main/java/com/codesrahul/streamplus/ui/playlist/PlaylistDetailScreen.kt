@@ -39,6 +39,7 @@ import com.codesrahul.streamplus.domain.model.M3UItem
 import com.codesrahul.streamplus.data.settings.AppSettings
 import com.codesrahul.streamplus.ui.components.PremiumBackground
 import com.codesrahul.streamplus.ui.settings.SettingsViewModel
+import com.codesrahul.streamplus.ui.util.tvFocusable
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
@@ -286,6 +287,7 @@ fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onT
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(0.67f)
+            .tvFocusable(cornerRadius = 12.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
@@ -350,6 +352,7 @@ fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(0.85f)
+            .tvFocusable(cornerRadius = 18.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(

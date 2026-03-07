@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.graphics.Color
+import com.codesrahul.streamplus.ui.util.tvFocusable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,7 +46,7 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
                         Surface(
                             shape = androidx.compose.foundation.shape.CircleShape,
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier.padding(end = 16.dp)
+                            modifier = Modifier.padding(end = 16.dp).tvFocusable(cornerRadius = 50.dp)
                         ) {
                             IconButton(onClick = { onNavigate("settings") }) {
                                 Icon(Icons.Default.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.primary)
@@ -130,6 +131,7 @@ fun HomeDashboardCard(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
+                .tvFocusable(cornerRadius = 16.dp)
                 .clickable(onClick = onClick),
             shape = MaterialTheme.shapes.large,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
