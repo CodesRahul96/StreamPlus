@@ -240,30 +240,41 @@ fun LocalVideoGrid(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         contentPadding = PaddingValues(vertical = 12.dp)
                     ) {
-                        items(folders, key = { it.name }) { folder ->
-                            VideoFolderItem(
-                                folder = folder,
-                                isSelected = selectedFolders.contains(folder.name),
-                                isSelectionMode = isSelectionMode,
-                                settings = settings,
-                                onClick = {
+                        items(folders, key = { it.name }, contentType = { "folder" }) { folder ->
+                            val onItemClick = remember(folder, isSelectionMode, viewModel) {
+                                {
                                     if (isSelectionMode) {
                                         if (selectedFolders.contains(folder.name)) {
                                             selectedFolders.remove(folder.name)
-                                            if (selectedFolders.isEmpty()) isSelectionMode = false
+                                            if (selectedFolders.isEmpty()) {
+                                                isSelectionMode = false
+                                            }
                                         } else {
                                             selectedFolders.add(folder.name)
                                         }
                                     } else {
                                         viewModel.selectFolder(folder.name)
                                     }
-                                },
-                                onLongClick = {
+                                    Unit
+                                }
+                            }
+                            val onItemLongClick = remember(folder, isSelectionMode) {
+                                {
                                     if (!isSelectionMode) {
                                         isSelectionMode = true
                                         selectedFolders.add(folder.name)
                                     }
+                                    Unit
                                 }
+                            }
+                            
+                            VideoFolderItem(
+                                folder = folder,
+                                isSelected = selectedFolders.contains(folder.name),
+                                isSelectionMode = isSelectionMode,
+                                settings = settings,
+                                onClick = onItemClick,
+                                onLongClick = onItemLongClick
                             )
                         }
                     }
@@ -447,25 +458,35 @@ fun LocalVideoList(
                 verticalArrangement = Arrangement.spacedBy(20.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(filteredVideos, key = { it.id }) { video ->
-                    VideoPosterItem(
-                        video = video,
-                        settings = settings,
-                        onClick = {
+                items(filteredVideos, key = { it.id }, contentType = { "video" }) { video ->
+                    val onItemClick = remember(video, context) {
+                        {
                             val intent = Intent(context, com.codesrahul.streamplus.ui.player.PlayerActivity::class.java).apply {
                                 putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_URL, video.uri.toString())
                                 putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_TITLE, video.title)
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
                             context.startActivity(intent)
-                        },
-                        onRename = {
+                        }
+                    }
+                    val onRenameClick = remember(video) {
+                        {
                             newName = video.title
                             videoToRename = video
-                        },
-                        onDelete = {
+                        }
+                    }
+                    val onDeleteClick = remember(video) {
+                        {
                             videoToDelete = video
                         }
+                    }
+
+                    VideoPosterItem(
+                        video = video,
+                        settings = settings,
+                        onClick = onItemClick,
+                        onRename = onRenameClick,
+                        onDelete = onDeleteClick
                     )
                 }
             }

@@ -24,16 +24,14 @@ class CrossDomainForwardingInterceptor : Interceptor {
                 builder.removeHeader("Content-Length")
             }
             
-            // Re-attach original headers that are often stripped by OkHttp on cross-domain
-            val originalHeaders = response.request.headers
-            for (i in 0 until originalHeaders.size) {
-                val name = originalHeaders.name(i)
-                if (name.equals("Host", ignoreCase = true) || 
-                    name.equals("Content-Length", ignoreCase = true) ||
-                    name.equals("Content-Type", ignoreCase = true)) continue
-                
-                // Use addHeader to avoid accidental overwrites of redirected headers
-                builder.addHeader(name, originalHeaders.value(i))
+            // OkHttp handles keeping most standard headers automatically across redirects.
+            // Manually re-adding them here causes duplicate User-Agents, breaking some streaming nodes.
+            // However, OkHttp deliberately drops `Set-Cookie` tokens on Cross-Domain redirects.
+            // We MUST manually extract and inject the session cookie for the new CDN edge node.
+            val cookies = response.headers("Set-Cookie")
+            if (cookies.isNotEmpty()) {
+                val cookieString = cookies.joinToString("; ") { it.substringBefore(";") }
+                builder.header("Cookie", cookieString)
             }
             
             response.close()

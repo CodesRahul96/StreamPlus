@@ -37,8 +37,11 @@ class NetworkModule {
         val builder = OkHttpClient.Builder()
             .addInterceptor { chain ->
                 val original = chain.request()
-                val request = original.newBuilder()
-                    .header("User-Agent", "IPTVSmartersPlayer")
+                val requestBuilder = original.newBuilder()
+                if (original.header("User-Agent") == null) {
+                    requestBuilder.header("User-Agent", "IPTVSmartersPlayer")
+                }
+                val request = requestBuilder
                     .header("Accept", "*/*")
                     .header("Connection", "keep-alive")
                     .build()

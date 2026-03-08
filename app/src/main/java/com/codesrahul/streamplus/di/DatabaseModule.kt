@@ -35,11 +35,50 @@ object DatabaseModule {
             }
         }
         
+        val MIGRATION_13_14 = object : androidx.room.migration.Migration(13, 14) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // Wipe stale cached items to force the app to generate new mathematically correct stream URLs
+                try {
+                    db.execSQL("DELETE FROM channels")
+                    db.execSQL("DELETE FROM history")
+                    db.execSQL("DELETE FROM favorites")
+                } catch (e: Exception) {
+                    android.util.Log.e("DatabaseModule", "Failed to clear cache tables internally", e)
+                }
+            }
+        }
+        
+        val MIGRATION_14_15 = object : androidx.room.migration.Migration(14, 15) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // Wipe stale cached items to force the app to generate new mathematically correct stream URLs
+                try {
+                    db.execSQL("DELETE FROM channels")
+                    db.execSQL("DELETE FROM history")
+                    db.execSQL("DELETE FROM favorites")
+                } catch (e: Exception) {
+                    android.util.Log.e("DatabaseModule", "Failed to clear cache tables internally", e)
+                }
+            }
+        }
+        
+        val MIGRATION_15_16 = object : androidx.room.migration.Migration(15, 16) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // Wipe stale cached items to force the app to generate new mathematically correct stream URLs
+                try {
+                    db.execSQL("DELETE FROM channels")
+                    db.execSQL("DELETE FROM history")
+                    db.execSQL("DELETE FROM favorites")
+                } catch (e: Exception) {
+                    android.util.Log.e("DatabaseModule", "Failed to clear cache tables internally", e)
+                }
+            }
+        }
+        
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             "stream_doctor_db"
-        ).addMigrations(MIGRATION_11_12, MIGRATION_12_13)
+        ).addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
             .fallbackToDestructiveMigration()
             .build()
     }

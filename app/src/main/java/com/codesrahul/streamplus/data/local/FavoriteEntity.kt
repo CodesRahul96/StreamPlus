@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
     tableName = "favorites",
     primaryKeys = ["name", "groupTitle", "playlistId"]
 )
+@androidx.compose.runtime.Immutable
 data class FavoriteEntity(
     val name: String,
     val groupTitle: String,

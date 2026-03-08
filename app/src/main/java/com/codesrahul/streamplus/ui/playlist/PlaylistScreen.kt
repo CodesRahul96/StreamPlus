@@ -329,7 +329,7 @@ fun PlaylistScreen(
                                     modifier = Modifier.padding(vertical = 4.dp)
                                 )
                             }
-                            items(searchResults, key = { "${it.name}|${it.group}|${it.playlistId}" }) { channel ->
+                            items(searchResults, key = { "${it.name}|${it.group}|${it.playlistId}" }, contentType = { "channel_search" }) { channel ->
                                 SearchResultItem(channel = channel, onClick = {
                                     val intent = android.content.Intent(context, PlayerActivity::class.java).apply {
                                         putExtra(PlayerActivity.EXTRA_STREAM_URL, channel.url)
@@ -371,7 +371,7 @@ fun PlaylistScreen(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                     contentPadding = PaddingValues(end = 16.dp)
                                 ) {
-                                    items(recentlyWatched, key = { it.url + it.name }) { item ->
+                                    items(recentlyWatched, key = { it.url + it.name }, contentType = { "channel_recent" }) { item ->
                                             RecentlyWatchedCard(
                                                 entry = item,
                                                 onClick = { onChannelClick(item) }
@@ -414,7 +414,7 @@ fun PlaylistScreen(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                     contentPadding = PaddingValues(end = 16.dp)
                                 ) {
-                                    items(favorites, key = { "${it.name}|${it.group}|${it.playlistId}" }) { fav ->
+                                    items(favorites, key = { "${it.name}|${it.group}|${it.playlistId}" }, contentType = { "channel_fav" }) { fav ->
                                         with(sharedTransitionScope) {
                                             FavouriteChannelCard(
                                                 favorite = fav,
@@ -433,7 +433,11 @@ fun PlaylistScreen(
                     }
 
                     // --- Playlist list ---
-                    items(sortedPlaylists, key = { it.id }) { playlist ->
+                    items(sortedPlaylists, key = { it.id }, contentType = { "playlist" }) { playlist ->
+                        val onPlaylistClickLambda = remember(playlist.id) { { onPlaylistClick(playlist.id) } }
+                        val onEditLambda = remember(playlist) { { showEditDialog = playlist } }
+                        val onPinToggleLambda = remember(playlist) { { viewModel.togglePin(playlist) } }
+
                         with(sharedTransitionScope) {
                             PlaylistItem(
                                 playlist = playlist,
@@ -442,9 +446,9 @@ fun PlaylistScreen(
                                     rememberSharedContentState(key = "playlist_${playlist.id}"),
                                     animatedVisibilityScope = animatedContentScope
                                 ),
-                                onClick = { onPlaylistClick(playlist.id) },
-                                onEdit = { showEditDialog = playlist },
-                                onPinToggle = { viewModel.togglePin(playlist) }
+                                onClick = onPlaylistClickLambda,
+                                onEdit = onEditLambda,
+                                onPinToggle = onPinToggleLambda
                             )
                         }
                     }

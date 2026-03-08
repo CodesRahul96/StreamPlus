@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
     tableName = "history_table",
     primaryKeys = ["name", "group", "playlistId"]
 )
+@androidx.compose.runtime.Immutable
 data class HistoryEntity(
     val name: String,
     val group: String,

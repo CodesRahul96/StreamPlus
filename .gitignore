@@ -11,5 +11,6 @@ local.properties
 .idea
 misc.xml
 /app/build
+/app/build_ext
 *.txt
 *.log

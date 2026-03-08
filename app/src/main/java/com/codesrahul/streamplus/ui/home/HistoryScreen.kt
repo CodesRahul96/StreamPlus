@@ -115,10 +115,9 @@ fun HistoryScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(historyItems, key = { it.url + it.timestamp }) { item ->
-                        HistoryItem(
-                            item = item,
-                            onClick = {
+                    items(historyItems, key = { it.url + it.timestamp }, contentType = { "history_item" }) { item ->
+                        val onItemClick = remember(item, context) {
+                            {
                                 val intent = Intent(context, PlayerActivity::class.java).apply {
                                     putExtra(PlayerActivity.EXTRA_STREAM_URL,   item.url)
                                     putExtra(PlayerActivity.EXTRA_STREAM_TITLE, item.name.ifBlank { "Unknown Stream" })
@@ -133,8 +132,16 @@ fun HistoryScreen(
                                     putExtra(PlayerActivity.EXTRA_STREAM_GROUP, item.group)
                                 }
                                 context.startActivity(intent)
-                            },
-                            onDelete = { viewModel.deleteHistory(item) }
+                            }
+                        }
+                        val onDeleteClick = remember(item) {
+                            { viewModel.deleteHistory(item) }
+                        }
+
+                        HistoryItem(
+                            item = item,
+                            onClick = onItemClick,
+                            onDelete = onDeleteClick
                         )
                     }
                 }

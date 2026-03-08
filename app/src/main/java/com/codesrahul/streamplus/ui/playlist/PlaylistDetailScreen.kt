@@ -197,13 +197,72 @@ fun PlaylistDetailScreen(
                             verticalArrangement   = Arrangement.spacedBy(12.dp),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            items(filteredChannels.size) { index ->
+                            items(
+                                count = filteredChannels.size,
+                                key = { index -> 
+                                    val ch = filteredChannels[index]
+                                    "${ch.playlistId}_${ch.url}_${ch.name}"
+                                },
+                                contentType = { index -> if (filteredChannels[index].isVod) "vod" else "live" }
+                            ) { index ->
                                 val channel = filteredChannels[index]
-                                val currentProgram = viewModel.getCurrentProgram(channel.epgId)
-                                
                                 val playlistId = playlist?.id
+                                
+                                val currentProgram = remember(channel.epgId) { viewModel.getCurrentProgram(channel.epgId) }
+                                
                                 val isFav = remember(channel.name, channel.group, playlistId, favoriteIdentities) {
                                     "${channel.name}|${channel.group}|$playlistId" in favoriteIdentities
+                                }
+
+                                val onToggleFav = remember(channel, viewModel) {
+                                    { viewModel.toggleFavorite(channel) }
+                                }
+
+                                val onItemClick = remember(channel, context, viewModel, onNavigate, isLoading, playlist) {
+                                    {
+                                        if (!isLoading) {
+                                            val lowerUrl = channel.url.lowercase()
+                                            val isPlaylist = channel.isPlaylist ||
+                                                (channel.licenseUrl.isNullOrBlank() && channel.drmScheme.isNullOrBlank() &&
+                                                 (lowerUrl.endsWith(".m3u") || lowerUrl.endsWith(".json") || lowerUrl.contains("m3u=1")))
+
+                                            if (isPlaylist) {
+                                                val encodedUrl  = java.net.URLEncoder.encode(channel.url, "UTF-8")
+                                                val encodedName = java.net.URLEncoder.encode(channel.name, "UTF-8")
+                                                val ua = java.net.URLEncoder.encode(viewModel.playlist.value?.userAgent ?: "Auto", "UTF-8")
+                                                onNavigate("playlist_url_detail/$encodedUrl/$encodedName/$ua")
+                                            } else {
+                                                val intent = android.content.Intent(context, com.codesrahul.streamplus.ui.player.PlayerActivity::class.java).apply {
+                                                    putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_URL, channel.url)
+                                                    putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_TITLE, channel.name)
+                                                    putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_CHANNEL_LOGO, channel.logoUrl)
+
+                                                    val channelHeaderUA = channel.headers["User-Agent"]?.takeIf { it.isNotBlank() && it != "Auto" }
+                                                    val channelUA       = channel.userAgent.takeIf { it.isNotBlank() && it != "Auto" }
+                                                    val playlistUA      = viewModel.playlist.value?.userAgent ?: "Auto"
+                                                    val finalUA = channelHeaderUA
+                                                        ?: channelUA
+                                                        ?: if (playlistUA == "Auto" || playlistUA == "Default")
+                                                            com.codesrahul.streamplus.util.UserAgentManager.DEFAULT_UA
+                                                           else playlistUA
+
+                                                    putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_USER_AGENT, finalUA)
+                                                    channel.headers["Referer"]?.let { putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_REFERER, it) }
+                                                    channel.headers["Cookie"]?.let  { putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_COOKIE, it) }
+                                                    channel.headers["Origin"]?.let  { putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_ORIGIN, it) }
+                                                    putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_HEADERS, java.util.HashMap(channel.headers))
+                                                    channel.licenseUrl?.let { putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_DRM_LICENSE_URL, it) }
+                                                    channel.drmScheme?.let  { putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_DRM_SCHEME, it) }
+                                                    if (channel.drmHeaders.isNotEmpty()) {
+                                                        putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_DRM_HEADERS, java.util.HashMap(channel.drmHeaders))
+                                                    }
+                                                    putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_PLAYLIST_ID, playlist?.id ?: -1)
+                                                    putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_GROUP, channel.group)
+                                                }
+                                                context.startActivity(intent)
+                                            }
+                                        }
+                                    }
                                 }
 
                                 ChannelItem(
@@ -211,50 +270,9 @@ fun PlaylistDetailScreen(
                                     hideImage = settingsState.hideChannelImage,
                                     currentProgram = currentProgram?.title,
                                     isFavorite = isFav,
-                                    onToggleFavorite = { viewModel.toggleFavorite(channel) }
-                                ) {
-                                    if (isLoading) return@ChannelItem
-                                    val lowerUrl = channel.url.lowercase()
-                                    val isPlaylist = channel.isPlaylist ||
-                                        (channel.licenseUrl.isNullOrBlank() && channel.drmScheme.isNullOrBlank() &&
-                                         (lowerUrl.endsWith(".m3u") || lowerUrl.endsWith(".json") || lowerUrl.contains("m3u=1")))
-
-                                    if (isPlaylist) {
-                                        val encodedUrl  = java.net.URLEncoder.encode(channel.url, "UTF-8")
-                                        val encodedName = java.net.URLEncoder.encode(channel.name, "UTF-8")
-                                        val ua = java.net.URLEncoder.encode(viewModel.playlist.value?.userAgent ?: "Auto", "UTF-8")
-                                        onNavigate("playlist_url_detail/$encodedUrl/$encodedName/$ua")
-                                    } else {
-                                        val intent = android.content.Intent(context, com.codesrahul.streamplus.ui.player.PlayerActivity::class.java).apply {
-                                            putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_URL, channel.url)
-                                            putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_TITLE, channel.name)
-                                            putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_CHANNEL_LOGO, channel.logoUrl)
-
-                                            val channelHeaderUA = channel.headers["User-Agent"]?.takeIf { it.isNotBlank() && it != "Auto" }
-                                            val channelUA       = channel.userAgent.takeIf { it.isNotBlank() && it != "Auto" }
-                                            val playlistUA      = viewModel.playlist.value?.userAgent ?: "Auto"
-                                            val finalUA = channelHeaderUA
-                                                ?: channelUA
-                                                ?: if (playlistUA == "Auto" || playlistUA == "Default")
-                                                    com.codesrahul.streamplus.util.UserAgentManager.DEFAULT_UA
-                                                   else playlistUA
-
-                                            putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_USER_AGENT, finalUA)
-                                            channel.headers["Referer"]?.let { putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_REFERER, it) }
-                                            channel.headers["Cookie"]?.let  { putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_COOKIE, it) }
-                                            channel.headers["Origin"]?.let  { putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_ORIGIN, it) }
-                                            putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_HEADERS, java.util.HashMap(channel.headers))
-                                            channel.licenseUrl?.let { putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_DRM_LICENSE_URL, it) }
-                                            channel.drmScheme?.let  { putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_DRM_SCHEME, it) }
-                                            if (channel.drmHeaders.isNotEmpty()) {
-                                                putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_DRM_HEADERS, java.util.HashMap(channel.drmHeaders))
-                                            }
-                                            putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_PLAYLIST_ID, playlist?.id ?: -1)
-                                            putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_GROUP, channel.group)
-                                        }
-                                        context.startActivity(intent)
-                                    }
-                                }
+                                    onToggleFavorite = onToggleFav,
+                                    onClick = onItemClick
+                                )
                             }
                         }
                     }
@@ -286,44 +304,65 @@ fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onT
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(0.67f)
-            .tvFocusable(cornerRadius = 12.dp)
+            .aspectRatio(0.67f) // Standard 2:3 VOD Poster Ratio
+            .tvFocusable(cornerRadius = 14.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (channel.logoUrl.isNotBlank() && !hideImage) {
-                val context = LocalContext.current
-                val imageRequest = remember(channel.logoUrl) {
-                    ImageRequest.Builder(context).data(channel.logoUrl).crossfade(true).build()
-                }
                 AsyncImage(
-                    model = imageRequest,
+                    model = channel.logoUrl,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Crop // VOD posters are fully cropped
                 )
             } else {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Movie, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.4f))
+                Box(
+                    modifier = Modifier.fillMaxSize().background(
+                        Brush.linearGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.2f)
+                            )
+                        )
+                    ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Movie,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
                 }
             }
             
+            // Sleek Gradient Overlay for perfect text contrast
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent, Color.Black.copy(alpha = 0.9f))))
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent, 
+                                Color.Transparent, 
+                                Color.Black.copy(alpha = 0.7f), 
+                                Color.Black.copy(alpha = 0.95f)
+                            )
+                        )
+                    )
             )
             
             Column(
-                modifier = Modifier.align(Alignment.BottomStart).padding(8.dp)
+                modifier = Modifier.align(Alignment.BottomStart).padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
                 Text(
                     text = channel.name,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -332,13 +371,22 @@ fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onT
             }
             
             if (onToggleFavorite != null) {
-                IconButton(onClick = onToggleFavorite, modifier = Modifier.align(Alignment.TopEnd).size(32.dp)) {
-                    Icon(
-                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = null,
-                        tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White,
-                        modifier = Modifier.size(18.dp)
-                    )
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .size(32.dp)
+                ) {
+                    IconButton(onClick = onToggleFavorite, modifier = Modifier.fillMaxSize()) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = null,
+                            tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
         }
@@ -351,53 +399,55 @@ fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(0.85f)
-            .tvFocusable(cornerRadius = 18.dp)
+            .aspectRatio(1f) // 1:1 Perfect square ensures identical heights for all Live items across grids
+            .tvFocusable(cornerRadius = 16.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
         ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
+            
+            // Universal Gradient Background so transparent logos look premium
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.15f)
+                            )
+                        )
+                    )
+            )
+
             if (channel.logoUrl.isNotBlank() && !hideImage) {
-                val context = LocalContext.current
-                val imageRequest = remember(channel.logoUrl) {
-                    ImageRequest.Builder(context).data(channel.logoUrl).crossfade(true).build()
-                }
                 AsyncImage(
-                    model = imageRequest,
+                    model = channel.logoUrl,
                     contentDescription = null,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight(0.70f)
-                        .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
-                        .background(Color.White.copy(alpha = 0.9f)),
-                    contentScale = ContentScale.Fit
+                        .fillMaxSize()
+                        // Ensure the image fits inside the middle, leaving vertical space for the text gradient
+                        .padding(bottom = 60.dp)
+                        .padding(20.dp),
+                    contentScale = ContentScale.Fit // Fit the logo perfectly without stretching
                 )
             } else {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight(0.70f)
-                        .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
-                        .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                                    MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
-                                )
-                            )
-                        ),
+                        .fillMaxSize()
+                        .padding(bottom = 60.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.Default.Tv,
                         contentDescription = null,
-                        modifier = Modifier.size(40.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                        modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     )
                 }
             }
@@ -415,7 +465,7 @@ fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
                     )
                 }
             }
@@ -426,41 +476,45 @@ fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String
                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(6.dp)
+                        .padding(8.dp)
                         .size(32.dp)
                 ) {
-                    IconButton(
-                        onClick = onToggleFavorite,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
+                    IconButton(onClick = onToggleFavorite, modifier = Modifier.fillMaxSize()) {
                         Icon(
                             imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = if (isFavorite) "Remove from favourites" else "Add to favourites",
-                            tint = if (isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                            tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White,
                             modifier = Modifier.size(16.dp)
                         )
                     }
                 }
             }
 
+            // Text overlay seamlessly blends with the glass card regardless of logo shape
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .fillMaxHeight(0.30f)
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
-                    .padding(horizontal = 10.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.6f),
+                                Color.Black.copy(alpha = 0.95f)
+                            )
+                        )
+                    )
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally, 
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
                         text = channel.name,
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = Color.White,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center

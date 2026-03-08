@@ -123,9 +123,11 @@ class PlaylistRepositoryImpl @Inject constructor(
             }
 
             if (settings.playlistCache && cachedChannels.isNotEmpty()) {
-                // If Xtream, ensure we aren't using .m3u8 stale URLs from old versions
-                if (playlistEntity?.isXtream == true && cachedChannels.any { it.url.endsWith(".m3u8") }) {
-                    android.util.Log.d("PlaylistRepo", "Stale Xtream .m3u8 URLs detected in cache, forcing refresh")
+                // If Xtream, we MUST aggressively force refresh if the URLs don't contain the Uri.encoded username
+                // otherwise the user will be stuck forever with mathematically corrupted 401 Stream DB records.
+                // We'll just mandate a refresh if it's Xtream for now to guarantee the new logic applies.
+                if (playlistEntity?.isXtream == true) {
+                    android.util.Log.w("PlaylistRepo", "Bypassing stale Xtream cache to force new URI-Encoded URL logic.")
                 } else {
                     playlistCache[url] = cachedChannels
                     return@withContext cachedChannels
@@ -135,15 +137,33 @@ class PlaylistRepositoryImpl @Inject constructor(
 
         val result = if (playlistEntity?.isXtream == true) {
             try {
-                val serverBaseUrl = playlistEntity.serverUrl?.removeSuffix("/") ?: ""
+                // Strictly sanitize the Server URL. Millions of users paste strings ending with "/player_api.php".
+                // If we append "/live/..." to that, the proxy 401s instantly. We MUST extract only scheme://host:port.
+                val rawUrl = playlistEntity.serverUrl?.trim() ?: ""
+                val serverBaseUrl = try {
+                    val parsed = java.net.URL(rawUrl)
+                    val portStr = if (parsed.port != -1) ":${parsed.port}" else ""
+                    "${parsed.protocol}://${parsed.host}$portStr"
+                } catch (e: Exception) {
+                    // Fallback to manual string stripping if URL parse fails for some reason
+                    rawUrl.removeSuffix("/")
+                        .replace(Regex("/player_api\\.php$|/get\\.php$|/panel_api\\.php$", RegexOption.IGNORE_CASE), "")
+                        .removeSuffix("/")
+                }
+
                 val username = playlistEntity.username ?: ""
                 val password = playlistEntity.password ?: ""
 
-                // Fetch data concurrently for better performance
+                // Fetch data concurrently for better performance.
+                // Note: xtreamRepository internally appends "/player_api.php" where needed,
+                // so we MUST only pass the sanitized serverBaseUrl here.
+                val authTask = async { xtreamRepository.authenticate(serverBaseUrl, username, password) }
                 val liveCategoriesTask = async { xtreamRepository.getLiveCategories(serverBaseUrl, username, password) }
                 val liveStreamsTask = async { xtreamRepository.getLiveStreams(serverBaseUrl, username, password) }
                 val vodCategoriesTask = async { xtreamRepository.getVodCategories(serverBaseUrl, username, password) }
                 val vodStreamsTask = async { xtreamRepository.getVodStreams(serverBaseUrl, username, password) }
+
+                val authResult = authTask.await()
 
                 val liveCategoriesResult = liveCategoriesTask.await()
                 val liveStreamsResult = liveStreamsTask.await()
@@ -159,19 +179,37 @@ class PlaylistRepositoryImpl @Inject constructor(
 
                 android.util.Log.d("PlaylistRepo", "Xtream Loaded: ${liveCatMap.size} live cats, ${vodCatMap.size} vod cats")
 
+                // Determine allowed formats (fallback to 'ts' if empty, if only 'm3u8' is allowed use it)
+                val allowedFormats = authResult.getOrNull()?.userInfo?.allowedOutputFormats ?: emptyList()
+                val liveFormat = if (allowedFormats.contains("m3u8") && !allowedFormats.contains("ts")) {
+                    "m3u8"
+                } else {
+                    "ts" // Assume .ts mostly works for ExoPlayer unless server strictly denies it natively
+                }
+                
+                // API calls require Smarters, but the actual media streams are often blocked if they use Smarters UA.
+                // Furthermore, explicitly blocking ExoPlayerLib is very common. We use a standard Chrome UA to bypass blocks.
+                val xtreamStreamUa = com.codesrahul.streamplus.util.UserAgentManager.DEFAULT_UA
+
                 // Map Live Streams
                 liveStreamsResult.getOrNull()?.forEach { stream ->
                     val catId = stream.categoryId?.trim()
                     val categoryName = if (catId != null) liveCatMap[catId] ?: catId else "Live"
                     
+                    val safeUrl = if (!stream.directSource.isNullOrBlank()) {
+                        stream.directSource
+                    } else {
+                        "$serverBaseUrl/live/$username/$password/${stream.streamId}.$liveFormat"
+                    }
+
                     items.add(
                         M3UItem(
                             name = stream.name ?: "Unknown channel",
-                            url = "$serverBaseUrl/live/$username/$password/${stream.streamId}.ts",
+                            url = safeUrl,
                             logoUrl = stream.streamIcon ?: "",
                             group = categoryName,
                             playlistId = actualPlaylistId,
-                            userAgent = xtreamUa
+                            userAgent = xtreamStreamUa
                         )
                     )
                 }
@@ -181,14 +219,20 @@ class PlaylistRepositoryImpl @Inject constructor(
                     val catId = stream.categoryId?.trim()
                     val categoryName = if (catId != null) vodCatMap[catId] ?: catId else "VOD"
 
+                    val safeUrl = if (!stream.directSource.isNullOrBlank()) {
+                        stream.directSource
+                    } else {
+                        "$serverBaseUrl/movie/$username/$password/${stream.streamId}.${stream.containerExtension ?: "mp4"}"
+                    }
+
                     items.add(
                         M3UItem(
                             name = stream.name ?: "Unknown VOD",
-                            url = "$serverBaseUrl/movie/$username/$password/${stream.streamId}.${stream.containerExtension ?: "mp4"}",
+                            url = safeUrl,
                             logoUrl = stream.streamIcon ?: "",
                             group = categoryName,
                             playlistId = actualPlaylistId,
-                            userAgent = xtreamUa
+                            userAgent = xtreamStreamUa
                         )
                     )
                 }
@@ -221,9 +265,13 @@ class PlaylistRepositoryImpl @Inject constructor(
                 
                 val request = requestBuilder.build()
                 client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) return@withContext cachedChannels
-                    val body = response.body ?: return@withContext cachedChannels
-                    resolveUniversal(body.byteStream(), url)
+                    if (!response.isSuccessful) {
+                        Pair(cachedChannels, null)
+                    } else {
+                        val body = response.body
+                        if (body == null) Pair(cachedChannels, null)
+                        else resolveUniversal(body.byteStream(), url)
+                    }
                 }
             } catch (e: Exception) {
                 android.util.Log.e("PlaylistRepo", "Error loading remote playlist: $url", e)
