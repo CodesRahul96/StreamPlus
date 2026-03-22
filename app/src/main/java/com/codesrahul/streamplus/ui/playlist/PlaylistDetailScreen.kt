@@ -166,15 +166,23 @@ fun PlaylistDetailScreen(
             Box(modifier = Modifier.padding(padding).fillMaxSize()) {
                 when {
                     isLoading -> {
+                        val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+                        val screenWidth = configuration.screenWidthDp
+                        val columns = when {
+                            screenWidth >= 1200 -> 6
+                            screenWidth >= 900  -> 5
+                            screenWidth >= 600  -> 4
+                            else -> 2
+                        }
                         LazyVerticalGrid(
-                            columns = GridCells.Adaptive(minSize = 140.dp),
-                            modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
-                            contentPadding = PaddingValues(vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            columns = GridCells.Fixed(columns),
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                            contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
                             userScrollEnabled = false
                         ) {
-                            items(12) {
+                            items(columns * 3) {
                                 com.codesrahul.streamplus.ui.components.ShimmerChannelItem()
                             }
                         }
@@ -189,13 +197,21 @@ fun PlaylistDetailScreen(
                         }
                     }
                     else -> {
-                        val isVodPlaylist = filteredChannels.any { it.isVod }
+                        val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+                        val screenWidth = configuration.screenWidthDp
+                        val columns = when {
+                            screenWidth >= 1200 -> 6
+                            screenWidth >= 900  -> 5
+                            screenWidth >= 600  -> 4
+                            else -> 2 // Default for Mobile
+                        }
+                        
                         LazyVerticalGrid(
-                            columns = if (isVodPlaylist) GridCells.Fixed(3) else GridCells.Adaptive(minSize = 140.dp),
-                            modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
-                            contentPadding = PaddingValues(vertical = 8.dp),
-                            verticalArrangement   = Arrangement.spacedBy(12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            columns = GridCells.Fixed(columns),
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                            contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
+                            verticalArrangement   = Arrangement.spacedBy(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             items(
                                 count = filteredChannels.size,
@@ -304,13 +320,13 @@ fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onT
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(0.67f) // Standard 2:3 VOD Poster Ratio
-            .tvFocusable(cornerRadius = 14.dp)
+            .aspectRatio(0.7f) // Slightly adjusted for better 2-column fit
+            .tvFocusable(cornerRadius = 16.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (channel.logoUrl.isNotBlank() && !hideImage) {
@@ -318,15 +334,15 @@ fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onT
                     model = channel.logoUrl,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop // VOD posters are fully cropped
+                    contentScale = ContentScale.Crop
                 )
             } else {
                 Box(
                     modifier = Modifier.fillMaxSize().background(
                         Brush.linearGradient(
                             listOf(
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.2f)
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.1f)
                             )
                         )
                     ),
@@ -335,13 +351,13 @@ fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onT
                     Icon(
                         Icons.Default.Movie,
                         contentDescription = null,
-                        modifier = Modifier.size(48.dp),
+                        modifier = Modifier.size(40.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     )
                 }
             }
             
-            // Sleek Gradient Overlay for perfect text contrast
+            // Gradient Overlay
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -349,42 +365,43 @@ fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onT
                         Brush.verticalGradient(
                             colors = listOf(
                                 Color.Transparent, 
-                                Color.Transparent, 
-                                Color.Black.copy(alpha = 0.7f), 
-                                Color.Black.copy(alpha = 0.95f)
+                                Color.Black.copy(alpha = 0.2f), 
+                                Color.Black.copy(alpha = 0.85f)
                             )
                         )
                     )
             )
             
             Column(
-                modifier = Modifier.align(Alignment.BottomStart).padding(horizontal = 12.dp, vertical = 10.dp)
+                modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp)
             ) {
                 Text(
                     text = channel.name,
                     style = MaterialTheme.typography.titleSmall,
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
             
             if (onToggleFavorite != null) {
                 Surface(
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                    color = Color.Black.copy(alpha = 0.5f),
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(8.dp)
-                        .size(32.dp)
+                        .size(34.dp)
                 ) {
-                    IconButton(onClick = onToggleFavorite, modifier = Modifier.fillMaxSize()) {
+                    IconButton(onClick = onToggleFavorite) {
                         Icon(
                             imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = null,
                             tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
@@ -399,27 +416,27 @@ fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1f) // 1:1 Perfect square ensures identical heights for all Live items across grids
+            .aspectRatio(1f) // Strict square ratio
             .tvFocusable(cornerRadius = 16.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
         ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             
-            // Universal Gradient Background so transparent logos look premium
+            // Background Glow
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
-                        Brush.linearGradient(
+                        Brush.radialGradient(
                             listOf(
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.15f)
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                                Color.Transparent
                             )
                         )
                     )
@@ -427,27 +444,29 @@ fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String
 
             if (channel.logoUrl.isNotBlank() && !hideImage) {
                 AsyncImage(
-                    model = channel.logoUrl,
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(channel.logoUrl)
+                        .crossfade(true)
+                        .build(),
                     contentDescription = null,
                     modifier = Modifier
                         .fillMaxSize()
-                        // Ensure the image fits inside the middle, leaving vertical space for the text gradient
-                        .padding(bottom = 60.dp)
-                        .padding(20.dp),
-                    contentScale = ContentScale.Fit // Fit the logo perfectly without stretching
+                        .padding(bottom = 40.dp)
+                        .padding(24.dp), 
+                    contentScale = ContentScale.Fit
                 )
             } else {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(bottom = 60.dp),
+                        .padding(bottom = 50.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.Default.Tv,
                         contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        modifier = Modifier.size(44.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
                     )
                 }
             }
@@ -456,41 +475,37 @@ fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String
                 Surface(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(8.dp),
-                    shape = RoundedCornerShape(6.dp),
+                        .padding(10.dp),
+                    shape = RoundedCornerShape(4.dp),
                     color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)
                 ) {
                     Text(
                         "DRM",
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
             }
 
             if (onToggleFavorite != null) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                IconButton(
+                    onClick = onToggleFavorite,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .size(32.dp)
+                        .padding(4.dp)
                 ) {
-                    IconButton(onClick = onToggleFavorite, modifier = Modifier.fillMaxSize()) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = if (isFavorite) "Remove from favourites" else "Add to favourites",
-                            tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = null,
+                        tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White.copy(alpha = 0.5f),
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
 
-            // Text overlay seamlessly blends with the glass card regardless of logo shape
+            // Text detail container at bottom
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -499,12 +514,11 @@ fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String
                         Brush.verticalGradient(
                             colors = listOf(
                                 Color.Transparent,
-                                Color.Black.copy(alpha = 0.6f),
-                                Color.Black.copy(alpha = 0.95f)
+                                Color.Black.copy(alpha = 0.8f)
                             )
                         )
                     )
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                    .padding(10.dp)
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally, 
@@ -512,7 +526,7 @@ fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String
                 ) {
                     Text(
                         text = channel.name,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         maxLines = 1,
@@ -523,11 +537,11 @@ fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String
                         Text(
                             text = currentProgram,
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(top = 2.dp)
+                            modifier = Modifier.basicMarquee()
                         )
                     }
                 }
