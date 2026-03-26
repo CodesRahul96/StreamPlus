@@ -172,8 +172,10 @@ fun PlaylistDetailScreen(
                             screenWidth >= 1200 -> 6
                             screenWidth >= 900  -> 5
                             screenWidth >= 600  -> 4
-                            else -> 2
+                            else -> 3
                         }
+                        val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                        val cardAspectRatio = if (isLandscape) 1.2f else 0.85f
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(columns),
                             modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
@@ -183,7 +185,7 @@ fun PlaylistDetailScreen(
                             userScrollEnabled = false
                         ) {
                             items(columns * 3) {
-                                com.codesrahul.streamplus.ui.components.ShimmerChannelItem()
+                                com.codesrahul.streamplus.ui.components.ShimmerChannelItem(cardAspectRatio)
                             }
                         }
                     }
@@ -203,8 +205,11 @@ fun PlaylistDetailScreen(
                             screenWidth >= 1200 -> 6
                             screenWidth >= 900  -> 5
                             screenWidth >= 600  -> 4
-                            else -> 2 // Default for Mobile
+                            else -> 3 // Mobile: 3 columns for better proportions
                         }
+                        
+                        val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                        val cardAspectRatio = if (isLandscape) 1.2f else 0.85f
                         
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(columns),
@@ -287,7 +292,8 @@ fun PlaylistDetailScreen(
                                     currentProgram = currentProgram?.title,
                                     isFavorite = isFav,
                                     onToggleFavorite = onToggleFav,
-                                    onClick = onItemClick
+                                    onClick = onItemClick,
+                                    cardAspectRatio = cardAspectRatio
                                 )
                             }
                         }
@@ -305,106 +311,106 @@ fun ChannelItem(
     currentProgram: String? = null,
     isFavorite: Boolean = false,
     onToggleFavorite: (() -> Unit)? = null,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    cardAspectRatio: Float = 0.85f
 ) {
     if (channel.isVod) {
-        VodPosterItem(channel, hideImage, isFavorite, onToggleFavorite, onClick)
+        VodPosterItem(channel, hideImage, isFavorite, onToggleFavorite, onClick, cardAspectRatio)
     } else {
-        LiveChannelItem(channel, hideImage, currentProgram, isFavorite, onToggleFavorite, onClick)
+        LiveChannelItem(channel, hideImage, currentProgram, isFavorite, onToggleFavorite, onClick, cardAspectRatio)
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onToggleFavorite: (() -> Unit)?, onClick: () -> Unit) {
+fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onToggleFavorite: (() -> Unit)?, onClick: () -> Unit, aspectRatio: Float = 0.85f) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(0.7f) // Slightly adjusted for better 2-column fit
+            .aspectRatio(aspectRatio)
             .tvFocusable(cornerRadius = 16.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            if (channel.logoUrl.isNotBlank() && !hideImage) {
-                AsyncImage(
-                    model = channel.logoUrl,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Box(
-                    modifier = Modifier.fillMaxSize().background(
-                        Brush.linearGradient(
-                            listOf(
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.1f)
-                            )
-                        )
-                    ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.Movie,
-                        contentDescription = null,
-                        modifier = Modifier.size(40.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                    )
-                }
-            }
+        Column(modifier = Modifier.fillMaxSize()) {
             
-            // Gradient Overlay
+            // Logo Area (same 1.2 weight as Live)
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent, 
-                                Color.Black.copy(alpha = 0.2f), 
-                                Color.Black.copy(alpha = 0.85f)
-                            )
-                        )
-                    )
-            )
-            
-            Column(
-                modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp)
+                    .weight(1.2f)
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = channel.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-            
-            if (onToggleFavorite != null) {
                 Surface(
-                    shape = CircleShape,
-                    color = Color.Black.copy(alpha = 0.5f),
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .size(34.dp)
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    IconButton(onClick = onToggleFavorite) {
+                    if (channel.logoUrl.isNotBlank() && !hideImage) {
+                        AsyncImage(
+                            model = channel.logoUrl,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize().padding(8.dp), 
+                            contentScale = ContentScale.Fit
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Movie,
+                                contentDescription = null,
+                                modifier = Modifier.size(32.dp),
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                            )
+                        }
+                    }
+                }
+
+                // Favorite Toggle
+                if (onToggleFavorite != null) {
+                    IconButton(
+                        onClick = onToggleFavorite,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(2.dp)
+                            .size(32.dp)
+                    ) {
                         Icon(
                             imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = null,
-                            tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White,
+                            tint = if (isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                             modifier = Modifier.size(18.dp)
                         )
                     }
                 }
+            }
+
+            // Text Area (same 0.8 weight as Live)
+            Column(
+                modifier = Modifier
+                    .weight(0.8f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = channel.name,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
@@ -412,138 +418,127 @@ fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onT
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String?, isFavorite: Boolean, onToggleFavorite: (() -> Unit)?, onClick: () -> Unit) {
+fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String?, isFavorite: Boolean, onToggleFavorite: (() -> Unit)?, onClick: () -> Unit, aspectRatio: Float = 0.85f) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1f) // Strict square ratio
+            .aspectRatio(aspectRatio)
             .tvFocusable(cornerRadius = 16.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
         ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
             
-            // Background Glow
+            // Logo Area
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.radialGradient(
-                            listOf(
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
-
-            if (channel.logoUrl.isNotBlank() && !hideImage) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(channel.logoUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = 40.dp)
-                        .padding(24.dp), 
-                    contentScale = ContentScale.Fit
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = 50.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.Tv,
-                        contentDescription = null,
-                        modifier = Modifier.size(44.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-                    )
-                }
-            }
-
-            if (!channel.drmScheme.isNullOrBlank()) {
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(10.dp),
-                    shape = RoundedCornerShape(4.dp),
-                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)
-                ) {
-                    Text(
-                        "DRM",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
-            }
-
-            if (onToggleFavorite != null) {
-                IconButton(
-                    onClick = onToggleFavorite,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(4.dp)
-                ) {
-                    Icon(
-                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = null,
-                        tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White.copy(alpha = 0.5f),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            // Text detail container at bottom
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
+                    .weight(1.2f)
                     .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.8f)
-                            )
-                        )
-                    )
-                    .padding(10.dp)
+                    .padding(8.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally, 
-                    modifier = Modifier.fillMaxWidth()
+                // Background for logos to ensure visibility
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text(
-                        text = channel.name,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center
-                    )
-                    if (!currentProgram.isNullOrBlank()) {
-                        Text(
-                            text = currentProgram,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.basicMarquee()
+                    if (channel.logoUrl.isNotBlank() && !hideImage) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(channel.logoUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize().padding(8.dp), 
+                            contentScale = ContentScale.Fit
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Tv,
+                                contentDescription = null,
+                                modifier = Modifier.size(32.dp),
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                            )
+                        }
+                    }
+                }
+
+                // Favorite Toggle (overlay on logo area)
+                if (onToggleFavorite != null) {
+                    IconButton(
+                        onClick = onToggleFavorite,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(2.dp)
+                            .size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = null,
+                            tint = if (isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            modifier = Modifier.size(18.dp)
                         )
                     }
+                }
+
+                // DRM Badge
+                if (!channel.drmScheme.isNullOrBlank()) {
+                    Surface(
+                        modifier = Modifier.align(Alignment.TopStart).padding(4.dp),
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)
+                    ) {
+                        Text(
+                            "DRM",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 0.dp)
+                        )
+                    }
+                }
+            }
+
+            // Text Area
+            Column(
+                modifier = Modifier
+                    .weight(0.8f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = channel.name,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center
+                )
+                if (!currentProgram.isNullOrBlank()) {
+                    Text(
+                        text = currentProgram,
+                        style = androidx.compose.ui.text.TextStyle(
+                            fontSize = MaterialTheme.typography.labelSmall.fontSize * 0.9f,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.basicMarquee()
+                    )
                 }
             }
         }

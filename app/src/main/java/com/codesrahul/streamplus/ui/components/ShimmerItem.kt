@@ -40,11 +40,11 @@ fun Modifier.shimmerEffect(): Modifier = composed {
 }
 
 @Composable
-fun ShimmerChannelItem() {
+fun ShimmerChannelItem(aspectRatio: Float = 0.85f) {
     androidx.compose.material3.Card(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1f), // Match LiveChannelItem 1:1 ratio
+            .aspectRatio(aspectRatio), 
         shape = RoundedCornerShape(16.dp),
         colors = androidx.compose.material3.CardDefaults.cardColors(
             containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
