@@ -257,11 +257,18 @@ class PlaylistRepositoryImpl @Inject constructor(
         } else {
             try {
                 val requestBuilder = okhttp3.Request.Builder().url(url)
-                if (!userAgent.isNullOrEmpty() && userAgent != "Auto" && userAgent != "Default") {
-                    requestBuilder.header("User-Agent", userAgent)
-                } else if (userAgent == "Default") {
-                    requestBuilder.header("User-Agent", com.codesrahul.streamplus.util.UserAgentManager.DEFAULT_UA)
+                val finalUA = when {
+                    !userAgent.isNullOrEmpty() && userAgent != "Auto" && userAgent != "Default" -> userAgent
+                    userAgent == "Default" -> com.codesrahul.streamplus.util.UserAgentManager.DEFAULT_UA
+                    // Auto mode: Detect if it's an Xtream short-link and use Smarters, otherwise Chrome
+                    url.contains(Regex("/[^/]+/[^/]+/[0-9]+$")) || url.contains("player_api.php") || url.contains("get.php") -> {
+                        android.util.Log.d("PlaylistRepo", "Auto-detected Xtream/IPTV link, using Smarters UA")
+                        "IPTVSmartersPlayer"
+                    }
+                    else -> com.codesrahul.streamplus.util.UserAgentManager.DEFAULT_UA
                 }
+                
+                requestBuilder.header("User-Agent", finalUA)
                 
                 val request = requestBuilder.build()
                 client.newCall(request).execute().use { response ->
