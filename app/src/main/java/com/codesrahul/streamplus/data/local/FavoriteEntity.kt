@@ -19,6 +19,7 @@ data class FavoriteEntity(
     val licenseUrl: String? = null,
     val drmScheme: String? = null,
     val drmHeaders: Map<String, String> = emptyMap(),
+    val streamType: String = "",
     val addedAt: Long = System.currentTimeMillis()
 )
 

@@ -22,6 +22,7 @@ data class HistoryEntity(
     val licenseUrl: String?,
     val drmScheme: String?,
     val drmHeaders: Map<String, String> = emptyMap(),
+    val streamType: String = "",
     val lastPosition: Long,
     val duration: Long,
     val timestamp: Long

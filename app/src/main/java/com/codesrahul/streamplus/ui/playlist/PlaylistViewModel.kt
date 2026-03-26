@@ -38,8 +38,8 @@ class PlaylistViewModel @Inject constructor(
                     userAgent = fav.userAgent,
                     headers = fav.headers,
                     licenseUrl = fav.licenseUrl,
-                    drmScheme = fav.drmScheme,
-                    drmHeaders = fav.drmHeaders
+                    drmHeaders = fav.drmHeaders,
+                    streamType = fav.streamType
                 )
             }
         }
@@ -57,8 +57,8 @@ class PlaylistViewModel @Inject constructor(
                     userAgent = entry.userAgent ?: "",
                     headers = entry.headers,
                     licenseUrl = entry.licenseUrl,
-                    drmScheme = entry.drmScheme,
-                    drmHeaders = entry.drmHeaders
+                    drmHeaders = entry.drmHeaders,
+                    streamType = entry.streamType
                 )
             }
         }
@@ -152,7 +152,8 @@ class PlaylistViewModel @Inject constructor(
                         groupTitle = item.group,
                         playlistId = playlistId,
                         url = item.url,
-                        logoUrl = item.logoUrl
+                        logoUrl = item.logoUrl,
+                        streamType = item.streamType
                     )
                 )
             }

@@ -31,7 +31,8 @@ data class ChannelEntity(
     val drmScheme: String? = null,
     val drmHeaders: Map<String, String> = emptyMap(),
     val epgId: String? = null,
-    val isVod: Boolean = false
+    val isVod: Boolean = false,
+    val streamType: String = "" // "live", "vod", "series", or "" for non-Xtream
 )
 
 fun ChannelEntity.toDomain() = M3UItem(
@@ -46,7 +47,8 @@ fun ChannelEntity.toDomain() = M3UItem(
     drmScheme = drmScheme,
     drmHeaders = drmHeaders,
     epgId = epgId,
-    isVod = isVod
+    isVod = isVod,
+    streamType = streamType
 )
 
 fun M3UItem.toEntity(playlistId: Int) = ChannelEntity(
@@ -61,5 +63,6 @@ fun M3UItem.toEntity(playlistId: Int) = ChannelEntity(
     drmScheme = drmScheme,
     drmHeaders = drmHeaders,
     epgId = epgId,
-    isVod = isVod
+    isVod = isVod,
+    streamType = streamType
 )

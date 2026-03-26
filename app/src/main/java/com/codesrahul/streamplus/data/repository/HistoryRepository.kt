@@ -46,6 +46,7 @@ class HistoryRepository @Inject constructor(
             licenseUrl = licenseUrl,
             drmScheme = drmScheme,
             drmHeaders = drmHeaders,
+            streamType = "", // Standard video playback might not always have info, but we can enhance this later
             lastPosition = position,
             duration = duration,
             timestamp = System.currentTimeMillis()

@@ -15,7 +15,8 @@ data class M3UItem(
     val userAgent: String = "",
     val isPlaylist: Boolean = false,
     val epgId: String? = null,
-    val isVod: Boolean = false
+    val isVod: Boolean = false,
+    val streamType: String = "" // "live", "vod", "series", or "" for non-Xtream
 )
 
 enum class StreamStatus {

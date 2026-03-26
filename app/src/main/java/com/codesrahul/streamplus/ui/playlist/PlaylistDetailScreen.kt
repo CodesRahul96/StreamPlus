@@ -58,6 +58,8 @@ fun PlaylistDetailScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val favoriteIdentities by viewModel.favoriteIdentities.collectAsState()
     val settingsState by hiltViewModel<SettingsViewModel>().settings.collectAsState(initial = AppSettings())
+    val isXtreamPlaylist by viewModel.isXtreamPlaylist.collectAsState()
+    val selectedStreamType by viewModel.selectedStreamType.collectAsState()
     
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -142,8 +144,45 @@ fun PlaylistDetailScreen(
                             focusedBorderColor      = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                         )
                     )
+                    // Xtream: TV / VOD / Series top-level tabs
+                    if (isXtreamPlaylist) {
+                        val streamTabs = listOf(
+                            Triple("live", "TV", Icons.Default.Tv),
+                            Triple("vod", "Movies", Icons.Default.Movie),
+                            Triple("series", "Series", Icons.Default.PlayCircle)
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .padding(bottom = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            streamTabs.forEach { (type, label, icon) ->
+                                val selected = selectedStreamType == type
+                                FilterChip(
+                                    selected = selected,
+                                    onClick = { viewModel.setSelectedStreamType(type) },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = icon,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    },
+                                    label = { Text(label, style = MaterialTheme.typography.labelMedium) },
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                )
+                            }
+                        }
+                    }
 
-                    // Category chips
+                    // Category chips (group-level filter, shown for both Xtream and regular)
                     if (groups.size > 1) {
                         androidx.compose.foundation.lazy.LazyRow(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),

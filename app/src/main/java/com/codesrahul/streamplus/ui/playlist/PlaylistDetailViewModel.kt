@@ -46,17 +46,26 @@ class PlaylistDetailViewModel @Inject constructor(
     private val _selectedGroup = MutableStateFlow("All")
     val selectedGroup = _selectedGroup.asStateFlow()
 
+    // Xtream-specific: which top-level category tab is selected (Live/VOD/Series)
+    private val _selectedStreamType = MutableStateFlow("live")
+    val selectedStreamType = _selectedStreamType.asStateFlow()
+
+    // Whether the current playlist is Xtream (drives tab visibility in the UI)
+    private val _isXtreamPlaylist = MutableStateFlow(false)
+    val isXtreamPlaylist = _isXtreamPlaylist.asStateFlow()
+
     // Favorite Identity set for fast O(1) lookup in the UI (Format: "name|group|playlistId")
     val favoriteIdentities = repository.getAllFavorites()
         .map { list -> list.map { "${it.name}|${it.groupTitle}|${it.playlistId}" }.toSet() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
-    val filteredChannels = combine(_channels, _searchQuery, _selectedGroup) { channels, query, group ->
-        if (query.isBlank() && group == "All") {
-            channels
-        } else {
-            kotlinx.coroutines.withContext(Dispatchers.Default) {
-                channels.filter { ch ->
+    val filteredChannels = combine(_channels, _searchQuery, _selectedGroup, _selectedStreamType, _isXtreamPlaylist) { channels, query, group, streamType, isXtream ->
+        kotlinx.coroutines.withContext(Dispatchers.Default) {
+            val afterTypeFiler = if (isXtream) channels.filter { it.streamType == streamType } else channels
+            if (query.isBlank() && group == "All") {
+                afterTypeFiler
+            } else {
+                afterTypeFiler.filter { ch ->
                     (group == "All" || ch.group == group) &&
                     (ch.name.contains(query, ignoreCase = true) || ch.url.contains(query, ignoreCase = true))
                 }
@@ -83,6 +92,7 @@ class PlaylistDetailViewModel @Inject constructor(
             if (id != null) {
                 repository.getPlaylist(id).collect { entity ->
                     if (entity != null) {
+                        _isXtreamPlaylist.value = entity.isXtream == true
                         val prevUrl = _playlist.value?.url
                         _playlist.value = entity
                         if (prevUrl != entity.url) {
@@ -107,8 +117,8 @@ class PlaylistDetailViewModel @Inject constructor(
     }
 
     fun setSearchQuery(query: String) { _searchQuery.value = query }
-
-    fun setSelectedGroup(group: String) { _selectedGroup.value = group }
+    fun setSelectedGroup(group: String) { _selectedGroup.value = group; }
+    fun setSelectedStreamType(type: String) { _selectedStreamType.value = type; _selectedGroup.value = "All" }
 
     fun toggleFavorite(item: M3UItem) {
         val currentPlaylistId = _playlist.value?.id ?: -1
@@ -127,7 +137,8 @@ class PlaylistDetailViewModel @Inject constructor(
                         headers = item.headers,
                         licenseUrl = item.licenseUrl,
                         drmScheme = item.drmScheme,
-                        drmHeaders = item.drmHeaders
+                        drmHeaders = item.drmHeaders,
+                        streamType = item.streamType
                     )
                 )
             }

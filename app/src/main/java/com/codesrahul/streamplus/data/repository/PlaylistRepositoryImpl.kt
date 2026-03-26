@@ -162,13 +162,16 @@ class PlaylistRepositoryImpl @Inject constructor(
                 val liveStreamsTask = async { xtreamRepository.getLiveStreams(serverBaseUrl, username, password) }
                 val vodCategoriesTask = async { xtreamRepository.getVodCategories(serverBaseUrl, username, password) }
                 val vodStreamsTask = async { xtreamRepository.getVodStreams(serverBaseUrl, username, password) }
+                val seriesCategoriesTask = async { xtreamRepository.getSeriesCategories(serverBaseUrl, username, password) }
+                val seriesTask = async { xtreamRepository.getSeries(serverBaseUrl, username, password) }
 
                 val authResult = authTask.await()
-
                 val liveCategoriesResult = liveCategoriesTask.await()
                 val liveStreamsResult = liveStreamsTask.await()
                 val vodCategoriesResult = vodCategoriesTask.await()
                 val vodStreamsResult = vodStreamsTask.await()
+                val seriesCategoriesResult = seriesCategoriesTask.await()
+                val seriesResult = seriesTask.await()
 
                 val items = mutableListOf<M3UItem>()
                 val xtreamUa = "TiviMate/5.0.4 (Linux; Android 11)"
@@ -176,8 +179,9 @@ class PlaylistRepositoryImpl @Inject constructor(
                 // Create category maps
                 val liveCatMap = liveCategoriesResult.getOrNull()?.associate { it.categoryId.trim() to it.categoryName } ?: emptyMap()
                 val vodCatMap = vodCategoriesResult.getOrNull()?.associate { it.categoryId.trim() to it.categoryName } ?: emptyMap()
+                val seriesCatMap = seriesCategoriesResult.getOrNull()?.associate { it.categoryId.trim() to it.categoryName } ?: emptyMap()
 
-                android.util.Log.d("PlaylistRepo", "Xtream Loaded: ${liveCatMap.size} live cats, ${vodCatMap.size} vod cats")
+                android.util.Log.d("PlaylistRepo", "Xtream Loaded: ${liveCatMap.size} live cats, ${vodCatMap.size} vod cats, ${seriesCatMap.size} series cats")
 
                 // Determine allowed formats (fallback to 'ts' if empty, if only 'm3u8' is allowed use it)
                 val allowedFormats = authResult.getOrNull()?.userInfo?.allowedOutputFormats ?: emptyList()
@@ -187,19 +191,18 @@ class PlaylistRepositoryImpl @Inject constructor(
                     "ts" // Assume .ts mostly works for ExoPlayer unless server strictly denies it natively
                 }
                 
-                // API calls require Smarters, but the actual media streams are often blocked if they use Smarters UA.
-                // Furthermore, explicitly blocking ExoPlayerLib is very common. We use a standard Chrome UA to bypass blocks.
-                val xtreamStreamUa = com.codesrahul.streamplus.util.UserAgentManager.DEFAULT_UA
+                // API calls and media streams both benefit from a TiviMate UA to avoid blocking or connection drops.
+                val xtreamStreamUa = "TiviMate/5.0.4 (Linux; Android 11)"
 
-                // Map Live Streams
+                // Map Live Streams — no extension to bypass Cloudflare/proxy blocks
                 liveStreamsResult.getOrNull()?.forEach { stream ->
                     val catId = stream.categoryId?.trim()
                     val categoryName = if (catId != null) liveCatMap[catId] ?: catId else "Live"
-                    
+                    // Use extension-less URL. Many servers (especially Cloudflare-protected) block .ts/.m3u8
                     val safeUrl = if (!stream.directSource.isNullOrBlank()) {
                         stream.directSource
                     } else {
-                        "$serverBaseUrl/live/$username/$password/${stream.streamId}.$liveFormat"
+                        "$serverBaseUrl/live/$username/$password/${stream.streamId}"
                     }
 
                     items.add(
@@ -209,20 +212,20 @@ class PlaylistRepositoryImpl @Inject constructor(
                             logoUrl = stream.streamIcon ?: "",
                             group = categoryName,
                             playlistId = actualPlaylistId,
-                            userAgent = xtreamStreamUa
+                            userAgent = xtreamStreamUa,
+                            streamType = "live"
                         )
                     )
                 }
 
-                // Map VOD Streams
+                // Map VOD Streams — no extension to avoid Cloudflare blocking
                 vodStreamsResult.getOrNull()?.forEach { stream ->
                     val catId = stream.categoryId?.trim()
                     val categoryName = if (catId != null) vodCatMap[catId] ?: catId else "VOD"
-
                     val safeUrl = if (!stream.directSource.isNullOrBlank()) {
                         stream.directSource
                     } else {
-                        "$serverBaseUrl/movie/$username/$password/${stream.streamId}.${stream.containerExtension ?: "mp4"}"
+                        "$serverBaseUrl/movie/$username/$password/${stream.streamId}"
                     }
 
                     items.add(
@@ -232,7 +235,27 @@ class PlaylistRepositoryImpl @Inject constructor(
                             logoUrl = stream.streamIcon ?: "",
                             group = categoryName,
                             playlistId = actualPlaylistId,
-                            userAgent = xtreamStreamUa
+                            userAgent = xtreamStreamUa,
+                            isVod = true,
+                            streamType = "vod"
+                        )
+                    )
+                }
+
+                // Map Series
+                seriesResult.getOrNull()?.forEach { show ->
+                    val catId = show.categoryId?.trim()
+                    val categoryName = if (catId != null) seriesCatMap[catId] ?: catId else "Series"
+                    items.add(
+                        M3UItem(
+                            name = show.name ?: "Unknown Series",
+                            url = "$serverBaseUrl/series/$username/$password/${show.seriesId}",
+                            logoUrl = show.cover ?: "",
+                            group = categoryName,
+                            playlistId = actualPlaylistId,
+                            userAgent = xtreamStreamUa,
+                            isVod = true,
+                            streamType = "series"
                         )
                     )
                 }
