@@ -17,7 +17,6 @@ object UserAgentManager {
         UserAgentPreset("Android 14", "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.6167.164 Mobile Safari/537.36", "Mozilla/5.0 (Linux; ...", "android"),
         UserAgentPreset("iPhone 15", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Mobile/15E148 Safari/604.1", "Mozilla/5.0 (iPhone; ...", "ios"),
         UserAgentPreset("Smart TV", "Mozilla/5.0 (Web0S; SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.5735.197 Safari/537.36", "Mozilla/5.0 (Web0S; ...", "tv"),
-        UserAgentPreset("IPTV Smarters", "IPTVSmartersPlayer", "IPTV Smarters Player", "tv"),
         UserAgentPreset("TiviMate", "TiviMate/5.0.4 (Linux; Android 11)", "TiviMate IPTV Player", "tv"),
         UserAgentPreset("OTT Navigator", "OTT-Navigator/1.7.1.1 (Linux; Android 10)", "OTT Navigator IPTV", "tv")
     )

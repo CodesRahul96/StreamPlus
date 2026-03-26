@@ -115,7 +115,7 @@ class PlaylistViewModel @Inject constructor(
                 PlaylistEntity(
                     name = name,
                     url = serverUrl, // Use serverUrl as the main URL identifier
-                    userAgent = "IPTVSmartersPlayer",
+                    userAgent = "TiviMate/5.0.4 (Linux; Android 11)",
                     icon = icon,
                     color = color,
                     isXtream = true,

@@ -171,7 +171,7 @@ class PlaylistRepositoryImpl @Inject constructor(
                 val vodStreamsResult = vodStreamsTask.await()
 
                 val items = mutableListOf<M3UItem>()
-                val xtreamUa = "IPTVSmartersPlayer"
+                val xtreamUa = "TiviMate/5.0.4 (Linux; Android 11)"
 
                 // Create category maps
                 val liveCatMap = liveCategoriesResult.getOrNull()?.associate { it.categoryId.trim() to it.categoryName } ?: emptyMap()
@@ -260,10 +260,10 @@ class PlaylistRepositoryImpl @Inject constructor(
                 val finalUA = when {
                     !userAgent.isNullOrEmpty() && userAgent != "Auto" && userAgent != "Default" -> userAgent
                     userAgent == "Default" -> com.codesrahul.streamplus.util.UserAgentManager.DEFAULT_UA
-                    // Auto mode: Detect if it's an Xtream short-link and use Smarters, otherwise Chrome
+                    // Auto mode: Detect if it's an Xtream short-link and use TiviMate, otherwise Chrome
                     url.contains(Regex("/[^/]+/[^/]+/[0-9]+$")) || url.contains("player_api.php") || url.contains("get.php") -> {
-                        android.util.Log.d("PlaylistRepo", "Auto-detected Xtream/IPTV link, using Smarters UA")
-                        "IPTVSmartersPlayer"
+                        android.util.Log.d("PlaylistRepo", "Auto-detected Xtream/IPTV link, using TiviMate UA")
+                        "TiviMate/5.0.4 (Linux; Android 11)"
                     }
                     else -> com.codesrahul.streamplus.util.UserAgentManager.DEFAULT_UA
                 }

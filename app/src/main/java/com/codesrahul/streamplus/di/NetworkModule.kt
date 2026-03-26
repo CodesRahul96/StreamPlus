@@ -39,7 +39,7 @@ class NetworkModule {
                 val original = chain.request()
                 val requestBuilder = original.newBuilder()
                 if (original.header("User-Agent") == null) {
-                    requestBuilder.header("User-Agent", "IPTVSmartersPlayer")
+                    requestBuilder.header("User-Agent", "TiviMate/5.0.4 (Linux; Android 11)")
                 }
                 val request = requestBuilder
                     .header("Accept", "*/*")
