@@ -72,6 +72,8 @@ data class AppSettings(
     val showVideoDuration: Boolean = true,
     val showVideoSize: Boolean = true,
     
+    val autoOrientation: Boolean = true,
+    
     // Internal Loading State
     val isLoaded: Boolean = false
 )
@@ -131,6 +133,7 @@ class SettingsRepository @Inject constructor(
         val SHOW_VIDEO_RESOLUTION = booleanPreferencesKey("show_video_resolution")
         val SHOW_VIDEO_DURATION = booleanPreferencesKey("show_video_duration")
         val SHOW_VIDEO_SIZE = booleanPreferencesKey("show_video_size")
+        val AUTO_ORIENTATION = booleanPreferencesKey("auto_orientation")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -187,6 +190,7 @@ class SettingsRepository @Inject constructor(
             showVideoResolution = prefs[Keys.SHOW_VIDEO_RESOLUTION] ?: true,
             showVideoDuration = prefs[Keys.SHOW_VIDEO_DURATION] ?: true,
             showVideoSize = prefs[Keys.SHOW_VIDEO_SIZE] ?: true,
+            autoOrientation = prefs[Keys.AUTO_ORIENTATION] ?: true,
             isLoaded = true
         )
     }
@@ -361,6 +365,10 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setShowVideoSize(show: Boolean) {
         context.dataStore.edit { it[Keys.SHOW_VIDEO_SIZE] = show }
+    }
+
+    suspend fun setAutoOrientation(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.AUTO_ORIENTATION] = enabled }
     }
 
     suspend fun factoryReset() {

@@ -218,4 +218,8 @@ class SettingsViewModel @Inject constructor(
     fun setShowVideoSize(show: Boolean) {
         viewModelScope.launch { settingsRepository.setShowVideoSize(show) }
     }
+
+    fun setAutoOrientation(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setAutoOrientation(enabled) }
+    }
 }

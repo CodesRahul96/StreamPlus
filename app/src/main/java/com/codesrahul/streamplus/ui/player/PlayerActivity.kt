@@ -612,6 +612,25 @@ fun PlayerScreen(
 
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
                 activityContext?.setLastVideoRatio(videoSize.width, videoSize.height)
+                
+                // Auto-detect orientation if enabled
+                if (settingsState.autoOrientation && !settingsState.forceLandscape) {
+                    val isPotentiallyPortrait = videoSize.height > videoSize.width && (videoSize.width > 0)
+                    val isPotentiallyLandscape = videoSize.width > videoSize.height && (videoSize.height > 0)
+                    
+                    activityContext?.let { activity ->
+                        val target = when {
+                            isPotentiallyPortrait -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+                            isPotentiallyLandscape -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                            else -> null
+                        }
+                        
+                        if (target != null && activity.requestedOrientation != target) {
+                            Log.d("PlayerActivity", "Auto-detecting orientation: target=$target (w=${videoSize.width}, h=${videoSize.height})")
+                            activity.requestedOrientation = target
+                        }
+                    }
+                }
             }
         })
         
@@ -1384,6 +1403,13 @@ fun PlayerScreen(
                         }.show()
                 }
 
+                SettingsSwitchItem(
+                    icon = Icons.Default.ScreenRotation,
+                    title = "Auto Orientation",
+                    checked = settingsState.autoOrientation,
+                    onCheckedChange = { scope.launch { settingsRepository.setAutoOrientation(it) } }
+                )
+
                 SettingsItem(Icons.Default.FileOpen, "Load External Subtitle") {
                     showSettingsSheet = false
                     subtitlePickerLauncher?.invoke()
@@ -1536,6 +1562,34 @@ fun SettingsSliderItem(icon: ImageVector, title: String, value: Float, onValueCh
                 inactiveTrackColor = Color.White.copy(alpha = 0.1f)
             )
         )
+    }
+}
+
+@Composable
+fun SettingsSwitchItem(icon: ImageVector, title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Surface(
+        onClick = { onCheckedChange(!checked) },
+        color = Color.Transparent,
+        modifier = Modifier.fillMaxWidth().tvFocusable(cornerRadius = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(24.dp))
+            Spacer(modifier = Modifier.width(20.dp))
+            Text(title, color = Color.White, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = Color(0xFF64B5F6),
+                    uncheckedThumbColor = Color.Gray,
+                    uncheckedTrackColor = Color.White.copy(alpha = 0.1f)
+                )
+            )
+        }
     }
 }
 

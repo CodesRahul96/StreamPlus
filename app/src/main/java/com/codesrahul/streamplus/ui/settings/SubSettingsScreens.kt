@@ -791,6 +791,15 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     )
 
                     SettingsSwitchItem(
+                        title = "Auto Orientation",
+                        subtitle = "Automatically switch orientation based on video aspect ratio",
+                        icon = Icons.Default.CropRotate,
+                        checked = settingsState.autoOrientation,
+                        onCheckedChange = { viewModel.setAutoOrientation(it) },
+                        showDivider = true
+                    )
+
+                    SettingsSwitchItem(
                         title = "Force Widevine L3",
                         subtitle = "Useful for devices with broken L1 certification (fixes black screen)",
                         icon = Icons.Default.Security,
