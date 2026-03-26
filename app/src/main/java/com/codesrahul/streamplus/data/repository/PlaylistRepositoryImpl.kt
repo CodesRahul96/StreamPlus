@@ -136,23 +136,39 @@ class PlaylistRepositoryImpl @Inject constructor(
         }
 
         val result = if (playlistEntity?.isXtream == true) {
-            try {
-                // Strictly sanitize the Server URL. Millions of users paste strings ending with "/player_api.php".
-                // If we append "/live/..." to that, the proxy 401s instantly. We MUST extract only scheme://host:port.
+            try {                // Strictly sanitize the Server URL. Millions of users paste strings ending with "/player_api.php"
+                // or even full channel URLs. We MUST extract only the base server URL.
                 val rawUrl = playlistEntity.serverUrl?.trim() ?: ""
-                val serverBaseUrl = try {
-                    val parsed = java.net.URL(rawUrl)
-                    val portStr = if (parsed.port != -1) ":${parsed.port}" else ""
-                    "${parsed.protocol}://${parsed.host}$portStr"
-                } catch (e: Exception) {
-                    // Fallback to manual string stripping if URL parse fails for some reason
-                    rawUrl.removeSuffix("/")
-                        .replace(Regex("/player_api\\.php$|/get\\.php$|/panel_api\\.php$", RegexOption.IGNORE_CASE), "")
+                val serverBaseUrl = if (rawUrl.isEmpty()) "" else {
+                    // 1. Strip query parameters
+                    val noQuery = rawUrl.split("?")[0]
+                    
+                    // 2. Strip common Xtream filenames and path segments
+                    var stripped = noQuery.removeSuffix("/")
+                        .replace(Regex("/(player_api\\.php|get\\.php|panel_api\\.php|xmltv\\.php|get|playlist|live|movie|series)/?.*$", RegexOption.IGNORE_CASE), "")
                         .removeSuffix("/")
+                    
+                    // 3. New: Strip full short-links (/user/pass/id) which users often paste as the "server"
+                    stripped = stripped.replace(Regex("/[^/]+/[^/]+/[0-9]+/?$", RegexOption.IGNORE_CASE), "")
+                        .removeSuffix("/")
+                    
+                    // 4. Final validation: if it's just a protocol + host, keep it simple.
+                    try {
+                        val parsed = java.net.URL(stripped)
+                        if (parsed.path.isNullOrEmpty() || parsed.path == "/") {
+                            val portStr = if (parsed.port != -1) ":${parsed.port}" else ""
+                            "${parsed.protocol}://${parsed.host}$portStr"
+                        } else {
+                            stripped
+                        }
+                    } catch (e: Exception) {
+                        stripped
+                    }
                 }
 
-                val username = playlistEntity.username ?: ""
-                val password = playlistEntity.password ?: ""
+
+                val username = android.net.Uri.encode(playlistEntity.username ?: "")
+                val password = android.net.Uri.encode(playlistEntity.password ?: "")
 
                 // Fetch data concurrently for better performance.
                 // Note: xtreamRepository internally appends "/player_api.php" where needed,
@@ -176,12 +192,20 @@ class PlaylistRepositoryImpl @Inject constructor(
                 val items = mutableListOf<M3UItem>()
                 val xtreamUa = "TiviMate/5.0.4 (Linux; Android 11)"
 
-                // Create category maps
-                val liveCatMap = liveCategoriesResult.getOrNull()?.associate { it.categoryId.trim() to it.categoryName } ?: emptyMap()
-                val vodCatMap = vodCategoriesResult.getOrNull()?.associate { it.categoryId.trim() to it.categoryName } ?: emptyMap()
-                val seriesCatMap = seriesCategoriesResult.getOrNull()?.associate { it.categoryId.trim() to it.categoryName } ?: emptyMap()
+                // Create category maps with robust ID normalization helper
+                fun normalizeId(id: String?): String = id?.trim()?.lowercase() ?: ""
 
-                android.util.Log.d("PlaylistRepo", "Xtream Loaded: ${liveCatMap.size} live cats, ${vodCatMap.size} vod cats, ${seriesCatMap.size} series cats")
+                val liveCatMap = liveCategoriesResult.getOrNull()?.associate { normalizeId(it.categoryId) to it.categoryName } ?: emptyMap()
+                val vodCatMap = vodCategoriesResult.getOrNull()?.associate { normalizeId(it.categoryId) to it.categoryName } ?: emptyMap()
+                val seriesCatMap = seriesCategoriesResult.getOrNull()?.associate { normalizeId(it.categoryId) to it.categoryName } ?: emptyMap()
+
+                android.util.Log.d("PlaylistRepo", "Xtream Categories: Live ${liveCatMap.size}, VOD ${vodCatMap.size}, Series ${seriesCatMap.size}")
+                
+                // Debug categories if empty or suspect
+                if (liveCatMap.isEmpty() && liveCategoriesResult.getOrNull()?.isNotEmpty() == true) {
+                    val sample = liveCategoriesResult.getOrNull()?.take(5)
+                    android.util.Log.e("PlaylistRepo", "Category Map empty! Sample categories: $sample")
+                }
 
                 // Determine allowed formats (fallback to 'ts' if empty, if only 'm3u8' is allowed use it)
                 val allowedFormats = authResult.getOrNull()?.userInfo?.allowedOutputFormats ?: emptyList()
@@ -194,15 +218,37 @@ class PlaylistRepositoryImpl @Inject constructor(
                 // API calls and media streams both benefit from a TiviMate UA to avoid blocking or connection drops.
                 val xtreamStreamUa = "TiviMate/5.0.4 (Linux; Android 11)"
 
-                // Map Live Streams — no extension to bypass Cloudflare/proxy blocks
+                // Map Live Streams
                 liveStreamsResult.getOrNull()?.forEach { stream ->
-                    val catId = stream.categoryId?.trim()
-                    val categoryName = if (catId != null) liveCatMap[catId] ?: catId else "Live"
-                    // Use extension-less URL. Many servers (especially Cloudflare-protected) block .ts/.m3u8
+                    val catId = normalizeId(stream.categoryId)
+                    val categoryName = if (catId.isNotEmpty()) liveCatMap[catId] ?: "Group $catId" else "Live"
+                    
+                    // Smart Path Detection: Check if the original input URL was a short-link.
+                    // Pattern: host/user/pass/stream_id
+                    val isShortPathServer = url.contains(Regex("/[^/]+/[^/]+/[0-9]+", RegexOption.IGNORE_CASE))
+                    
+                    val serverSuggestedUrl = authResult.getOrNull()?.serverInfo?.url?.trim()?.removeSuffix("/")
+                    val finalStreamBaseUrl = if (!serverSuggestedUrl.isNullOrBlank() && serverSuggestedUrl.startsWith("http")) {
+                        serverSuggestedUrl
+                    } else {
+                        serverBaseUrl
+                    }
+
                     val safeUrl = if (!stream.directSource.isNullOrBlank()) {
                         stream.directSource
                     } else {
-                        "$serverBaseUrl/live/$username/$password/${stream.streamId}"
+                        if (isShortPathServer) {
+                            // XUI / Short-Path format: host/user/pass/id (usually no extension)
+                            "$finalStreamBaseUrl/$username/$password/${stream.streamId}"
+                        } else {
+                            // Standard Xtream format: host/live/user/pass/id.ts
+                            val ext = if (liveFormat.isNotBlank()) ".$liveFormat" else ".ts"
+                            "$finalStreamBaseUrl/live/$username/$password/${stream.streamId}$ext"
+                        }
+                    }
+
+                    if (items.size < 5) {
+                        android.util.Log.d("PlaylistRepo", "Smart Path Detection: isShortPath=$isShortPathServer | URL: $safeUrl")
                     }
 
                     items.add(
@@ -218,14 +264,33 @@ class PlaylistRepositoryImpl @Inject constructor(
                     )
                 }
 
-                // Map VOD Streams — no extension to avoid Cloudflare blocking
+                // Map VOD Streams
                 vodStreamsResult.getOrNull()?.forEach { stream ->
-                    val catId = stream.categoryId?.trim()
-                    val categoryName = if (catId != null) vodCatMap[catId] ?: catId else "VOD"
+                    val catId = normalizeId(stream.categoryId)
+                    val categoryName = if (catId.isNotEmpty()) vodCatMap[catId] ?: "Group $catId" else "VOD"
+                    
+                    // Use server suggested URL if available
+                    val serverSuggestedUrl = authResult.getOrNull()?.serverInfo?.url?.trim()?.removeSuffix("/")
+                    val finalStreamBaseUrl = if (!serverSuggestedUrl.isNullOrBlank() && serverSuggestedUrl.startsWith("http")) {
+                        serverSuggestedUrl
+                    } else {
+                        serverBaseUrl
+                    }
+
+                    // Determine if the original input URL was a short-link for adaptive path construction
+                    val isShortPathServer = url.contains(Regex("/[^/]+/[^/]+/[0-9]+", RegexOption.IGNORE_CASE))
+
                     val safeUrl = if (!stream.directSource.isNullOrBlank()) {
                         stream.directSource
                     } else {
-                        "$serverBaseUrl/movie/$username/$password/${stream.streamId}"
+                        val ext = stream.containerExtension ?: "mp4"
+                        if (isShortPathServer) {
+                            // XUI / Short-Path format: host/user/pass/id (no extension)
+                            "$finalStreamBaseUrl/$username/$password/${stream.streamId}"
+                        } else {
+                            // Standard Xtream format: host/movie/user/pass/id.ext
+                            "$finalStreamBaseUrl/movie/$username/$password/${stream.streamId}.$ext"
+                        }
                     }
 
                     items.add(
@@ -244,12 +309,13 @@ class PlaylistRepositoryImpl @Inject constructor(
 
                 // Map Series
                 seriesResult.getOrNull()?.forEach { show ->
-                    val catId = show.categoryId?.trim()
-                    val categoryName = if (catId != null) seriesCatMap[catId] ?: catId else "Series"
+                    val catId = normalizeId(show.categoryId)
+                    val categoryName = if (catId.isNotEmpty()) seriesCatMap[catId] ?: "Group $catId" else "Series"
+                    val safeUrl = "${show.seriesId}" // We only need the ID for navigation
                     items.add(
                         M3UItem(
                             name = show.name ?: "Unknown Series",
-                            url = "$serverBaseUrl/series/$username/$password/${show.seriesId}",
+                            url = safeUrl,
                             logoUrl = show.cover ?: "",
                             group = categoryName,
                             playlistId = actualPlaylistId,
@@ -260,7 +326,11 @@ class PlaylistRepositoryImpl @Inject constructor(
                     )
                 }
                 
-                Pair(items, null)
+                // Auto-construct Xtream EPG URL if not provided. 
+                // Note: Xtream EPG is usually at /xmltv.php but we should use encoded credentials.
+                val xtreamEpgUrl = "$serverBaseUrl/xmltv.php?username=$username&password=$password"
+                
+                Pair(items, (playlistEntity.epgUrl ?: xtreamEpgUrl))
             } catch (e: Exception) {
                 android.util.Log.e("PlaylistRepo", "Error loading Xtream playlist: $url", e)
                 // If it's a 401, we MUST NOT return the stale cache because the cache itself 
@@ -283,8 +353,10 @@ class PlaylistRepositoryImpl @Inject constructor(
                 val finalUA = when {
                     !userAgent.isNullOrEmpty() && userAgent != "Auto" && userAgent != "Default" -> userAgent
                     userAgent == "Default" -> com.codesrahul.streamplus.util.UserAgentManager.DEFAULT_UA
-                    // Auto mode: Detect if it's an Xtream short-link and use TiviMate, otherwise Chrome
-                    url.contains(Regex("/[^/]+/[^/]+/[0-9]+$")) || url.contains("player_api.php") || url.contains("get.php") -> {
+                    // Auto mode: Detect if it's an Xtream link (short-link or API) and use TiviMate.
+                    // Updated regex to support optional extensions like .ts, .m3u8, etc.
+                    url.contains(Regex("/[^/]+/[^/]+/[0-9]+(\\.[^/]+)?$", RegexOption.IGNORE_CASE)) || 
+                    url.contains("player_api.php") || url.contains("get.php") -> {
                         android.util.Log.d("PlaylistRepo", "Auto-detected Xtream/IPTV link, using TiviMate UA")
                         "TiviMate/5.0.4 (Linux; Android 11)"
                     }
@@ -470,5 +542,23 @@ class PlaylistRepositoryImpl @Inject constructor(
             }
         }
         results
+    }
+
+    override suspend fun getSeriesInfo(playlistId: Int, seriesId: Int): com.codesrahul.streamplus.data.remote.model.XtreamSeriesInfo? = withContext(Dispatchers.IO) {
+        val playlist = playlistDao.getPlaylistSync(playlistId) ?: return@withContext null
+        if (!playlist.isXtream) return@withContext null
+        
+        val rawUrl = playlist.serverUrl?.trim() ?: ""
+        val serverBaseUrl = if (rawUrl.isEmpty()) "" else {
+            val noQuery = rawUrl.split("?")[0]
+            noQuery.removeSuffix("/")
+                .replace(Regex("/(player_api\\.php|get\\.php|panel_api\\.php|xmltv\\.php|get|playlist|live|movie|series)/?.*$", RegexOption.IGNORE_CASE), "")
+                .removeSuffix("/")
+        }
+        
+        val username = android.net.Uri.encode(playlist.username ?: "")
+        val password = android.net.Uri.encode(playlist.password ?: "")
+        
+        xtreamRepository.getSeriesInfo(serverBaseUrl, username, password, seriesId).getOrNull()
     }
 }

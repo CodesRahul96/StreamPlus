@@ -293,6 +293,10 @@ fun PlaylistDetailScreen(
                                                 val encodedName = java.net.URLEncoder.encode(channel.name, "UTF-8")
                                                 val ua = java.net.URLEncoder.encode(viewModel.playlist.value?.userAgent ?: "Auto", "UTF-8")
                                                 onNavigate("playlist_url_detail/$encodedUrl/$encodedName/$ua")
+                                            } else if (channel.streamType == "series") {
+                                                val seriesId = channel.url.split("/").last().toIntOrNull() ?: -1
+                                                val encodedName = java.net.URLEncoder.encode(channel.name, "UTF-8")
+                                                onNavigate("series_detail/${playlist?.id ?: -1}/$seriesId/$encodedName")
                                             } else {
                                                 val intent = android.content.Intent(context, com.codesrahul.streamplus.ui.player.PlayerActivity::class.java).apply {
                                                     putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_URL, channel.url)

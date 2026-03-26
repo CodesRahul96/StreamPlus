@@ -28,4 +28,7 @@ interface PlaylistRepository {
 
     // Global Search
     suspend fun searchAllPlaylists(query: String): List<M3UItem>
+
+    // Xtream Specific
+    suspend fun getSeriesInfo(playlistId: Int, seriesId: Int): com.codesrahul.streamplus.data.remote.model.XtreamSeriesInfo?
 }

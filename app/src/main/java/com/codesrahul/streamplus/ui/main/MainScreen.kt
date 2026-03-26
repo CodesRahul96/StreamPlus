@@ -190,6 +190,24 @@ fun MainScreen(initialTab: String? = null) {
                         onNavigate = { route -> navController.navigate(route) }
                     )
                 }
+                composable(
+                    route = "series_detail/{playlistId}/{seriesId}/{name}",
+                    arguments = listOf(
+                        androidx.navigation.navArgument("playlistId") { type = androidx.navigation.NavType.IntType },
+                        androidx.navigation.navArgument("seriesId")   { type = androidx.navigation.NavType.IntType },
+                        androidx.navigation.navArgument("name")       { type = androidx.navigation.NavType.StringType }
+                    )
+                ) { backStackEntry ->
+                    val pid = backStackEntry.arguments?.getInt("playlistId") ?: -1
+                    val sid = backStackEntry.arguments?.getInt("seriesId") ?: -1
+                    val name = backStackEntry.arguments?.getString("name") ?: "Series"
+                    com.codesrahul.streamplus.ui.playlist.SeriesDetailScreen(
+                        playlistId = pid,
+                        seriesId = sid,
+                        seriesName = java.net.URLDecoder.decode(name, "UTF-8"),
+                        onBack = { navController.popBackStack() }
+                    )
+                }
                 composable("settings") {
                     SettingsScreen(onBack = { navController.popBackStack() })
                 }

@@ -8,6 +8,7 @@ import com.codesrahul.streamplus.domain.model.M3UItem
 import com.codesrahul.streamplus.domain.repository.PlaylistRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -20,12 +21,18 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@OptIn(FlowPreview::class)
 @HiltViewModel
 class PlaylistDetailViewModel @Inject constructor(
     private val repository: PlaylistRepository,
     private val epgManager: com.codesrahul.streamplus.data.epg.EPGManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    companion object {
+        // Track which playlists have been refreshed in this app session to avoid redundant network calls
+        private val sessionRefreshedPlaylists = mutableSetOf<Int>()
+    }
 
     val playlistId: String = savedStateHandle.get<String>("playlistId") ?: ""
     private val _playlist = MutableStateFlow<com.codesrahul.streamplus.data.local.PlaylistEntity?>(null)
@@ -96,7 +103,12 @@ class PlaylistDetailViewModel @Inject constructor(
                         val prevUrl = _playlist.value?.url
                         _playlist.value = entity
                         if (prevUrl != entity.url) {
-                            loadChannels(entity.url, entity.userAgent, playlistId = entity.id)
+                            // If it's an Xtream playlist, we force a refresh ONCE per app session
+                            // to ensure any connectivity improvements are applied to cached items.
+                            val shouldForce = entity.isXtream == true && !sessionRefreshedPlaylists.contains(entity.id)
+                            if (shouldForce) sessionRefreshedPlaylists.add(entity.id)
+                            
+                            loadChannels(entity.url, entity.userAgent, forceRefresh = shouldForce, playlistId = entity.id)
                             entity.epgUrl?.let { epgManager.loadEPG(it) }
                         }
                     }
