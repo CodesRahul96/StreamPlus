@@ -470,29 +470,61 @@ fun PlaylistScreen(
     }
 
     showEditDialog?.let { playlist ->
-        PlaylistDialog(
-            title = "Edit Playlist",
-            initialName = playlist.name,
-            initialUrl = playlist.url,
-            initialUserAgent = playlist.userAgent,
-            initialIcon = playlist.icon,
-            initialColor = playlist.color,
-            initialEpgUrl = playlist.epgUrl ?: "",
-            confirmButtonText = "Update",
-            onConfirm = { name, url, userAgent, icon, color, epgUrl ->
-                viewModel.updatePlaylist(playlist.copy(name = name, url = url, userAgent = userAgent, icon = icon, color = color, epgUrl = epgUrl))
-                showEditDialog = null
-            },
-            onDismiss = { showEditDialog = null },
-            onDelete = {
-                viewModel.deletePlaylist(playlist)
-                showEditDialog = null
-            }
-        )
+        if (playlist.isXtream) {
+            XtreamPlaylistDialog(
+                title = "Edit Xtream Playlist",
+                initialName = playlist.name,
+                initialServerUrl = playlist.serverUrl ?: playlist.url,
+                initialUsername = playlist.username ?: "",
+                initialPassword = playlist.password ?: "",
+                initialIcon = playlist.icon,
+                initialColor = playlist.color,
+                confirmButtonText = "Update",
+                onConfirm = { name, server, user, pass, icon, color ->
+                    viewModel.updatePlaylist(
+                        playlist.copy(
+                            name = name,
+                            url = server,
+                            serverUrl = server,
+                            username = user,
+                            password = pass,
+                            icon = icon,
+                            color = color
+                        )
+                    )
+                    showEditDialog = null
+                },
+                onDismiss = { showEditDialog = null },
+                onDelete = {
+                    viewModel.deletePlaylist(playlist)
+                    showEditDialog = null
+                }
+            )
+        } else {
+            PlaylistDialog(
+                title = "Edit Playlist",
+                initialName = playlist.name,
+                initialUrl = playlist.url,
+                initialUserAgent = playlist.userAgent,
+                initialIcon = playlist.icon,
+                initialColor = playlist.color,
+                initialEpgUrl = playlist.epgUrl ?: "",
+                confirmButtonText = "Update",
+                onConfirm = { name, url, userAgent, icon, color, epgUrl ->
+                    viewModel.updatePlaylist(playlist.copy(name = name, url = url, userAgent = userAgent, icon = icon, color = color, epgUrl = epgUrl))
+                    showEditDialog = null
+                },
+                onDismiss = { showEditDialog = null },
+                onDelete = {
+                    viewModel.deletePlaylist(playlist)
+                    showEditDialog = null
+                }
+            )
+        }
     }
     
     if (showXtreamDialog) {
-        XtreamLoginDialog(
+        XtreamPlaylistDialog(
             onConfirm = { name, server, user, pass, icon, color ->
                 viewModel.addXtreamPlaylist(name, server, user, pass, icon, color)
                 showXtreamDialog = false
@@ -1003,26 +1035,39 @@ fun FavouriteChannelCard(
 }
 
 @Composable
-fun XtreamLoginDialog(
+fun XtreamPlaylistDialog(
+    title: String = "Login to API",
+    initialName: String = "",
+    initialServerUrl: String = "",
+    initialUsername: String = "",
+    initialPassword: String = "",
+    initialIcon: String = "default",
+    initialColor: Int = -1,
+    confirmButtonText: String = "Login",
     onConfirm: (String, String, String, String, String, Int) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onDelete: (() -> Unit)? = null
 ) {
-    var name by remember { mutableStateOf("") }
-    var serverUrl by remember { mutableStateOf("") }
-    var username by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(initialName) }
+    var serverUrl by remember { mutableStateOf(initialServerUrl) }
+    var username by remember { mutableStateOf(initialUsername) }
+    var password by remember { mutableStateOf(initialPassword) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.AccountCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Icon(
+                    if (onDelete != null) Icons.Default.Edit else Icons.Default.AccountCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Login to API", fontWeight = FontWeight.Bold)
+                Text(title, fontWeight = FontWeight.Bold)
             }
         },
         text = {
-            Column {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -1061,20 +1106,33 @@ fun XtreamLoginDialog(
             Button(
                 onClick = {
                     if (name.isNotBlank() && serverUrl.isNotBlank() && username.isNotBlank() && password.isNotBlank()) {
-                        val colors = listOf(Color(0xFFE57373), Color(0xFF81C784), Color(0xFF64B5F6), Color(0xFFFFD54F), Color(0xFFBA68C8))
-                        val randomColorStr = colors.random().toArgb()
-                        onConfirm(name.trim(), serverUrl.trim(), username.trim(), password.trim(), "default", randomColorStr)
+                        val finalColor = if (initialColor != -1) initialColor else {
+                            val colors = listOf(Color(0xFFE57373), Color(0xFF81C784), Color(0xFF64B5F6), Color(0xFFFFD54F), Color(0xFFBA68C8))
+                            colors.random().toArgb()
+                        }
+                        onConfirm(name.trim(), serverUrl.trim(), username.trim(), password.trim(), initialIcon, finalColor)
                     }
                 },
                 enabled = name.isNotBlank() && serverUrl.isNotBlank() && username.isNotBlank() && password.isNotBlank(),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("Login", fontWeight = FontWeight.Bold)
+                Text(confirmButtonText, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+            Row {
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
+                if (onDelete != null) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    TextButton(
+                        onClick = onDelete,
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Delete", fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         },
         shape = RoundedCornerShape(24.dp)
