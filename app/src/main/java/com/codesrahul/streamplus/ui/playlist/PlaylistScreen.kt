@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -95,7 +96,7 @@ fun PlaylistScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                        containerColor = Color.Transparent,
                         titleContentColor = MaterialTheme.colorScheme.onSurface,
                         actionIconContentColor = MaterialTheme.colorScheme.onSurface,
                         scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
@@ -329,7 +330,7 @@ fun PlaylistScreen(
                                     modifier = Modifier.padding(vertical = 4.dp)
                                 )
                             }
-                            items(searchResults, key = { "${it.name}|${it.group}|${it.playlistId}" }, contentType = { "channel_search" }) { channel ->
+                            itemsIndexed(searchResults, key = { index, it -> "${it.name}|${it.group}|${it.playlistId}|${it.url}|$index" }, contentType = { _, _ -> "channel_search" }) { index, channel ->
                                 SearchResultItem(channel = channel, onClick = {
                                     val intent = android.content.Intent(context, PlayerActivity::class.java).apply {
                                         putExtra(PlayerActivity.EXTRA_STREAM_URL, channel.url)
@@ -338,6 +339,12 @@ fun PlaylistScreen(
                                         putExtra(PlayerActivity.EXTRA_USER_AGENT, channel.userAgent)
                                         putExtra(PlayerActivity.EXTRA_PLAYLIST_ID, channel.playlistId)
                                         putExtra(PlayerActivity.EXTRA_STREAM_GROUP, channel.group)
+                                        
+                                        // Explicitly pass special headers if present
+                                        channel.headers["Referer"]?.let { putExtra(PlayerActivity.EXTRA_REFERER, it) }
+                                        channel.headers["Cookie"]?.let  { putExtra(PlayerActivity.EXTRA_COOKIE, it) }
+                                        channel.headers["Origin"]?.let  { putExtra(PlayerActivity.EXTRA_ORIGIN, it) }
+                                        
                                         putExtra(PlayerActivity.EXTRA_HEADERS, java.util.HashMap(channel.headers))
                                         channel.licenseUrl?.let { putExtra(PlayerActivity.EXTRA_DRM_LICENSE_URL, it) }
                                         channel.drmScheme?.let { putExtra(PlayerActivity.EXTRA_DRM_SCHEME, it) }

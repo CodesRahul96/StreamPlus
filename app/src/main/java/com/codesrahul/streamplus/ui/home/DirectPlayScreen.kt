@@ -135,7 +135,7 @@ fun DirectPlayScreen(
                         )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                        containerColor = Color.Transparent,
                         scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
                     ),
                     actions = {

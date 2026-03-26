@@ -441,28 +441,34 @@ class PlaylistRepositoryImpl @Inject constructor(
     override suspend fun searchAllPlaylists(query: String): List<M3UItem> = withContext(Dispatchers.IO) {
         if (query.isBlank()) return@withContext emptyList()
         val settings = settingsRepository.settings.first()
-        
+
         // If caching is on, searching the DB is MUCH faster and covers all playlists at once
         if (settings.playlistCache) {
             return@withContext channelDao.searchChannels(query).map { it.toDomain() }
         }
 
-        // Fallback to legacy parallel search if cache is off
+        // Fallback: search by re-downloading playlists (cache OFF path).
+        // We process playlists sequentially (not in parallel) and cap results per playlist
+        // to prevent OutOfMemoryError on large playlists.
         val lowerQuery = query.lowercase()
         val playlists = playlistDao.getAllPlaylistsList()
-        val jobs = playlists.map { playlist ->
-            async {
-                try {
-                    val items = loadPlaylist(playlist.url, playlist.userAgent)
-                    items.filter { item ->
-                        item.name.lowercase().contains(lowerQuery) ||
-                        item.group.lowercase().contains(lowerQuery)
-                    }
-                } catch (e: Exception) {
-                    emptyList()
-                }
+        val results = mutableListOf<M3UItem>()
+        for (playlist in playlists) {
+            if (results.size >= 200) break // global cap – enough results to show
+            try {
+                val items = loadPlaylist(playlist.url, playlist.userAgent)
+                val matched = items.filter { item ->
+                    item.name.lowercase().contains(lowerQuery) ||
+                    item.group.lowercase().contains(lowerQuery)
+                }.take(50).map { it.copy(playlistId = playlist.id) } // Assign playlistId
+                results.addAll(matched)
+            } catch (_: OutOfMemoryError) {
+                System.gc()
+                android.util.Log.w("PlaylistRepo", "OOM during global search for playlist ${playlist.name}, skipping")
+            } catch (_: Exception) {
+                // silently skip failed playlists
             }
         }
-        jobs.awaitAll().flatten()
+        results
     }
 }

@@ -82,13 +82,19 @@ class PlaylistViewModel @Inject constructor(
             _searchQuery
                 .debounce(500)
                 .collectLatest { query ->
-                    if (query.isBlank()) {
+                    try {
+                        if (query.isBlank()) {
+                            _searchResults.value = emptyList()
+                            _isSearching.value = false
+                        } else {
+                            _isSearching.value = true
+                            _searchResults.value = repository.searchAllPlaylists(query)
+                            _isSearching.value = false
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        _isSearching.value = false
                         _searchResults.value = emptyList()
-                        _isSearching.value = false
-                    } else {
-                        _isSearching.value = true
-                        _searchResults.value = repository.searchAllPlaylists(query)
-                        _isSearching.value = false
                     }
                 }
         }

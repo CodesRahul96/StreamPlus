@@ -79,7 +79,9 @@ fun PlaylistDetailScreen(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 Column(
-                    modifier = Modifier.background(MaterialTheme.colorScheme.background.copy(alpha = 0.95f))
+                    modifier = Modifier
+                        .background(Color.Transparent)
+                        .statusBarsPadding()
                 ) {
                     TopAppBar(
                         title = {
@@ -102,7 +104,7 @@ fun PlaylistDetailScreen(
                             }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.background,
+                            containerColor = Color.Transparent,
                             scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
                         ),
                         scrollBehavior = scrollBehavior,

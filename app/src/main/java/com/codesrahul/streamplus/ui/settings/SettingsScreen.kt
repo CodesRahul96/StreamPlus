@@ -112,7 +112,7 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                         }
                     },
                     colors = TopAppBarDefaults.largeTopAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                        containerColor = Color.Transparent,
                         titleContentColor = MaterialTheme.colorScheme.onSurface,
                         navigationIconContentColor = MaterialTheme.colorScheme.primary,
                         scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
@@ -494,7 +494,7 @@ fun AccessibilitySettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                        containerColor = Color.Transparent,
                         scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
                     )
                 )
