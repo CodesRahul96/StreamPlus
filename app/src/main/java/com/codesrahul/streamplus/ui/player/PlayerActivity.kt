@@ -58,6 +58,7 @@ import okhttp3.OkHttpClient
 import okhttp3.CookieJar
 import okhttp3.Cookie
 import okhttp3.HttpUrl
+import androidx.media3.extractor.ts.AdtsExtractor
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 import javax.net.ssl.SSLContext
@@ -370,6 +371,10 @@ fun PlayerScreen(
     // Bottom Sheet State
     var showSettingsSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
+    
+    // Auto-Retry State
+    var retryCount by remember { mutableIntStateOf(0) }
+    val maxRetries = 5
 
     // Resume Logic
     // Using a separate LaunchedEffect for resume so it doesn't re-trigger on other changes
@@ -550,6 +555,7 @@ fun PlayerScreen(
         val extractorsFactory = androidx.media3.extractor.DefaultExtractorsFactory()
             .setConstantBitrateSeekingEnabled(true)
             .setAdtsExtractorFlags(androidx.media3.extractor.ts.AdtsExtractor.FLAG_ENABLE_CONSTANT_BITRATE_SEEKING)
+            .setTsExtractorFlags(1 or 8) // FLAG_ALLOW_NON_IDR_KEYFRAMES | FLAG_DETECT_ACCESS_UNITS
 
         val mediaSourceFactory = DefaultMediaSourceFactory(context, extractorsFactory)
             .setDataSourceFactory(dataSourceFactory)
@@ -571,9 +577,9 @@ fun PlayerScreen(
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
             .setBufferDurationsMs(
                 bufferMs, // Min buffer
-                (bufferMs * 2.5).toInt(), // Max buffer (e.g. 75s for 30s setting)
+                (bufferMs * 2.5).toInt(), // Max buffer
                 2_500, // Buffer for playback start
-                5_000  // Buffer for rebuffer
+                8_000  // Buffer for rebuffer (Increased for stability)
             )
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()
@@ -597,7 +603,25 @@ fun PlayerScreen(
         
         player.addListener(object : androidx.media3.common.Player.Listener {
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                Log.e("PlayerScreen", "Playback Error: ${error.message}", error)
+                Log.e("PlayerScreen", "Playback Error: ${error.message} [Code: ${error.errorCode}]", error)
+                
+                val isNetworkError = error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
+                                     error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
+                                     error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_UNSPECIFIED
+                
+                if (isNetworkError && retryCount < maxRetries) {
+                    retryCount++
+                    val delayMs = (2000L * retryCount).coerceAtMost(10000L) // Exponential backoff
+                    Log.d("PlayerScreen", "Network error detected. Retrying ($retryCount/$maxRetries) in ${delayMs}ms...")
+                    
+                    scope.launch {
+                        kotlinx.coroutines.delay(delayMs)
+                        player.prepare()
+                        player.play()
+                    }
+                    return
+                }
+
                 if (settingsState.silentSkipping) {
                     android.widget.Toast.makeText(context, "Playback error: ${error.errorCodeName}. Skipping...", android.widget.Toast.LENGTH_SHORT).show()
                     return
@@ -608,6 +632,13 @@ fun PlayerScreen(
                     else -> "Playback Error: ${error.errorCodeName}"
                 }
                 android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
+            }
+
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (isPlaying) {
+                    Log.d("PlayerScreen", "Playback successful. Resetting retry count.")
+                    retryCount = 0
+                }
             }
 
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
