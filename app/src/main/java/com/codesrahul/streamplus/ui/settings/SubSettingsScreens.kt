@@ -1,6 +1,7 @@
 package com.codesrahul.streamplus.ui.settings
  
 import com.codesrahul.streamplus.data.settings.ThemeMode
+import com.codesrahul.streamplus.data.settings.PlayerOrientation
 
 import android.content.Intent
 import android.graphics.Bitmap
@@ -690,6 +691,7 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
     var showAudioDialog by remember { mutableStateOf(false) }
     var showBufferDialog by remember { mutableStateOf(false) }
     var showAspectRatioDialog by remember { mutableStateOf(false) }
+    var showOrientationDialog by remember { mutableStateOf(false) }
 
     com.codesrahul.streamplus.ui.components.PremiumBackground {
         Scaffold(
@@ -781,21 +783,11 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         showDivider = true
                     )
 
-                    SettingsSwitchItem(
-                        title = "Force Landscape Mode",
-                        subtitle = "Always play videos in landscape orientation",
-                        icon = Icons.Default.ScreenRotation,
-                        checked = settingsState.forceLandscape,
-                        onCheckedChange = { viewModel.setForceLandscape(it) },
-                        showDivider = true
-                    )
-
-                    SettingsSwitchItem(
-                        title = "Auto Orientation",
-                        subtitle = "Automatically switch orientation based on video aspect ratio",
+                    SettingsClickableItem(
+                        title = "Default Player Orientation",
+                        subtitle = settingsState.playerOrientation.name.lowercase().replaceFirstChar { it.uppercase() },
                         icon = Icons.Default.CropRotate,
-                        checked = settingsState.autoOrientation,
-                        onCheckedChange = { viewModel.setAutoOrientation(it) },
+                        onClick = { showOrientationDialog = true },
                         showDivider = true
                     )
 
@@ -970,6 +962,45 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             },
             confirmButton = {
                 TextButton(onClick = { showAspectRatioDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showOrientationDialog) {
+        AlertDialog(
+            onDismissRequest = { showOrientationDialog = false },
+            title = { Text("Default Player Orientation", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    PlayerOrientation.entries.forEach { orientation ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = (orientation == settingsState.playerOrientation),
+                                    onClick = {
+                                        viewModel.setPlayerOrientation(orientation)
+                                        showOrientationDialog = false
+                                    }
+                                )
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (orientation == settingsState.playerOrientation),
+                                onClick = null
+                            )
+                            Text(
+                                text = orientation.name.lowercase().replaceFirstChar { it.uppercase() },
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 16.dp)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showOrientationDialog = false }) { Text("Cancel") }
             }
         )
     }

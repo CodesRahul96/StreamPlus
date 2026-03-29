@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.codesrahul.streamplus.data.settings.AppSettings
 import com.codesrahul.streamplus.data.settings.SettingsRepository
 import com.codesrahul.streamplus.data.settings.ThemeMode
+import com.codesrahul.streamplus.data.settings.PlayerOrientation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -75,8 +76,8 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.setPreferSoftwareDecoder(enabled) }
     }
 
-    fun setForceLandscape(enabled: Boolean) {
-        viewModelScope.launch { settingsRepository.setForceLandscape(enabled) }
+    fun setPlayerOrientation(orientation: PlayerOrientation) {
+        viewModelScope.launch { settingsRepository.setPlayerOrientation(orientation) }
     }
 
     fun setVolumeGestures(enabled: Boolean) {

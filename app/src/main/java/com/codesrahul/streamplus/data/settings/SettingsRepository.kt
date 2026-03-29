@@ -20,6 +20,10 @@ enum class ThemeMode {
     SYSTEM, LIGHT, DARK, PITCH_BLACK
 }
 
+enum class PlayerOrientation {
+    AUTO, LANDSCAPE, PORTRAIT
+}
+
 data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicTheme: Boolean = false,
@@ -30,7 +34,7 @@ data class AppSettings(
     val skipSslVerification: Boolean = true,
     val enableTunneling: Boolean = false,
     val preferSoftwareDecoder: Boolean = false,
-    val forceLandscape: Boolean = false,
+    val playerOrientation: PlayerOrientation = PlayerOrientation.AUTO,
     val volumeGestures: Boolean = false,
     val brightnessGestures: Boolean = false,
     val resumePlaying: Boolean = false,
@@ -72,8 +76,6 @@ data class AppSettings(
     val showVideoDuration: Boolean = true,
     val showVideoSize: Boolean = true,
     
-    val autoOrientation: Boolean = true,
-    
     // Internal Loading State
     val isLoaded: Boolean = false
 )
@@ -92,7 +94,7 @@ class SettingsRepository @Inject constructor(
         val SKIP_SSL_VERIFICATION = booleanPreferencesKey("skip_ssl_verification")
         val ENABLE_TUNNELING = booleanPreferencesKey("enable_tunneling")
         val PREFER_SOFTWARE_DECODER = booleanPreferencesKey("prefer_software_decoder")
-        val FORCE_LANDSCAPE = booleanPreferencesKey("force_landscape")
+        val PLAYER_ORIENTATION = stringPreferencesKey("player_orientation")
         val VOLUME_GESTURES = booleanPreferencesKey("volume_gestures")
         val BRIGHTNESS_GESTURES = booleanPreferencesKey("brightness_gestures")
         val RESUME_PLAYING = booleanPreferencesKey("resume_playing")
@@ -133,7 +135,6 @@ class SettingsRepository @Inject constructor(
         val SHOW_VIDEO_RESOLUTION = booleanPreferencesKey("show_video_resolution")
         val SHOW_VIDEO_DURATION = booleanPreferencesKey("show_video_duration")
         val SHOW_VIDEO_SIZE = booleanPreferencesKey("show_video_size")
-        val AUTO_ORIENTATION = booleanPreferencesKey("auto_orientation")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -149,7 +150,9 @@ class SettingsRepository @Inject constructor(
             skipSslVerification = prefs[Keys.SKIP_SSL_VERIFICATION] ?: true,
             enableTunneling = prefs[Keys.ENABLE_TUNNELING] ?: false,
             preferSoftwareDecoder = prefs[Keys.PREFER_SOFTWARE_DECODER] ?: false,
-            forceLandscape = prefs[Keys.FORCE_LANDSCAPE] ?: false,
+            playerOrientation = try {
+                PlayerOrientation.valueOf(prefs[Keys.PLAYER_ORIENTATION] ?: PlayerOrientation.AUTO.name)
+            } catch (e: Exception) { PlayerOrientation.AUTO },
             volumeGestures = prefs[Keys.VOLUME_GESTURES] ?: false,
             brightnessGestures = prefs[Keys.BRIGHTNESS_GESTURES] ?: false,
             resumePlaying = prefs[Keys.RESUME_PLAYING] ?: false,
@@ -190,7 +193,6 @@ class SettingsRepository @Inject constructor(
             showVideoResolution = prefs[Keys.SHOW_VIDEO_RESOLUTION] ?: true,
             showVideoDuration = prefs[Keys.SHOW_VIDEO_DURATION] ?: true,
             showVideoSize = prefs[Keys.SHOW_VIDEO_SIZE] ?: true,
-            autoOrientation = prefs[Keys.AUTO_ORIENTATION] ?: true,
             isLoaded = true
         )
     }
@@ -227,8 +229,8 @@ class SettingsRepository @Inject constructor(
         context.dataStore.edit { it[Keys.PREFER_SOFTWARE_DECODER] = enabled }
     }
 
-    suspend fun setForceLandscape(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.FORCE_LANDSCAPE] = enabled }
+    suspend fun setPlayerOrientation(orientation: PlayerOrientation) {
+        context.dataStore.edit { it[Keys.PLAYER_ORIENTATION] = orientation.name }
     }
 
     suspend fun setVolumeGestures(enabled: Boolean) {
@@ -368,7 +370,7 @@ class SettingsRepository @Inject constructor(
     }
 
     suspend fun setAutoOrientation(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.AUTO_ORIENTATION] = enabled }
+        // Deprecated, supersceeded by setPlayerOrientation
     }
 
     suspend fun factoryReset() {

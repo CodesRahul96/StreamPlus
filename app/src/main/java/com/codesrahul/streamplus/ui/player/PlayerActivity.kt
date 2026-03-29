@@ -5,6 +5,8 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.Toast
+import com.codesrahul.streamplus.data.settings.PlayerOrientation
 import android.util.Base64
 import androidx.activity.ComponentActivity
 import androidx.appcompat.app.AppCompatActivity
@@ -449,13 +451,14 @@ fun PlayerScreen(
     var currentTimeFormatted by remember { mutableStateOf("00:00") }
     var durationFormatted by remember { mutableStateOf("00:00") }
 
-    LaunchedEffect(settingsState.forceLandscape) {
-        activity?.requestedOrientation = if (settingsState.forceLandscape) {
-            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-        } else {
-            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER
+    LaunchedEffect(settingsState.playerOrientation) {
+        val activity = context as? android.app.Activity
+        activity?.requestedOrientation = when (settingsState.playerOrientation) {
+            PlayerOrientation.LANDSCAPE -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            PlayerOrientation.PORTRAIT -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+            PlayerOrientation.AUTO -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
-        if (settingsState.forceLandscape) {
+        if (settingsState.playerOrientation == PlayerOrientation.LANDSCAPE) {
             activity?.let { hideSystemUI(it) }
         }
     }
@@ -644,15 +647,15 @@ fun PlayerScreen(
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
                 activityContext?.setLastVideoRatio(videoSize.width, videoSize.height)
                 
-                // Auto-detect orientation if enabled
-                if (settingsState.autoOrientation && !settingsState.forceLandscape) {
-                    val isPotentiallyPortrait = videoSize.height > videoSize.width && (videoSize.width > 0)
-                    val isPotentiallyLandscape = videoSize.width > videoSize.height && (videoSize.height > 0)
+                // Auto-detect orientation if set to AUTO
+                if (settingsState.playerOrientation == PlayerOrientation.AUTO) {
+                    val isPortraitVideo = videoSize.height > videoSize.width && (videoSize.width > 0)
+                    val isLandscapeVideo = videoSize.width > videoSize.height && (videoSize.height > 0)
                     
                     activityContext?.let { activity ->
                         val target = when {
-                            isPotentiallyPortrait -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
-                            isPotentiallyLandscape -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                            isPortraitVideo -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+                            isLandscapeVideo -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
                             else -> null
                         }
                         
@@ -1433,13 +1436,6 @@ fun PlayerScreen(
                             showSettingsSheet = false
                         }.show()
                 }
-
-                SettingsSwitchItem(
-                    icon = Icons.Default.ScreenRotation,
-                    title = "Auto Orientation",
-                    checked = settingsState.autoOrientation,
-                    onCheckedChange = { scope.launch { settingsRepository.setAutoOrientation(it) } }
-                )
 
                 SettingsItem(Icons.Default.FileOpen, "Load External Subtitle") {
                     showSettingsSheet = false
