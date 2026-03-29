@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.Toast
 import com.codesrahul.streamplus.data.settings.PlayerOrientation
+import com.codesrahul.streamplus.BuildConfig
 import android.util.Base64
 import androidx.activity.ComponentActivity
 import androidx.appcompat.app.AppCompatActivity
@@ -629,10 +630,16 @@ fun PlayerScreen(
                     android.widget.Toast.makeText(context, "Playback error: ${error.errorCodeName}. Skipping...", android.widget.Toast.LENGTH_SHORT).show()
                     return
                 }
-                val msg = when (val cause = error.cause) {
-                    is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException -> "Error: ${cause.responseCode} ${cause.message}"
-                    is androidx.media3.datasource.HttpDataSource.HttpDataSourceException -> "Network Error: ${cause.message}"
-                    else -> "Playback Error: ${error.errorCodeName}"
+
+                val msg = if (BuildConfig.DEBUG) {
+                    when (val cause = error.cause) {
+                        is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException -> "Error: ${cause.responseCode} ${cause.message}"
+                        is androidx.media3.datasource.HttpDataSource.HttpDataSourceException -> "Network Error: ${cause.message}"
+                        else -> "Playback Error: ${error.errorCodeName}"
+                    }
+                } else {
+                    // Generic message for Release
+                    "Playback error. Please try again or check the source."
                 }
                 android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
             }
