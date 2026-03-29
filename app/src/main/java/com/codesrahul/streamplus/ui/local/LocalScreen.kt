@@ -638,13 +638,29 @@ fun VideoPosterItem(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(horizontal = 4.dp)
             )
-            if (settings.showVideoSize) {
-                Text(
-                    text = formatSize(video.size),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
+            
+            Row(modifier = Modifier.padding(horizontal = 4.dp)) {
+                if (video.mediaType == MediaType.AUDIO) {
+                    Text(
+                        text = video.artist ?: "Unknown Artist",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (settings.showVideoSize) {
+                        Text(" • ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                    }
+                }
+                
+                if (settings.showVideoSize) {
+                    Text(
+                        text = formatSize(video.size),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    )
+                }
             }
         }
     } else {
@@ -699,6 +715,17 @@ fun VideoPosterItem(
                     overflow = TextOverflow.Ellipsis
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (video.mediaType == MediaType.AUDIO) {
+                        Text(
+                            text = video.artist ?: "Unknown Artist",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(" • ", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                    }
+                    
                     if (settings.showVideoSize) {
                         Text(
                             text = formatSize(video.size),
@@ -706,19 +733,14 @@ fun VideoPosterItem(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    if (settings.showVideoSize && settings.showVideoResolution) {
-                        Text(" • ", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    
+                    if (settings.showVideoSize && settings.showVideoResolution && video.mediaType == MediaType.VIDEO) {
+                        Text(" • ", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
                     }
+                    
                     if (settings.showVideoResolution && video.mediaType == MediaType.VIDEO) {
                         Text(
-                            text = "1080p", // Mock resolution
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    if (video.mediaType == MediaType.AUDIO) {
-                        Text(
-                            text = video.artist ?: "Unknown Artist",
+                            text = "HD", // Generic HD for now
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
