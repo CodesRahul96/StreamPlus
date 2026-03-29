@@ -48,26 +48,33 @@ import com.codesrahul.streamplus.ui.components.PermissionBox
 import com.codesrahul.streamplus.ui.components.PremiumBackground
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.codesrahul.streamplus.ui.settings.SettingsViewModel
 import java.util.concurrent.TimeUnit
 
-data class VideoFolder(
+enum class MediaType { VIDEO, AUDIO }
+
+data class LocalFolder(
     val name: String,
     val count: Int,
-    val firstVideoUri: Uri?,
-    val totalSize: Long = 0
+    val firstMediaUri: Uri?,
+    val totalSize: Long = 0,
+    val mediaType: MediaType = MediaType.VIDEO
 )
 
-data class LocalVideo(
+data class LocalMedia(
     val id: Long,
     val title: String,
     val path: String,
     val duration: Long,
     val size: Long,
     val dateAdded: Long,
-    val uri: Uri
+    val uri: Uri,
+    val mediaType: MediaType = MediaType.VIDEO,
+    val artist: String? = null,
+    val album: String? = null
 )
 
 enum class SortType {
@@ -77,13 +84,16 @@ enum class SortType {
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun LocalScreen() {
-    val permissionState = rememberPermissionState(
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Manifest.permission.READ_MEDIA_VIDEO
-        } else {
-            Manifest.permission.READ_EXTERNAL_STORAGE
-        }
+    val permissionState = rememberMultiplePermissionsState(
+        listOf(
+            Manifest.permission.READ_MEDIA_VIDEO,
+            Manifest.permission.READ_MEDIA_AUDIO
+        )
     )
+
+    val audioPermissionState = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        rememberPermissionState(Manifest.permission.READ_MEDIA_AUDIO)
+    } else null
 
     val viewModel: LocalViewModel = hiltViewModel()
     val settingsViewModel: SettingsViewModel = hiltViewModel()
@@ -94,23 +104,45 @@ fun LocalScreen() {
 
     PermissionBox(
         permissionState = permissionState,
-        description = "Permission needed to load local videos"
+        description = "Permission needed to load local media"
     ) {
-        if (selectedFolder != null) {
-            LocalVideoList(
-                viewModel = viewModel, 
-                settingsViewModel = settingsViewModel,
-                settings = settings,
-                onBack = { viewModel.selectFolder(null) },
-                onShowSettings = { showSettings = true }
-            )
-        } else {
-            LocalVideoGrid(
-                viewModel = viewModel, 
-                settingsViewModel = settingsViewModel,
-                settings = settings,
-                onShowSettings = { showSettings = true }
-            )
+        val currentType by viewModel.mediaType.collectAsState()
+        
+        Column {
+            TabRow(
+                selectedTabIndex = if (currentType == MediaType.VIDEO) 0 else 1,
+                containerColor = Color.Transparent,
+                contentColor = MaterialTheme.colorScheme.primary,
+                divider = {}
+            ) {
+                Tab(
+                    selected = currentType == MediaType.VIDEO,
+                    onClick = { viewModel.setMediaType(MediaType.VIDEO) },
+                    text = { Text("Video", fontWeight = if (currentType == MediaType.VIDEO) FontWeight.Bold else FontWeight.Medium) }
+                )
+                Tab(
+                    selected = currentType == MediaType.AUDIO,
+                    onClick = { viewModel.setMediaType(MediaType.AUDIO) },
+                    text = { Text("Music", fontWeight = if (currentType == MediaType.AUDIO) FontWeight.Bold else FontWeight.Medium) }
+                )
+            }
+
+            if (selectedFolder != null) {
+                LocalMediaList(
+                    viewModel = viewModel, 
+                    settingsViewModel = settingsViewModel,
+                    settings = settings,
+                    onBack = { viewModel.selectFolder(null) },
+                    onShowSettings = { showSettings = true }
+                )
+            } else {
+                LocalMediaGrid(
+                    viewModel = viewModel, 
+                    settingsViewModel = settingsViewModel,
+                    settings = settings,
+                    onShowSettings = { showSettings = true }
+                )
+            }
         }
 
         if (showSettings) {
@@ -125,7 +157,7 @@ fun LocalScreen() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LocalVideoGrid(
+fun LocalMediaGrid(
     viewModel: LocalViewModel,
     settingsViewModel: SettingsViewModel,
     settings: com.codesrahul.streamplus.data.settings.AppSettings,
@@ -159,18 +191,19 @@ fun LocalVideoGrid(
                     TopAppBar(
                         title = {
                             Column {
-                                Text(
-                                    if (isSelectionMode) "${selectedFolders.size} Selected" else "Gallery",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                if (!isSelectionMode && folders.isNotEmpty()) {
                                     Text(
-                                        "${folders.size} folders",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        if (isSelectionMode) "${selectedFolders.size} Selected" else if (viewModel.mediaType.value == MediaType.VIDEO) "Gallery" else "Music Library",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold
                                     )
-                                }
+                                    val countText = if (viewModel.mediaType.value == MediaType.VIDEO) "video folders" else "music folders"
+                                    if (!isSelectionMode && folders.isNotEmpty()) {
+                                        Text(
+                                            "${folders.size} $countText",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                             }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
@@ -220,14 +253,16 @@ fun LocalVideoGrid(
                 if (folders.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            val emptyIcon = if (viewModel.mediaType.value == MediaType.VIDEO) Icons.Default.VideoLibrary else Icons.Default.LibraryMusic
+                            val emptyText = if (viewModel.mediaType.value == MediaType.VIDEO) "No videos found" else "No music found"
                             Icon(
-                                Icons.Default.VideoLibrary,
+                                emptyIcon,
                                 contentDescription = null,
                                 modifier = Modifier.size(64.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                             )
                             Spacer(modifier = Modifier.height(16.dp))
-                            Text("No videos found", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(emptyText, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 } else {
@@ -268,7 +303,7 @@ fun LocalVideoGrid(
                                 }
                             }
                             
-                            VideoFolderItem(
+                            LocalFolderItem(
                                 folder = folder,
                                 isSelected = selectedFolders.contains(folder.name),
                                 isSelectionMode = isSelectionMode,
@@ -285,7 +320,7 @@ fun LocalVideoGrid(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LocalVideoList(
+fun LocalMediaList(
     viewModel: LocalViewModel,
     settingsViewModel: SettingsViewModel,
     settings: com.codesrahul.streamplus.data.settings.AppSettings,
@@ -298,8 +333,8 @@ fun LocalVideoList(
     val folderName = selectedFolder ?: ""
     val isLoading by viewModel.isLoading.collectAsState()
     
-    var videoToDelete by remember { mutableStateOf<LocalVideo?>(null) }
-    var videoToRename by remember { mutableStateOf<LocalVideo?>(null) }
+    var videoToDelete by remember { mutableStateOf<LocalMedia?>(null) }
+    var videoToRename by remember { mutableStateOf<LocalMedia?>(null) }
     var newName by remember { mutableStateOf("") }
     var searchQuery by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
@@ -308,6 +343,9 @@ fun LocalVideoList(
         if (searchQuery.isEmpty()) videos 
         else videos.filter { it.title.contains(searchQuery, ignoreCase = true) }
     }
+    
+    val currentType by viewModel.mediaType.collectAsState()
+    val typeLabel = if (currentType == MediaType.VIDEO) "videos" else "songs"
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -320,7 +358,7 @@ fun LocalVideoList(
     if (videoToDelete != null) {
         AlertDialog(
             onDismissRequest = { videoToDelete = null },
-            title = { Text("Delete Video") },
+            title = { Text(if (currentType == MediaType.VIDEO) "Delete Video" else "Delete Song") },
             text = { Text("Are you sure you want to delete \"${videoToDelete?.title}\"?") },
             confirmButton = {
                 TextButton(onClick = {
@@ -416,7 +454,7 @@ fun LocalVideoList(
                             Column {
                                 Text(folderName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                                 if (videos.isNotEmpty()) {
-                                    Text("${filteredVideos.size} videos", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("${filteredVideos.size} $typeLabel", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         },
@@ -447,7 +485,8 @@ fun LocalVideoList(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.SearchOff, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f))
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text(if (searchQuery.isEmpty()) "No videos found" else "No results for \"$searchQuery\"", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    val emptyMsg = if (searchQuery.isEmpty()) "No $typeLabel found" else "No results for \"$searchQuery\""
+                    Text(emptyMsg, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         } else {
@@ -497,7 +536,7 @@ fun LocalVideoList(
 
 @Composable
 fun VideoPosterItem(
-    video: LocalVideo,
+    video: LocalMedia,
     settings: com.codesrahul.streamplus.data.settings.AppSettings,
     onClick: () -> Unit,
     onRename: () -> Unit,
@@ -515,7 +554,7 @@ fun VideoPosterItem(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(0.72f), // Movie poster style
+                    .aspectRatio(if (video.mediaType == MediaType.VIDEO) 0.72f else 1f), // Square for music
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -529,8 +568,9 @@ fun VideoPosterItem(
                             contentScale = ContentScale.Crop
                         )
                     } else {
+                        val placeholderIcon = if (video.mediaType == MediaType.VIDEO) Icons.Default.VideoFile else Icons.Default.MusicNote
                         Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.VideoFile, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary.copy(0.4f))
+                            Icon(placeholderIcon, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary.copy(0.4f))
                         }
                     }
 
@@ -630,7 +670,8 @@ fun VideoPosterItem(
                         contentScale = ContentScale.Crop
                     )
                 } else {
-                    Icon(Icons.Default.VideoFile, null, modifier = Modifier.align(Alignment.Center).size(24.dp), tint = MaterialTheme.colorScheme.primary.copy(0.4f))
+                    val placeholderIcon = if (video.mediaType == MediaType.VIDEO) Icons.Default.VideoFile else Icons.Default.MusicNote
+                    Icon(placeholderIcon, null, modifier = Modifier.align(Alignment.Center).size(24.dp), tint = MaterialTheme.colorScheme.primary.copy(0.4f))
                 }
                 
                 if (settings.showVideoDuration) {
@@ -668,9 +709,16 @@ fun VideoPosterItem(
                     if (settings.showVideoSize && settings.showVideoResolution) {
                         Text(" • ", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    if (settings.showVideoResolution) {
+                    if (settings.showVideoResolution && video.mediaType == MediaType.VIDEO) {
                         Text(
                             text = "1080p", // Mock resolution
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (video.mediaType == MediaType.AUDIO) {
+                        Text(
+                            text = video.artist ?: "Unknown Artist",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -691,8 +739,8 @@ fun VideoPosterItem(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun VideoFolderItem(
-    folder: VideoFolder,
+fun LocalFolderItem(
+    folder: LocalFolder,
     isSelected: Boolean,
     isSelectionMode: Boolean,
     settings: com.codesrahul.streamplus.data.settings.AppSettings,
@@ -722,14 +770,15 @@ fun VideoFolderItem(
                         .fillMaxWidth()
                         .aspectRatio(1.1f)
                 ) {
-                    if (folder.firstVideoUri != null) {
+                    if (folder.firstMediaUri != null) {
                         AsyncImage(
-                            model = folder.firstVideoUri,
+                            model = folder.firstMediaUri,
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
                     } else {
+                        val folderIcon = if (folder.mediaType == MediaType.VIDEO) Icons.Filled.Folder else Icons.Filled.LibraryMusic
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -740,7 +789,7 @@ fun VideoFolderItem(
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Filled.Folder, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
+                            Icon(folderIcon, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
                         }
                     }
 
@@ -785,7 +834,10 @@ fun VideoFolderItem(
                             text = buildString {
                                 if (settings.showFolderCount) append("${folder.count} items ")
                                 if (settings.showFolderCount && settings.showFolderPath) append("• ")
-                                if (settings.showFolderPath) append("/sdcard/Videos/${folder.name}") // Mock path
+                                if (settings.showFolderPath) {
+                                    val pathLabel = if (folder.mediaType == MediaType.VIDEO) "Videos" else "Music"
+                                    append("/sdcard/$pathLabel/${folder.name}") 
+                                }
                             },
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
@@ -812,17 +864,19 @@ fun VideoFolderItem(
                     .background(MaterialTheme.colorScheme.primary.copy(0.1f)),
                 contentAlignment = Alignment.Center
             ) {
-                if (folder.firstVideoUri != null) {
-                    AsyncImage(model = folder.firstVideoUri, contentDescription = null, contentScale = ContentScale.Crop)
+                if (folder.firstMediaUri != null) {
+                    AsyncImage(model = folder.firstMediaUri, contentDescription = null, contentScale = ContentScale.Crop)
                 } else {
-                    Icon(Icons.Default.Folder, null, tint = MaterialTheme.colorScheme.primary)
+                    val folderIcon = if (folder.mediaType == MediaType.VIDEO) Icons.Default.Folder else Icons.Default.LibraryMusic
+                    Icon(folderIcon, null, tint = MaterialTheme.colorScheme.primary)
                 }
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(folder.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
                 if (settings.showFolderPath) {
-                    Text("/sdcard/Videos/${folder.name}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    val pathLabel = if (folder.mediaType == MediaType.VIDEO) "Videos" else "Music"
+                    Text("/sdcard/$pathLabel/${folder.name}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             if (settings.showFolderCount) {
@@ -1042,7 +1096,105 @@ fun formatSize(bytes: Long): String {
     }
 }
 
-fun deleteVideo(context: Context, video: LocalVideo): FileOpResult {
+fun getAudiosInFolder(context: Context, folderName: String): List<LocalMedia> {
+    val audios = mutableListOf<LocalMedia>()
+    val selection = if (folderName == "All Music") null else "${MediaStore.Audio.Media.BUCKET_DISPLAY_NAME} = ?"
+    val selectionArgs = if (folderName == "All Music") null else arrayOf(folderName)
+
+    try {
+        val projection = arrayOf(
+            MediaStore.Audio.Media._ID,
+            MediaStore.Audio.Media.DISPLAY_NAME,
+            MediaStore.Audio.Media.DATA,
+            MediaStore.Audio.Media.DURATION,
+            MediaStore.Audio.Media.SIZE,
+            MediaStore.Audio.Media.DATE_ADDED,
+            MediaStore.Audio.Media.ARTIST,
+            MediaStore.Audio.Media.ALBUM
+        )
+        context.contentResolver.query(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            projection,
+            selection,
+            selectionArgs,
+            "${MediaStore.Audio.Media.DATE_ADDED} DESC"
+        )?.use { cursor ->
+            val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+            val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
+            val dataCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+            val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+            val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
+            val dateCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
+            val artistCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
+            val albumCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
+            
+            while (cursor.moveToNext()) {
+                val id = cursor.getLong(idCol)
+                val title = cursor.getString(nameCol) ?: "Unknown"
+                val path = cursor.getString(dataCol) ?: ""
+                val duration = cursor.getLong(durationCol)
+                val size = cursor.getLong(sizeCol)
+                val date = cursor.getLong(dateCol)
+                val artist = cursor.getString(artistCol)
+                val album = cursor.getString(albumCol)
+                val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
+                
+                audios.add(LocalMedia(id, title, path, duration, size, date, uri, MediaType.AUDIO, artist, album))
+            }
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    return audios
+}
+
+fun getAudioFolders(context: Context): List<LocalFolder> {
+    val folderMap = mutableMapOf<String, MutableList<Long>>()
+    val sizeMap = mutableMapOf<String, Long>()
+    val projection = arrayOf(
+        MediaStore.Audio.Media.BUCKET_DISPLAY_NAME,
+        MediaStore.Audio.Media._ID,
+        MediaStore.Audio.Media.SIZE
+    )
+    
+    try {
+        context.contentResolver.query(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            projection,
+            null, null, null
+        )?.use { cursor ->
+            val bucketCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.BUCKET_DISPLAY_NAME)
+            val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+            val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
+            
+            while (cursor.moveToNext()) {
+                val bucketName = cursor.getString(bucketCol) ?: "Internal Storage"
+                val id = cursor.getLong(idCol)
+                val size = cursor.getLong(sizeCol)
+                
+                folderMap.getOrPut(bucketName) { mutableListOf() }.add(id)
+                sizeMap[bucketName] = sizeMap.getOrDefault(bucketName, 0L) + size
+            }
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    
+    val folders = folderMap.map { (name, ids) ->
+        val firstUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, ids.first())
+        LocalFolder(name, ids.size, firstUri, sizeMap[name] ?: 0L, MediaType.AUDIO)
+    }.toMutableList()
+    
+    val totalCount = folders.sumOf { it.count }
+    if (totalCount > 0) {
+        val firstUri = folders.firstOrNull { it.firstMediaUri != null }?.firstMediaUri
+        folders.add(0, LocalFolder("All Music", totalCount, firstUri, folders.sumOf { it.totalSize }, MediaType.AUDIO))
+    }
+    
+    return folders
+}
+
+fun deleteVideo(context: Context, video: LocalMedia): FileOpResult {
     return deleteVideos(context, listOf(video.uri))
 }
 
@@ -1068,9 +1220,10 @@ fun deleteVideos(context: Context, uris: List<Uri>): FileOpResult {
     }
 }
 
-fun renameVideo(context: Context, video: LocalVideo, newName: String): FileOpResult {
+fun renameVideo(context: Context, video: LocalMedia, newName: String): FileOpResult {
     val values = ContentValues().apply {
-        put(MediaStore.Video.Media.DISPLAY_NAME, newName)
+        val colName = if (video.mediaType == MediaType.VIDEO) MediaStore.Video.Media.DISPLAY_NAME else MediaStore.Audio.Media.DISPLAY_NAME
+        put(colName, newName)
     }
     return try {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -1089,8 +1242,8 @@ fun renameVideo(context: Context, video: LocalVideo, newName: String): FileOpRes
     }
 }
 
-fun getVideosInFolder(context: Context, folderName: String): List<LocalVideo> {
-    val videos = mutableListOf<LocalVideo>()
+fun getVideosInFolder(context: Context, folderName: String): List<LocalMedia> {
+    val videos = mutableListOf<LocalMedia>()
     val selection = if (folderName == "All Videos") null else "${MediaStore.Video.Media.BUCKET_DISPLAY_NAME} = ?"
     val selectionArgs = if (folderName == "All Videos") null else arrayOf(folderName)
 
@@ -1126,7 +1279,7 @@ fun getVideosInFolder(context: Context, folderName: String): List<LocalVideo> {
                 val date = cursor.getLong(dateCol)
                 val uri = ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id)
                 
-                videos.add(LocalVideo(id, title, path, duration, size, date, uri))
+                videos.add(LocalMedia(id, title, path, duration, size, date, uri, MediaType.VIDEO))
             }
         }
     } catch (e: Exception) {
@@ -1135,7 +1288,7 @@ fun getVideosInFolder(context: Context, folderName: String): List<LocalVideo> {
     return videos
 }
 
-fun getVideoFolders(context: Context): List<VideoFolder> {
+fun getLocalFolders(context: Context): List<LocalFolder> {
     val folderMap = mutableMapOf<String, MutableList<Long>>()
     val sizeMap = mutableMapOf<String, Long>()
     val projection = arrayOf(
@@ -1169,13 +1322,13 @@ fun getVideoFolders(context: Context): List<VideoFolder> {
     
     val folders = folderMap.map { (name, ids) ->
         val firstUri = ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, ids.first())
-        VideoFolder(name, ids.size, firstUri, sizeMap[name] ?: 0L)
+        LocalFolder(name, ids.size, firstUri, sizeMap[name] ?: 0L, MediaType.VIDEO)
     }.toMutableList()
     
     val totalCount = folders.sumOf { it.count }
     if (totalCount > 0) {
-        val firstUri = folders.firstOrNull { it.firstVideoUri != null }?.firstVideoUri
-        folders.add(0, VideoFolder("All Videos", totalCount, firstUri, folders.sumOf { it.totalSize }))
+        val firstUri = folders.firstOrNull { it.firstMediaUri != null }?.firstMediaUri
+        folders.add(0, LocalFolder("All Videos", totalCount, firstUri, folders.sumOf { it.totalSize }, MediaType.VIDEO))
     }
     
     return folders

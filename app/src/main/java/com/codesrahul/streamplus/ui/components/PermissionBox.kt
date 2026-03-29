@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
+import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.shouldShowRationale
 
@@ -34,6 +35,31 @@ fun PermissionBox(
                 Text(description)
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(onClick = { permissionState.launchPermissionRequest() }) {
+                    Text("Request Permission")
+                }
+            }
+        }
+    }
+}
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun PermissionBox(
+    permissionState: MultiplePermissionsState,
+    description: String,
+    content: @Composable () -> Unit
+) {
+    val allGranted = permissionState.permissions.all { it.status.isGranted }
+    if (allGranted) {
+        content()
+    } else {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(description)
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = { permissionState.launchMultiplePermissionRequest() }) {
                     Text("Request Permission")
                 }
             }

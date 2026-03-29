@@ -22,27 +22,30 @@ class LocalViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
-    private val _folders = MutableStateFlow<List<VideoFolder>>(emptyList())
+    private val _folders = MutableStateFlow<List<LocalFolder>>(emptyList())
     val folders = _folders.asStateFlow()
 
     private val _selectedFolder = MutableStateFlow<String?>(null)
     val selectedFolder = _selectedFolder.asStateFlow()
 
-    private val _videos = MutableStateFlow<List<LocalVideo>>(emptyList())
+    private val _videos = MutableStateFlow<List<LocalMedia>>(emptyList())
     val videos = _videos.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
+    private val _mediaType = MutableStateFlow(MediaType.VIDEO)
+    val mediaType = _mediaType.asStateFlow()
+
     val settings = settingsRepository.settings
 
     init {
         viewModelScope.launch {
-            combine(settings, _selectedFolder) { s, folder -> s to folder }
-                .collect { (s, folder) ->
-                    refreshFolders(s)
+            combine(settings, _selectedFolder, _mediaType) { s, folder, type -> Triple(s, folder, type) }
+                .collect { (s, folder, type) ->
+                    refreshFolders(s, type)
                     if (folder != null) {
-                        loadVideos(folder, s)
+                        loadVideos(folder, s, type)
                     }
                 }
         }
@@ -51,14 +54,19 @@ class LocalViewModel @Inject constructor(
     fun refreshFolders() {
         viewModelScope.launch {
             val s = settings.first()
-            refreshFolders(s)
+            refreshFolders(s, _mediaType.value)
         }
     }
 
-    private suspend fun refreshFolders(s: com.codesrahul.streamplus.data.settings.AppSettings) {
+    fun setMediaType(type: MediaType) {
+        _selectedFolder.value = null
+        _mediaType.value = type
+    }
+
+    private suspend fun refreshFolders(s: com.codesrahul.streamplus.data.settings.AppSettings, type: MediaType) {
         _isLoading.value = true
         val list = withContext(Dispatchers.IO) {
-            getVideoFolders(context)
+            if (type == MediaType.VIDEO) getLocalFolders(context) else getAudioFolders(context)
         }
         
         val sortedList = when (s.folderSortField) {
@@ -77,11 +85,12 @@ class LocalViewModel @Inject constructor(
         _selectedFolder.value = folderName
     }
 
-    private fun loadVideos(folderName: String, s: com.codesrahul.streamplus.data.settings.AppSettings) {
+    private fun loadVideos(folderName: String, s: com.codesrahul.streamplus.data.settings.AppSettings, type: MediaType) {
         viewModelScope.launch {
             _isLoading.value = true
             val list = withContext(Dispatchers.IO) {
-                getVideosInFolder(context, folderName)
+                if (type == MediaType.VIDEO) getVideosInFolder(context, folderName)
+                else getAudiosInFolder(context, folderName)
             }
             
             val sortedList = when (s.videoSortField) {
