@@ -263,7 +263,7 @@ fun PlaylistDetailScreen(
                                 count = filteredChannels.size,
                                 key = { index -> 
                                     val ch = filteredChannels[index]
-                                    "${ch.playlistId}_${ch.url}_${ch.name}"
+                                    "${ch.playlistId}_${ch.url}_${ch.name}_$index"
                                 },
                                 contentType = { index -> if (filteredChannels[index].isVod) "vod" else "live" }
                             ) { index ->

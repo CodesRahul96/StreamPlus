@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -275,7 +276,7 @@ fun LocalMediaGrid(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         contentPadding = PaddingValues(vertical = 12.dp)
                     ) {
-                        items(folders, key = { it.name }, contentType = { "folder" }) { folder ->
+                        itemsIndexed(folders, key = { index, it -> "${it.name}_$index" }, contentType = { _, _ -> "folder" }) { index, folder ->
                             val onItemClick = remember(folder, isSelectionMode, viewModel) {
                                 {
                                     if (isSelectionMode) {

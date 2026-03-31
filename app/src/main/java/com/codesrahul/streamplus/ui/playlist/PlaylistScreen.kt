@@ -378,7 +378,7 @@ fun PlaylistScreen(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                     contentPadding = PaddingValues(end = 16.dp)
                                 ) {
-                                    items(recentlyWatched, key = { it.url + it.name }, contentType = { "channel_recent" }) { item ->
+                                    itemsIndexed(recentlyWatched, key = { index, it -> "${it.url}_${it.name}_$index" }, contentType = { _, _ -> "channel_recent" }) { index, item ->
                                             RecentlyWatchedCard(
                                                 entry = item,
                                                 onClick = { onChannelClick(item) }
@@ -421,12 +421,12 @@ fun PlaylistScreen(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                     contentPadding = PaddingValues(end = 16.dp)
                                 ) {
-                                    items(favorites, key = { "${it.name}|${it.group}|${it.playlistId}" }, contentType = { "channel_fav" }) { fav ->
+                                    itemsIndexed(favorites, key = { index, it -> "${it.name}|${it.group}|${it.playlistId}_$index" }, contentType = { _, _ -> "channel_fav" }) { index, fav ->
                                         with(sharedTransitionScope) {
                                             FavouriteChannelCard(
                                                 favorite = fav,
                                                 modifier = Modifier.sharedElement(
-                                                    rememberSharedContentState(key = "fav_${fav.name}_${fav.playlistId}"),
+                                                    rememberSharedContentState(key = "fav_${fav.name}_${fav.playlistId}_$index"),
                                                     animatedVisibilityScope = animatedContentScope
                                                 ),
                                                 onClick = { onChannelClick(fav) },

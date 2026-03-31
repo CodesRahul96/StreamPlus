@@ -8,6 +8,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -115,7 +116,7 @@ fun HistoryScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(historyItems, key = { it.url + it.timestamp }, contentType = { "history_item" }) { item ->
+                    itemsIndexed(historyItems, key = { index, it -> "${it.url}_${it.timestamp}_$index" }, contentType = { _, _ -> "history_item" }) { index, item ->
                         val onItemClick = remember(item, context) {
                             {
                                 val intent = Intent(context, PlayerActivity::class.java).apply {
