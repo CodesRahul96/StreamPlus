@@ -1,6 +1,7 @@
 package com.codesrahul.streamplus.util
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,3 +20,4 @@ fun Modifier.glassy(
 ): Modifier = this
     .clip(RoundedCornerShape(cornerRadius))
     .background(fillColor)
+    .border(1.dp, strokeColor, RoundedCornerShape(cornerRadius))

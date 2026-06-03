@@ -29,7 +29,7 @@ class NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(settingsRepository: SettingsRepository): OkHttpClient {
+    fun provideOkHttpClient(): OkHttpClient {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.HEADERS
         }
@@ -38,9 +38,27 @@ class NetworkModule {
             .addInterceptor { chain ->
                 val original = chain.request()
                 val requestBuilder = original.newBuilder()
-                if (original.header("User-Agent") == null) {
+                val urlString = original.url.toString()
+                
+                val isMagStream = urlString.contains("mac=", ignoreCase = true) || 
+                                  urlString.contains("play/live.php", ignoreCase = true) ||
+                                  urlString.contains("/stalker", ignoreCase = true)
+                
+                val currentUa = original.header("User-Agent")
+                val isDefaultOrExo = currentUa == null || 
+                                     currentUa.isEmpty() || 
+                                     currentUa.contains("ExoPlayer", ignoreCase = true) || 
+                                     currentUa == "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+                
+                if (isMagStream) {
+                    if (isDefaultOrExo) {
+                        requestBuilder.header("User-Agent", "MacroHTTP")
+                    }
+                    requestBuilder.header("X-User-Agent", "Model: MAG250; Link: Ethernet")
+                } else if (isDefaultOrExo) {
                     requestBuilder.header("User-Agent", "TiviMate/5.0.4 (Linux; Android 11)")
                 }
+                
                 val request = requestBuilder
                     .header("Accept", "*/*")
                     .header("Connection", "keep-alive")

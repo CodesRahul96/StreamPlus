@@ -41,6 +41,7 @@ import androidx.compose.ui.window.Dialog
 import com.codesrahul.streamplus.ui.components.PremiumBackground
 import com.codesrahul.streamplus.ui.player.PlayerActivity
 import com.codesrahul.streamplus.util.UserAgentManager
+import com.codesrahul.streamplus.ui.util.tvFocusable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,13 +103,30 @@ fun DirectPlayScreen(
 
     fun handlePlay() {
         if (streamUrl.isBlank()) { urlError = true; return }
+        var url = streamUrl.trim()
+        if (!url.startsWith("http://", ignoreCase = true) && 
+            !url.startsWith("https://", ignoreCase = true) && 
+            !url.startsWith("rtmp://", ignoreCase = true) && 
+            !url.startsWith("rtsp://", ignoreCase = true) && 
+            !url.startsWith("file://", ignoreCase = true) && 
+            !url.startsWith("content://", ignoreCase = true)) {
+            url = "http://$url"
+        }
+        
+        var finalDrmLicenseUrl = drmLicenseUrl.trim()
+        if (finalDrmLicenseUrl.isNotEmpty() &&
+            !finalDrmLicenseUrl.startsWith("http://", ignoreCase = true) && 
+            !finalDrmLicenseUrl.startsWith("https://", ignoreCase = true)) {
+            finalDrmLicenseUrl = "http://$finalDrmLicenseUrl"
+        }
+
         urlError = false
         val derivedTitle = streamTitle.takeIf { it.isNotBlank() } ?: try {
-            java.net.URI(streamUrl).host?.removePrefix("www.") ?: streamUrl
-        } catch (e: Exception) { streamUrl }
+            java.net.URI(url).host?.removePrefix("www.") ?: url
+        } catch (e: Exception) { url }
 
         val intent = Intent(context, PlayerActivity::class.java).apply {
-            putExtra(PlayerActivity.EXTRA_STREAM_URL,   streamUrl)
+            putExtra(PlayerActivity.EXTRA_STREAM_URL,   url)
             putExtra(PlayerActivity.EXTRA_STREAM_TITLE, derivedTitle)
             putExtra(PlayerActivity.EXTRA_USER_AGENT,   resolvedUA)
             if (referer.isNotBlank()) putExtra(PlayerActivity.EXTRA_REFERER, referer)
@@ -116,7 +134,7 @@ fun DirectPlayScreen(
             if (origin.isNotBlank())  putExtra(PlayerActivity.EXTRA_ORIGIN,  origin)
             if (drmScheme != "None") {
                 putExtra(PlayerActivity.EXTRA_DRM_SCHEME, drmScheme.lowercase())
-                if (drmLicenseUrl.isNotBlank()) putExtra(PlayerActivity.EXTRA_DRM_LICENSE_URL, drmLicenseUrl)
+                if (finalDrmLicenseUrl.isNotBlank()) putExtra(PlayerActivity.EXTRA_DRM_LICENSE_URL, finalDrmLicenseUrl)
             }
         }
         context.startActivity(intent)
@@ -371,14 +389,14 @@ fun DirectPlayScreen(
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Spacer(modifier = Modifier.height(12.dp))
-                            Divider(modifier = Modifier.alpha(0.3f))
+                            HorizontalDivider(modifier = Modifier.alpha(0.3f))
                             Spacer(modifier = Modifier.height(4.dp))
 
                             AdvancedTextField(value = referer, onValueChange = { referer = it }, label = "Referer", icon = Icons.Default.OpenInNew)
                             AdvancedTextField(value = cookie, onValueChange = { cookie = it }, label = "Cookie", icon = Icons.Default.Cookie)
                             AdvancedTextField(value = origin, onValueChange = { origin = it }, label = "Origin", icon = Icons.Default.Public)
 
-                            Divider(modifier = Modifier.alpha(0.3f).padding(vertical = 4.dp))
+                            HorizontalDivider(modifier = Modifier.alpha(0.3f).padding(vertical = 4.dp))
 
                             // DRM Toggle
                             Row(
@@ -521,6 +539,7 @@ fun UserAgentSelectionDialog(
                             Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
+                                .tvFocusable(cornerRadius = 12.dp)
                                 .selectable(
                                     selected = isSelected,
                                     onClick  = { onSelect(option) },
@@ -577,6 +596,7 @@ fun DrmSelectionDialog(
                         Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
+                            .tvFocusable(cornerRadius = 12.dp)
                             .selectable(
                                 selected = isSelected,
                                 onClick  = { onSelect(option) },

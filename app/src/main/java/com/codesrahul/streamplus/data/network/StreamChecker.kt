@@ -35,7 +35,14 @@ class StreamChecker @Inject constructor(
                 if (response.isSuccessful) {
                     val contentType = response.header("Content-Type") ?: ""
                     val bodySnippet = try {
-                        response.body?.string()?.take(2048) ?: ""
+                        val body = response.body
+                        if (body != null) {
+                            val source = body.source()
+                            source.request(2048)
+                            val buffer = source.buffer
+                            val count = minOf(2048L, buffer.size)
+                            buffer.clone().readString(count, Charsets.UTF_8)
+                        } else ""
                     } catch (e: Exception) { "" }
 
                     if (contentType.contains("mpegurl", ignoreCase = true) || contentType.contains("application/x-mpegurl", ignoreCase = true) ||

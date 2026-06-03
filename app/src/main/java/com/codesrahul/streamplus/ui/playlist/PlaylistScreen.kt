@@ -17,9 +17,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.AnimatedContentScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -49,11 +46,9 @@ import com.codesrahul.streamplus.util.UserAgentManager
 import com.codesrahul.streamplus.ui.util.tvFocusable
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlaylistScreen(
-    sharedTransitionScope: SharedTransitionScope,
-    animatedContentScope: AnimatedContentScope,
     onPlaylistClick: (Int) -> Unit,
     onChannelClick: (M3UItem) -> Unit = {},
     viewModel: PlaylistViewModel = hiltViewModel()
@@ -62,6 +57,7 @@ fun PlaylistScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var showXtreamDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf<PlaylistEntity?>(null) }
+    var playlistToDelete by remember { mutableStateOf<PlaylistEntity?>(null) }
     val playlists by viewModel.playlists.collectAsState()
     val favorites by viewModel.favorites.collectAsState()
     val recentlyWatched by viewModel.recentlyWatched.collectAsState()
@@ -422,17 +418,11 @@ fun PlaylistScreen(
                                     contentPadding = PaddingValues(end = 16.dp)
                                 ) {
                                     itemsIndexed(favorites, key = { index, it -> "${it.name}|${it.group}|${it.playlistId}_$index" }, contentType = { _, _ -> "channel_fav" }) { index, fav ->
-                                        with(sharedTransitionScope) {
-                                            FavouriteChannelCard(
-                                                favorite = fav,
-                                                modifier = Modifier.sharedElement(
-                                                    rememberSharedContentState(key = "fav_${fav.name}_${fav.playlistId}_$index"),
-                                                    animatedVisibilityScope = animatedContentScope
-                                                ),
-                                                onClick = { onChannelClick(fav) },
-                                                onRemove = { viewModel.toggleFavorite(fav, fav.playlistId) }
-                                            )
-                                        }
+                                        FavouriteChannelCard(
+                                            favorite = fav,
+                                            onClick = { onChannelClick(fav) },
+                                            onRemove = { viewModel.toggleFavorite(fav, fav.playlistId) }
+                                        )
                                     }
                                 }
                             }
@@ -445,19 +435,13 @@ fun PlaylistScreen(
                         val onEditLambda = remember(playlist) { { showEditDialog = playlist } }
                         val onPinToggleLambda = remember(playlist) { { viewModel.togglePin(playlist) } }
 
-                        with(sharedTransitionScope) {
-                            PlaylistItem(
-                                playlist = playlist,
-                                settingsState = settingsState,
-                                modifier = Modifier.sharedElement(
-                                    rememberSharedContentState(key = "playlist_${playlist.id}"),
-                                    animatedVisibilityScope = animatedContentScope
-                                ),
-                                onClick = onPlaylistClickLambda,
-                                onEdit = onEditLambda,
-                                onPinToggle = onPinToggleLambda
-                            )
-                        }
+                        PlaylistItem(
+                            playlist = playlist,
+                            settingsState = settingsState,
+                            onClick = onPlaylistClickLambda,
+                            onEdit = onEditLambda,
+                            onPinToggle = onPinToggleLambda
+                        )
                     }
                 }
             }
@@ -469,7 +453,19 @@ fun PlaylistScreen(
             title = "Add Playlist",
             confirmButtonText = "Save",
             onConfirm = { name, url, userAgent, icon, color, epgUrl ->
-                viewModel.addPlaylist(name, url, userAgent, icon, color, epgUrl)
+                var finalUrl = url.trim()
+                if (finalUrl.isNotEmpty() &&
+                    !finalUrl.startsWith("http://", ignoreCase = true) && 
+                    !finalUrl.startsWith("https://", ignoreCase = true)) {
+                    finalUrl = "http://$finalUrl"
+                }
+                var finalEpgUrl = epgUrl.trim()
+                if (finalEpgUrl.isNotEmpty() &&
+                    !finalEpgUrl.startsWith("http://", ignoreCase = true) && 
+                    !finalEpgUrl.startsWith("https://", ignoreCase = true)) {
+                    finalEpgUrl = "http://$finalEpgUrl"
+                }
+                viewModel.addPlaylist(name, finalUrl, userAgent, icon, color, finalEpgUrl)
                 showAddDialog = false
             },
             onDismiss = { showAddDialog = false }
@@ -488,11 +484,17 @@ fun PlaylistScreen(
                 initialColor = playlist.color,
                 confirmButtonText = "Update",
                 onConfirm = { name, server, user, pass, icon, color ->
+                    var finalServer = server.trim()
+                    if (finalServer.isNotEmpty() &&
+                        !finalServer.startsWith("http://", ignoreCase = true) && 
+                        !finalServer.startsWith("https://", ignoreCase = true)) {
+                        finalServer = "http://$finalServer"
+                    }
                     viewModel.updatePlaylist(
                         playlist.copy(
                             name = name,
-                            url = server,
-                            serverUrl = server,
+                            url = finalServer,
+                            serverUrl = finalServer,
                             username = user,
                             password = pass,
                             icon = icon,
@@ -503,7 +505,7 @@ fun PlaylistScreen(
                 },
                 onDismiss = { showEditDialog = null },
                 onDelete = {
-                    viewModel.deletePlaylist(playlist)
+                    playlistToDelete = playlist
                     showEditDialog = null
                 }
             )
@@ -518,12 +520,24 @@ fun PlaylistScreen(
                 initialEpgUrl = playlist.epgUrl ?: "",
                 confirmButtonText = "Update",
                 onConfirm = { name, url, userAgent, icon, color, epgUrl ->
-                    viewModel.updatePlaylist(playlist.copy(name = name, url = url, userAgent = userAgent, icon = icon, color = color, epgUrl = epgUrl))
+                    var finalUrl = url.trim()
+                    if (finalUrl.isNotEmpty() &&
+                        !finalUrl.startsWith("http://", ignoreCase = true) && 
+                        !finalUrl.startsWith("https://", ignoreCase = true)) {
+                        finalUrl = "http://$finalUrl"
+                    }
+                    var finalEpgUrl = epgUrl.trim()
+                    if (finalEpgUrl.isNotEmpty() &&
+                        !finalEpgUrl.startsWith("http://", ignoreCase = true) && 
+                        !finalEpgUrl.startsWith("https://", ignoreCase = true)) {
+                        finalEpgUrl = "http://$finalEpgUrl"
+                    }
+                    viewModel.updatePlaylist(playlist.copy(name = name, url = finalUrl, userAgent = userAgent, icon = icon, color = color, epgUrl = finalEpgUrl))
                     showEditDialog = null
                 },
                 onDismiss = { showEditDialog = null },
                 onDelete = {
-                    viewModel.deletePlaylist(playlist)
+                    playlistToDelete = playlist
                     showEditDialog = null
                 }
             )
@@ -533,10 +547,40 @@ fun PlaylistScreen(
     if (showXtreamDialog) {
         XtreamPlaylistDialog(
             onConfirm = { name, server, user, pass, icon, color ->
-                viewModel.addXtreamPlaylist(name, server, user, pass, icon, color)
+                var finalServer = server.trim()
+                if (finalServer.isNotEmpty() &&
+                    !finalServer.startsWith("http://", ignoreCase = true) && 
+                    !finalServer.startsWith("https://", ignoreCase = true)) {
+                    finalServer = "http://$finalServer"
+                }
+                viewModel.addXtreamPlaylist(name, finalServer, user, pass, icon, color)
                 showXtreamDialog = false
             },
             onDismiss = { showXtreamDialog = false }
+        )
+    }
+
+    playlistToDelete?.let { playlist ->
+        AlertDialog(
+            onDismissRequest = { playlistToDelete = null },
+            title = { Text("Delete Playlist", fontWeight = FontWeight.Bold) },
+            text = { Text("Are you sure you want to delete \"${playlist.name}\"? All channels and cached streams associated with this playlist will be removed.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deletePlaylist(playlist)
+                        playlistToDelete = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { playlistToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 }
@@ -833,7 +877,9 @@ fun PlaylistDialog(
                             onClick = { icon = iconKey },
                             shape = RoundedCornerShape(12.dp),
                             color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                            modifier = Modifier.size(44.dp)
+                            modifier = Modifier
+                                .size(44.dp)
+                                .tvFocusable(cornerRadius = 12.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(

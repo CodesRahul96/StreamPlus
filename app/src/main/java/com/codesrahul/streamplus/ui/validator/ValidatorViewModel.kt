@@ -53,7 +53,6 @@ class ValidatorViewModel @Inject constructor(
             
             // For better progress updates, we might need to change the repository to emit flow or validate one by one here
             // implementing a simple chunked validation here for progress updates.
-             val validatedItems = mutableListOf<M3UItem>()
              val total = currentItems.size
              
              currentItems.forEachIndexed { index, item ->

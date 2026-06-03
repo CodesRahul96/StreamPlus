@@ -28,7 +28,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.launch
-import com.codesrahul.streamplus.utils.AppUpdater
+import com.codesrahul.streamplus.ui.components.PremiumBackground
 
 // Specific named color shades for icon containers (iOS-inspired)
 private val GreenApple  = Color(0xFF34C759)
@@ -80,14 +80,6 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
     var showAboutDialog by remember { mutableStateOf(false) }
     var showHelpDialog by remember { mutableStateOf(false) }
     
-    // Update States
-    var isCheckingForUpdate by remember { mutableStateOf(false) }
-    var updateInfo by remember { mutableStateOf<AppUpdater.UpdateInfo?>(null) }
-    var showUpdateDialog by remember { mutableStateOf(false) }
-    var isDownloading by remember { mutableStateOf(false) }
-    val downloadProgress by AppUpdater.downloadProgress.collectAsState()
-    
-    val scope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
@@ -194,8 +186,8 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                 SettingsCard {
                     val version = remember {
                         try {
-                            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.6"
-                        } catch (e: Exception) { "1.0.6" }
+                            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.0"
+                        } catch (e: Exception) { "1.0.0" }
                     }
                     SettingsClickableItem(
                         title = "App Version",
@@ -206,55 +198,6 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                         showDivider = true
                     )
                     
-                    if (isCheckingForUpdate) {
-                        ListItem(
-                            headlineContent = { Text("Checking for updates...") },
-                            trailingContent = { CircularProgressIndicator(modifier = Modifier.size(24.dp)) },
-                            leadingContent = {
-                                Surface(shape = RoundedCornerShape(10.dp), color = TealSea, modifier = Modifier.size(40.dp)) {
-                                    Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.SystemUpdate, null) }
-                                }
-                            }
-                        )
-                    } else if (isDownloading) {
-                        ListItem(
-                            headlineContent = { Text("Downloading Update...") },
-                            trailingContent = { Text("${(downloadProgress * 100).toInt()}%", style = MaterialTheme.typography.labelSmall) },
-                            supportingContent = {
-                                LinearProgressIndicator(
-                                    progress = { downloadProgress },
-                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                                )
-                            },
-                            leadingContent = {
-                                Surface(shape = RoundedCornerShape(10.dp), color = GreenApple, modifier = Modifier.size(40.dp)) {
-                                    Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.CloudDownload, null) }
-                                }
-                            }
-                        )
-                    } else {
-                        SettingsClickableItem(
-                            title = "Check for Updates",
-                            subtitle = "Download the latest version",
-                            icon = Icons.Default.SystemUpdate,
-                            iconColor = TealSea,
-                            onClick = { 
-                                scope.launch {
-                                    isCheckingForUpdate = true
-                                    val info = AppUpdater.checkForUpdate(context)
-                                    isCheckingForUpdate = false
-                                    if (info != null && info.isUpdateAvailable) {
-                                        updateInfo = info
-                                        showUpdateDialog = true
-                                    } else {
-                                        android.widget.Toast.makeText(context, "You are on the latest version", android.widget.Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            },
-                            showDivider = true
-                        )
-                    }
-
                     SettingsClickableItem(
                         title = "Share App",
                         subtitle = "Share StreamPlus with friends",
@@ -263,7 +206,7 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                         onClick = {
                             val shareIntent = android.content.Intent().apply {
                                 action = android.content.Intent.ACTION_SEND
-                                putExtra(android.content.Intent.EXTRA_TEXT, "Check out StreamPlus for IPTV and local media: https://github.com/CodesRahul96/StreamPlus")
+                                putExtra(android.content.Intent.EXTRA_TEXT, "Check out StreamPlus for IPTV and local media: https://play.google.com/store/apps/details?id=${context.packageName}")
                                 type = "text/plain"
                             }
                             context.startActivity(android.content.Intent.createChooser(shareIntent, null))
@@ -283,7 +226,6 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                 // ── Support ──────────────────────────────────────────────
                 SettingsSectionHeader("Support")
                 SettingsCard {
-                    val context = androidx.compose.ui.platform.LocalContext.current
                     SettingsClickableItem(
                         title = "Help & FAQ",
                         subtitle = "Get help and find answers",
@@ -301,11 +243,13 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                             try {
                                 val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
                                     data = android.net.Uri.parse("mailto:")
-                                    putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf("codesrahul96@gmail.com"))
+                                    putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf("support@streamplus.app"))
                                     putExtra(android.content.Intent.EXTRA_SUBJECT, "StreamPlus Feedback")
                                 }
                                 context.startActivity(intent)
-                            } catch (e: Exception) {}
+                            } catch (e: Exception) {
+                                android.widget.Toast.makeText(context, "No email client found. Send feedback to support@streamplus.app", android.widget.Toast.LENGTH_LONG).show()
+                            }
                         },
                         showDivider = true
                     )
@@ -338,30 +282,7 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
     if (showHelpDialog) {
         HelpFaqDialog(onDismiss = { showHelpDialog = false })
     }
-    
-    if (showUpdateDialog && updateInfo != null) {
-        AlertDialog(
-            onDismissRequest = { showUpdateDialog = false },
-            title = { Text("Update Available: ${updateInfo!!.latestVersionName}") },
-            text = { Text(updateInfo!!.content) },
-            confirmButton = {
-                TextButton(onClick = { 
-                    showUpdateDialog = false
-                    isDownloading = true
-                    AppUpdater.downloadAndInstallUpdate(context, updateInfo!!.downloadUrl) {
-                        isDownloading = true
-                    }
-                }) {
-                    Text("Download & Install")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showUpdateDialog = false }) {
-                    Text("Later")
-                }
-            }
-        )
-    }
+
 }
 
 @Composable
@@ -381,8 +302,8 @@ fun AppInfoFooter() {
     val context = androidx.compose.ui.platform.LocalContext.current
     val version = remember {
         try {
-            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.1"
-        } catch (e: Exception) { "1.0.1" }
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.0"
+        } catch (e: Exception) { "1.0.0" }
     }
 
     Column(
@@ -420,28 +341,6 @@ fun AppInfoFooter() {
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
         )
         Spacer(modifier = Modifier.height(12.dp))
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .clip(CircleShape)
-                .clickable {
-                    try {
-                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://www.codesrahul.in"))
-                        context.startActivity(intent)
-                    } catch (e: Exception) {}
-                }
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            Icon(Icons.Default.Code, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                "Crafted with ♥ by CodesRahul",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            )
-        }
     }
 }
 
@@ -556,8 +455,8 @@ fun AboutDialog(onDismiss: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val version = remember {
         try {
-            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.6"
-        } catch (e: Exception) { "1.0.6" }
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.0"
+        } catch (e: Exception) { "1.0.0" }
     }
 
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {

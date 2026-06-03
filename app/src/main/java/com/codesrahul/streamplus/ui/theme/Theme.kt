@@ -103,8 +103,8 @@ fun StreamPlusTheme(
             WindowCompat.setDecorFitsSystemWindows(window, false)
             
             val controller = WindowCompat.getInsetsController(window, view)
-            controller?.isAppearanceLightStatusBars = !darkTheme
-            controller?.isAppearanceLightNavigationBars = !darkTheme
+            controller.isAppearanceLightStatusBars = !darkTheme
+            controller.isAppearanceLightNavigationBars = !darkTheme
         }
     }
 

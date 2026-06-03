@@ -1,5 +1,6 @@
 package com.codesrahul.streamplus.ui.util
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
@@ -32,28 +33,34 @@ fun Modifier.tvFocusable(
     
     val scale by animateFloatAsState(
         targetValue = if (isFocused) 1.08f else 1f,
-        animationSpec = tween(durationMillis = 200),
+        animationSpec = tween(durationMillis = 150),
         label = "scale"
+    )
+    
+    val shadowElevation by animateDpAsState(
+        targetValue = if (isFocused) 12.dp else 0.dp,
+        animationSpec = tween(durationMillis = 150),
+        label = "shadowElevation"
+    )
+
+    val borderAlpha by animateFloatAsState(
+        targetValue = if (isFocused) 1f else 0f,
+        animationSpec = tween(durationMillis = 150),
+        label = "borderAlpha"
     )
 
     this
         .scale(scale)
         .shadow(
-            elevation = if (isFocused) 20.dp else 0.dp,
+            elevation = shadowElevation,
             shape = RoundedCornerShape(cornerRadius),
-            ambientColor = borderColor.copy(alpha = 0.5f),
-            spotColor = borderColor
+            ambientColor = borderColor.copy(alpha = 0.3f * borderAlpha),
+            spotColor = borderColor.copy(alpha = borderAlpha)
         )
         .focusable(interactionSource = source)
-        .then(
-            if (isFocused) {
-                Modifier.border(
-                    width = borderWidth,
-                    color = borderColor,
-                    shape = RoundedCornerShape(cornerRadius)
-                )
-            } else {
-                Modifier
-            }
+        .border(
+            width = borderWidth,
+            color = borderColor.copy(alpha = borderAlpha),
+            shape = RoundedCornerShape(cornerRadius)
         )
 }

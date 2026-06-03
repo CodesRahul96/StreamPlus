@@ -29,9 +29,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.AnimatedContentScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -41,11 +38,9 @@ import com.codesrahul.streamplus.ui.components.PremiumBackground
 import com.codesrahul.streamplus.ui.settings.SettingsViewModel
 import com.codesrahul.streamplus.ui.util.tvFocusable
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlaylistDetailScreen(
-    sharedTransitionScope: SharedTransitionScope,
-    animatedContentScope: AnimatedContentScope,
     onBack: () -> Unit,
     onNavigate: (String) -> Unit,
     viewModel: PlaylistDetailViewModel = hiltViewModel()
@@ -86,18 +81,11 @@ fun PlaylistDetailScreen(
                     TopAppBar(
                         title = {
                             Column {
-                                val sharedKey = remember(viewModel.playlistId) { "playlist_${viewModel.playlistId}" }
-                                with(sharedTransitionScope) {
-                                    Text(
-                                        playlist?.name ?: "Playlist",
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = if (playlist != null) Modifier.sharedElement(
-                                            rememberSharedContentState(key = sharedKey),
-                                            animatedVisibilityScope = animatedContentScope
-                                        ) else Modifier
-                                    )
-                                }
+                                Text(
+                                    playlist?.name ?: "Playlist",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
                                 if (!isLoading && viewModel.channels.value.isNotEmpty()) {
                                     Text("${filteredChannels.size} channels", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
@@ -263,7 +251,7 @@ fun PlaylistDetailScreen(
                                 count = filteredChannels.size,
                                 key = { index -> 
                                     val ch = filteredChannels[index]
-                                    "${ch.playlistId}_${ch.url}_${ch.name}_$index"
+                                    if (ch.id != 0) ch.id else "${ch.playlistId}_${ch.group}_${ch.name}_${ch.url}"
                                 },
                                 contentType = { index -> if (filteredChannels[index].isVod) "vod" else "live" }
                             ) { index ->

@@ -9,7 +9,6 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- TV Support Features -->
     <uses-feature
@@ -60,6 +59,14 @@
             android:label="Player"
             android:launchMode="singleTask"
             android:supportsPictureInPicture="true"
+            android:theme="@style/Theme.M3UValidator" />
+
+        <activity
+            android:name=".ui.player.MusicPlayerActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
+            android:exported="true"
+            android:label="Music Player"
+            android:launchMode="singleTask"
             android:theme="@style/Theme.M3UValidator" />
 
 

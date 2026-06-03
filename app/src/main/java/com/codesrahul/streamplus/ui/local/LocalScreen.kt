@@ -28,6 +28,8 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -92,10 +94,6 @@ fun LocalScreen() {
         )
     )
 
-    val audioPermissionState = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        rememberPermissionState(Manifest.permission.READ_MEDIA_AUDIO)
-    } else null
-
     val viewModel: LocalViewModel = hiltViewModel()
     val settingsViewModel: SettingsViewModel = hiltViewModel()
     val settings by viewModel.settings.collectAsState(initial = com.codesrahul.streamplus.data.settings.AppSettings())
@@ -131,7 +129,6 @@ fun LocalScreen() {
             if (selectedFolder != null) {
                 LocalMediaList(
                     viewModel = viewModel, 
-                    settingsViewModel = settingsViewModel,
                     settings = settings,
                     onBack = { viewModel.selectFolder(null) },
                     onShowSettings = { showSettings = true }
@@ -139,7 +136,6 @@ fun LocalScreen() {
             } else {
                 LocalMediaGrid(
                     viewModel = viewModel, 
-                    settingsViewModel = settingsViewModel,
                     settings = settings,
                     onShowSettings = { showSettings = true }
                 )
@@ -160,7 +156,6 @@ fun LocalScreen() {
 @Composable
 fun LocalMediaGrid(
     viewModel: LocalViewModel,
-    settingsViewModel: SettingsViewModel,
     settings: com.codesrahul.streamplus.data.settings.AppSettings,
     onShowSettings: () -> Unit
 ) {
@@ -224,7 +219,11 @@ fun LocalMediaGrid(
                                 }
                                 IconButton(onClick = {
                                     val uris = selectedFolders.flatMap { folder ->
-                                        getVideosInFolder(context, folder).map { it.uri }
+                                        if (viewModel.mediaType.value == MediaType.VIDEO) {
+                                            getVideosInFolder(context, folder).map { it.uri }
+                                        } else {
+                                            getAudiosInFolder(context, folder).map { it.uri }
+                                        }
                                     }
                                     val result = deleteVideos(context, uris)
                                     if (result is FileOpResult.RequiresPermission) {
@@ -276,7 +275,7 @@ fun LocalMediaGrid(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         contentPadding = PaddingValues(vertical = 12.dp)
                     ) {
-                        itemsIndexed(folders, key = { index, it -> "${it.name}_$index" }, contentType = { _, _ -> "folder" }) { index, folder ->
+                        items(folders, key = { it.name }, contentType = { "folder" }) { folder ->
                             val onItemClick = remember(folder, isSelectionMode, viewModel) {
                                 {
                                     if (isSelectionMode) {
@@ -323,7 +322,6 @@ fun LocalMediaGrid(
 @Composable
 fun LocalMediaList(
     viewModel: LocalViewModel,
-    settingsViewModel: SettingsViewModel,
     settings: com.codesrahul.streamplus.data.settings.AppSettings,
     onBack: () -> Unit,
     onShowSettings: () -> Unit
@@ -332,7 +330,6 @@ fun LocalMediaList(
     val videos by viewModel.videos.collectAsState()
     val selectedFolder by viewModel.selectedFolder.collectAsState()
     val folderName = selectedFolder ?: ""
-    val isLoading by viewModel.isLoading.collectAsState()
     
     var videoToDelete by remember { mutableStateOf<LocalMedia?>(null) }
     var videoToRename by remember { mutableStateOf<LocalMedia?>(null) }
@@ -466,7 +463,7 @@ fun LocalMediaList(
                         scrollBehavior = scrollBehavior,
                         navigationIcon = {
                             IconButton(onClick = onBack) {
-                                Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                             }
                         },
                         actions = {
@@ -501,9 +498,25 @@ fun LocalMediaList(
                 items(filteredVideos, key = { it.id }, contentType = { "video" }) { video ->
                     val onItemClick = remember(video, context) {
                         {
-                            val intent = Intent(context, com.codesrahul.streamplus.ui.player.PlayerActivity::class.java).apply {
+                            val targetClass = if (video.mediaType == MediaType.AUDIO) {
+                                com.codesrahul.streamplus.ui.player.MusicPlayerActivity::class.java
+                            } else {
+                                com.codesrahul.streamplus.ui.player.PlayerActivity::class.java
+                            }
+                            val intent = Intent(context, targetClass).apply {
                                 putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_URL, video.uri.toString())
                                 putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_TITLE, video.title)
+                                putExtra("EXTRA_IS_AUDIO", video.mediaType == MediaType.AUDIO)
+                                putExtra("EXTRA_MEDIA_TYPE", video.mediaType.name)
+                                
+                                val playlistUris = filteredVideos.map { it.uri.toString() }.toTypedArray()
+                                val playlistTitles = filteredVideos.map { it.title }.toTypedArray()
+                                val clickedIndex = filteredVideos.indexOf(video)
+                                
+                                putExtra("EXTRA_PLAYLIST_URIS", playlistUris)
+                                putExtra("EXTRA_PLAYLIST_TITLES", playlistTitles)
+                                putExtra("EXTRA_PLAYLIST_INDEX", clickedIndex)
+                                
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
                             context.startActivity(intent)
@@ -959,7 +972,7 @@ fun GallerySettingsBottomSheet(
                 GalleryOptionButton(
                     label = "List", 
                     isSelected = settings.galleryLayout == "List", 
-                    icon = Icons.Default.List,
+                    icon = Icons.AutoMirrored.Filled.List,
                     modifier = Modifier.weight(1f)
                 ) { viewModel.setGalleryLayout("List") }
                 GalleryOptionButton(

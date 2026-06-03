@@ -36,6 +36,7 @@ data class ChannelEntity(
 )
 
 fun ChannelEntity.toDomain() = M3UItem(
+    id = id,
     name = name,
     url = url,
     group = group,

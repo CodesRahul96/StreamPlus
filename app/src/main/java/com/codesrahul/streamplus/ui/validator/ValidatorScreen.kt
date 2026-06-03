@@ -138,7 +138,7 @@ fun ValidatingView(state: ValidatorUiState.Validating) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         LinearProgressIndicator(
-            progress = state.progress.toFloat() / state.total.coerceAtLeast(1),
+            progress = { state.progress.toFloat() / state.total.coerceAtLeast(1) },
             modifier = Modifier.fillMaxWidth().height(8.dp)
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -160,7 +160,6 @@ fun SuccessView(
 ) {
     val activeCount = items.count { it.status == StreamStatus.ACTIVE }
     val deadCount = items.count { it.status == StreamStatus.DEAD || it.status == StreamStatus.TIMEOUT }
-    val unknownCount = items.count { it.status == StreamStatus.UNKNOWN }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Header Stats
@@ -184,7 +183,7 @@ fun SuccessView(
             }
         }
         
-        Divider()
+        HorizontalDivider()
 
         LazyColumn(
             modifier = Modifier.weight(1f),
@@ -213,7 +212,7 @@ fun SuccessView(
                         )
                     }
                 )
-                Divider()
+                HorizontalDivider()
             }
         }
 

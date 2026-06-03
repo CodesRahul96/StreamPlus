@@ -127,7 +127,7 @@ fun SeriesDetailScreen(
                                     contentPadding = PaddingValues(horizontal = 16.dp),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    items(info.seasons) { season ->
+                                    items(info.seasons, key = { it.seasonNumber ?: it.id ?: 0 }) { season ->
                                         val isSelected = selectedSeason == season.seasonNumber
                                         FilterChip(
                                             selected = isSelected,
@@ -146,7 +146,7 @@ fun SeriesDetailScreen(
                                 contentPadding = PaddingValues(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(episodes) { episode ->
+                                items(episodes, key = { it.id }) { episode ->
                                     EpisodeItem(
                                         episode = episode,
                                         onClick = {

@@ -385,14 +385,19 @@ class PlaylistRepositoryImpl @Inject constructor(
         val items = result.first
         val detectedEpgUrl = result.second
 
+        var finalItems = items
         if (items.isNotEmpty()) {
-            if (settings.playlistCache) {
-                playlistCache[url] = items
-            }
             // Update disk cache
             if (actualPlaylistId != -1) {
                 channelDao.deleteChannelsByPlaylist(actualPlaylistId)
                 channelDao.insertChannels(items.map { it.toEntity(actualPlaylistId) })
+                val reloaded = channelDao.getChannelsByPlaylist(actualPlaylistId).map { it.toDomain() }
+                if (reloaded.isNotEmpty()) {
+                    finalItems = reloaded
+                }
+            }
+            if (settings.playlistCache) {
+                playlistCache[url] = finalItems
             }
         }
 
@@ -412,7 +417,7 @@ class PlaylistRepositoryImpl @Inject constructor(
             }
         }
 
-        items
+        finalItems
     }
 
     override suspend fun parsePlaylist(inputStream: InputStream): List<M3UItem> = withContext(Dispatchers.IO) {
@@ -446,7 +451,7 @@ class PlaylistRepositoryImpl @Inject constructor(
             async {
                 try {
                     val lower = item.url.lowercase()
-                    if (lower.contains(".m3u") || lower.contains(".m3u8") || lower.contains(".json") || lower.contains("/playlist") || lower.contains("/m3u")) {
+                    if ((lower.contains(".m3u") && !lower.contains(".m3u8")) || lower.contains(".json") || lower.contains("/playlist") || lower.contains("/m3u")) {
                         val requestBuilder = okhttp3.Request.Builder().url(item.url)
                         for ((k, v) in item.headers) requestBuilder.header(k, v)
                         val request = requestBuilder.get().build()
@@ -473,7 +478,7 @@ class PlaylistRepositoryImpl @Inject constructor(
         }.awaitAll().flatten()
 
         // Recurse once more to expand any nested playlists found
-        if (expandedResults.any { it.url.lowercase().contains(".m3u") || it.url.lowercase().contains(".json") }) {
+        if (expandedResults.any { (it.url.lowercase().contains(".m3u") && !it.url.lowercase().contains(".m3u8")) || it.url.lowercase().contains(".json") }) {
             return@withContext expandItems(expandedResults, depth + 1)
         }
         return@withContext expandedResults

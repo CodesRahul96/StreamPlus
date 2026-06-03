@@ -81,7 +81,7 @@ fun SampleCategoryItem(category: SampleCategory) {
 
             AnimatedVisibility(visible = expanded) {
                 Column {
-                    Divider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
                     category.streams.forEach { stream ->
                         ListItem(
                             headlineContent = { Text(stream.title) },

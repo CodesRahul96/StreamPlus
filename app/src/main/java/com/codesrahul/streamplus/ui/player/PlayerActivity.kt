@@ -40,6 +40,13 @@ import com.codesrahul.streamplus.ui.util.tvFocusable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.animation.core.*
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaItem.DrmConfiguration
@@ -103,6 +110,12 @@ class PlayerActivity : AppCompatActivity() {
 
     @Inject
     lateinit var channelDao: com.codesrahul.streamplus.data.local.ChannelDao
+
+    @Inject
+    lateinit var playlistDao: com.codesrahul.streamplus.data.local.PlaylistDao
+
+    @Inject
+    lateinit var playlistRepository: com.codesrahul.streamplus.domain.repository.PlaylistRepository
 
     private var castContext: CastContext? = null
     private var castPlayer: CastPlayer? = null
@@ -211,6 +224,12 @@ class PlayerActivity : AppCompatActivity() {
         val playlistId = intent.getIntExtra(EXTRA_PLAYLIST_ID, -1)
         val groupTitle = intent.getStringExtra(EXTRA_STREAM_GROUP) ?: "Default"
         
+        val isAudioExtra = intent.getBooleanExtra("EXTRA_IS_AUDIO", false)
+        val mediaTypeExtra = intent.getStringExtra("EXTRA_MEDIA_TYPE")
+        val playlistUris = intent.getStringArrayExtra("EXTRA_PLAYLIST_URIS")
+        val playlistTitles = intent.getStringArrayExtra("EXTRA_PLAYLIST_TITLES")
+        val playlistIndex = intent.getIntExtra("EXTRA_PLAYLIST_INDEX", -1)
+        
         Log.d("PlayerActivity", ">>> Intent received: URL=$streamUrl, Title=$streamTitle, Cookie=$cookie, UA=$userAgent, DRM=$drmScheme")
 
         updatePipParams()
@@ -259,11 +278,19 @@ class PlayerActivity : AppCompatActivity() {
                             okHttpClientProvider = okHttpClientProvider,
                             settingsRepository = settingsRepository,
                             historyRepository = historyRepository,
+                            channelDao = channelDao,
+                            playlistDao = playlistDao,
+                            playlistRepository = playlistRepository,
                             playlistId = playlistId,
                             groupTitle = groupTitle,
                             castPlayer = castPlayer,
                             onEnterPip = { enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().build()) },
-                            isInPip = isInPip
+                            isInPip = isInPip,
+                            isAudioExtra = isAudioExtra,
+                            mediaTypeExtra = mediaTypeExtra,
+                            playlistUris = playlistUris,
+                            playlistTitles = playlistTitles,
+                            playlistIndex = playlistIndex
                         )
                     }
                 }
@@ -339,11 +366,19 @@ fun PlayerScreen(
     okHttpClientProvider: javax.inject.Provider<okhttp3.OkHttpClient>,
     settingsRepository: com.codesrahul.streamplus.data.settings.SettingsRepository,
     historyRepository: com.codesrahul.streamplus.data.repository.HistoryRepository,
+    channelDao: com.codesrahul.streamplus.data.local.ChannelDao,
+    playlistDao: com.codesrahul.streamplus.data.local.PlaylistDao,
+    playlistRepository: com.codesrahul.streamplus.domain.repository.PlaylistRepository,
     playlistId: Int,
     groupTitle: String,
     castPlayer: androidx.media3.cast.CastPlayer? = null,
     onEnterPip: () -> Unit,
-    isInPip: Boolean = false
+    isInPip: Boolean = false,
+    isAudioExtra: Boolean = false,
+    mediaTypeExtra: String? = null,
+    playlistUris: Array<String>? = null,
+    playlistTitles: Array<String>? = null,
+    playlistIndex: Int = -1
 ) {
     val context = LocalContext.current
     val activityContext = remember(context) {
@@ -358,8 +393,13 @@ fun PlayerScreen(
     val settingsState by settingsRepository.settings.collectAsState(initial = com.codesrahul.streamplus.data.settings.AppSettings())
     
     // Audio Boost State
+    var currentStreamUrl by remember { mutableStateOf(streamUrl) }
+    var hasRefreshedPlaylist by remember { mutableStateOf(false) }
+    
     var audioBoost by remember { mutableStateOf(0f) }
     var volumeAccumulator by remember { mutableStateOf(0f) }
+    
+
     
     // Playback Speed State
     var playbackSpeed by remember { mutableFloatStateOf(1.0f) }
@@ -465,20 +505,29 @@ fun PlayerScreen(
     }
 
     // 1. Resolve Item immediately based on Inputs
-    val resolvedItem = remember(streamUrl, streamTitle, channelLogo, userAgent, referer, cookie, origin, drmLicenseUrl, drmScheme, headers, drmHeaders) {
+    val resolvedItem = remember(currentStreamUrl, streamTitle, channelLogo, userAgent, referer, cookie, origin, drmLicenseUrl, drmScheme, headers, drmHeaders) {
+        val isMagUrl = currentStreamUrl.contains("mac=", ignoreCase = true) || 
+                       currentStreamUrl.contains("play/live.php", ignoreCase = true) ||
+                       currentStreamUrl.contains("/stalker", ignoreCase = true)
+        
+        val effectiveUA = if (isMagUrl) "MacroHTTP" else userAgent
+        
         // Build the starting headers map from all individual intent extras
         val startHeaders = mutableMapOf<String, String>()
         startHeaders.putAll(headers)
         if (!referer.isNullOrBlank())  startHeaders["Referer"]    = referer
         if (!cookie.isNullOrBlank())   startHeaders["Cookie"]     = cookie
         if (!origin.isNullOrBlank())   startHeaders["Origin"]     = origin
+        if (isMagUrl) {
+            startHeaders["X-User-Agent"] = "Model: MAG250; Link: Ethernet"
+        }
 
         val item = M3UItem(
             name = streamTitle,
-            url = streamUrl,
+            url = currentStreamUrl,
             logoUrl = channelLogo ?: "",
             group = "",
-            userAgent = userAgent,  // preserved by the fixed HeaderResolver
+            userAgent = effectiveUA,  // preserved by the fixed HeaderResolver
             headers = startHeaders, // referer/cookie/origin now in headers from the start
             licenseUrl = drmLicenseUrl,
             drmScheme = drmScheme,
@@ -613,7 +662,54 @@ fun PlayerScreen(
                                      error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
                                      error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_UNSPECIFIED
                 
-                if (isNetworkError && retryCount < maxRetries) {
+                val isHttpError = error.cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException ||
+                                  error.cause is androidx.media3.datasource.HttpDataSource.HttpDataSourceException
+                
+                if ((isNetworkError || isHttpError) && !hasRefreshedPlaylist && playlistId != -1) {
+                    hasRefreshedPlaylist = true
+                    Log.d("PlayerScreen", "Attempting automatic playlist refresh to resolve token/stream expiration...")
+                    scope.launch {
+                        try {
+                            val playlistEntity = withContext(Dispatchers.IO) {
+                                playlistDao.getPlaylistSync(playlistId)
+                            }
+                            if (playlistEntity != null) {
+                                withContext(Dispatchers.IO) {
+                                    playlistRepository.loadPlaylist(
+                                        url = playlistEntity.url,
+                                        userAgent = playlistEntity.userAgent,
+                                        forceRefresh = true,
+                                        playlistId = playlistId
+                                    )
+                                }
+                                val fresh = withContext(Dispatchers.IO) {
+                                    channelDao.getChannelByIdentity(streamTitle, groupTitle, playlistId)
+                                }
+                                if (fresh != null) {
+                                    Log.d("PlayerScreen", "Playlist refreshed. New URL: ${fresh.url}")
+                                    if (fresh.url != currentStreamUrl) {
+                                        currentStreamUrl = fresh.url
+                                        return@launch
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.e("PlayerScreen", "Auto-refresh of playlist failed", e)
+                        }
+                        
+                        // If url didn't change or refresh failed, fallback to standard retry
+                        if (retryCount < maxRetries) {
+                            retryCount++
+                            val delayMs = (2000L * retryCount).coerceAtMost(10000L)
+                            kotlinx.coroutines.delay(delayMs)
+                            player.prepare()
+                            player.play()
+                        }
+                    }
+                    return
+                }
+
+                if ((isNetworkError || isHttpError) && retryCount < maxRetries) {
                     retryCount++
                     val delayMs = (2000L * retryCount).coerceAtMost(10000L) // Exponential backoff
                     Log.d("PlayerScreen", "Network error detected. Retrying ($retryCount/$maxRetries) in ${delayMs}ms...")
@@ -1019,7 +1115,32 @@ fun PlayerScreen(
                     Log.d("PlayerScreen", "Applied DRM Config: UUID=$uuid, Scheme=$effectiveScheme, License=$effectiveLicenseUrl")
                 }
             }
-            exoPlayer.setMediaItem(mediaItemBuilder.build())
+            if (playlistUris != null && playlistUris.isNotEmpty()) {
+                val mediaItems = playlistUris.mapIndexed { idx, url ->
+                    val title = playlistTitles?.getOrNull(idx) ?: "Track ${idx + 1}"
+                    val itemMimeType = when {
+                        url.lowercase().contains(".m3u8") || url.lowercase().contains("type=hls") -> androidx.media3.common.MimeTypes.APPLICATION_M3U8
+                        url.lowercase().contains(".mpd") || url.lowercase().contains("type=dash") -> androidx.media3.common.MimeTypes.APPLICATION_MPD
+                        else -> null
+                    }
+                    MediaItem.Builder()
+                        .setUri(Uri.parse(url))
+                        .setMediaId(url)
+                        .apply { itemMimeType?.let { setMimeType(it) } }
+                        .setMediaMetadata(
+                            androidx.media3.common.MediaMetadata.Builder()
+                                .setTitle(title)
+                                .build()
+                        )
+                        .build()
+                }
+                exoPlayer.setMediaItems(mediaItems)
+                if (playlistIndex >= 0 && playlistIndex < mediaItems.size) {
+                    exoPlayer.seekTo(playlistIndex, 0L)
+                }
+            } else {
+                exoPlayer.setMediaItem(mediaItemBuilder.build())
+            }
             exoPlayer.prepare()
         }
     }
@@ -1036,6 +1157,7 @@ fun PlayerScreen(
                 val playerView = view.findViewById<androidx.media3.ui.PlayerView>(com.codesrahul.streamplus.R.id.player_view)
                 playerView.player = exoPlayer
                 playerView.keepScreenOn = true
+
                 
                 val detector = android.view.GestureDetector(context, object : android.view.GestureDetector.SimpleOnGestureListener() {
                     val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
@@ -1643,3 +1765,5 @@ private fun formatElapsedTime(timeMs: Long): String {
         }
     }
 }
+
+

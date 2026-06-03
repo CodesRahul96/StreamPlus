@@ -78,7 +78,7 @@ class SplashActivity : ComponentActivity() {
                         )
                     }
 
-                    delay(2500L)
+                    delay(1000L)
 
                     val splashAction = intent?.action
                     if (splashAction == "com.codesrahul.streamplus.ACTION_PLAY_LAST") {

@@ -56,7 +56,7 @@ class M3UStreamParser : StreamParser {
             }
 
             val finalName = if (currentName.isBlank()) extractNameFromUrl(finalUrl) else currentName
-            val detectedScheme = detectDrmScheme(finalUrl, currentDrmScheme, currentDrmLicense)
+            val detectedScheme = detectDrmScheme(currentDrmScheme, currentDrmLicense)
 
             items.add(M3UItem(
                 name = finalName,
@@ -109,10 +109,13 @@ class M3UStreamParser : StreamParser {
                         val props = info.substring(0, paramsEnd)
                         parseProps(props) { k, v -> 
                             when(k.lowercase()) {
-                                "tvg-id", "tvg-name" -> currentEpgId = v
+                                "tvg-id" -> currentEpgId = v
+                                "tvg-name" -> {
+                                    currentEpgId = v
+                                    if (currentName.isBlank()) currentName = v
+                                }
                                 "tvg-logo", "logo" -> currentLogo = v
                                 "group-title", "group" -> currentGroup = v
-                                "tvg-name" -> if (currentName.isBlank()) currentName = v
                                 "user-agent", "http-user-agent" -> currentHeaders["User-Agent"] = v
                                 "referer", "http-referrer" -> currentHeaders["Referer"] = v
                                 "origin", "http-origin" -> currentHeaders["Origin"] = v
@@ -143,7 +146,7 @@ class M3UStreamParser : StreamParser {
                      }
                 } else if (trimmed.startsWith("#KODIPROP:") || trimmed.startsWith("# KODIPROP:")) {
                     val prop = trimmed.substringAfter("PROP:")
-                    parseKodiProp(prop, currentHeaders) { scheme, license ->
+                    parseKodiProp(prop, currentHeaders, currentDrmHeaders) { scheme, license ->
                         if (scheme != null) currentDrmScheme = scheme
                         if (license != null) currentDrmLicense = license
                     }
@@ -189,7 +192,17 @@ class M3UStreamParser : StreamParser {
                         else if (bw != info) currentName = "Bandwidth: $bw"
                     }
                 } else if (!trimmed.startsWith("#")) {
-                    saveItem(trimmed)
+                    if (trimmed.contains(",http", ignoreCase = true)) {
+                        val commaIdx = trimmed.indexOf(",http", ignoreCase = true)
+                        val namePart = trimmed.substring(0, commaIdx).trim()
+                        val urlPart = trimmed.substring(commaIdx + 1).trim()
+                        if (urlPart.isNotEmpty()) {
+                            currentName = namePart
+                            saveItem(urlPart)
+                        }
+                    } else {
+                        saveItem(trimmed)
+                    }
                     // Reset per-item state
                     currentName = ""
                     currentLogo = ""
@@ -203,13 +216,6 @@ class M3UStreamParser : StreamParser {
                     currentOrigin = ""
                     currentEpgId = null
                     currentDuration = -1
-                } else if (trimmed.startsWith("http", true) && !trimmed.contains("#")) {
-                     // RAW URL Support: If it starts with http and we missed it above (though the !startsWith("#") should catch it)
-                     // This block is technically redundant due to the else if (!trimmed.startsWith("#")) above, 
-                     // but explicitly capturing it here for clarity if we change the logic above.
-                     // Actually, the above block DOES catch it. 
-                     // The logic "else if (!trimmed.startsWith("#"))" catches EVERYTHING that is not a comment.
-                     // So raw URLs are already handled! We just need to ensure currentName has a fallback.
                 }
             }
         }
@@ -217,11 +223,11 @@ class M3UStreamParser : StreamParser {
         return items
     }
 
-    override fun canParse(url: String, content: String): Boolean {
+    override fun canParse(url: String, prefix: String): Boolean {
         return url.contains(".m3u", true) || 
-               content.contains("#EXTM3U") || 
-               content.contains("http://") || 
-               content.contains("https://")
+               prefix.contains("#EXTM3U") || 
+               prefix.contains("http://") || 
+               prefix.contains("https://")
     }
 
     private fun parseProps(input: String, onProp: (String, String) -> Unit) {
@@ -267,7 +273,12 @@ class M3UStreamParser : StreamParser {
         }
     }
 
-    private fun parseKodiProp(prop: String, headers: MutableMap<String, String>, onDrm: (String?, String?) -> Unit) {
+    private fun parseKodiProp(
+        prop: String,
+        headers: MutableMap<String, String>,
+        drmHeaders: MutableMap<String, String>,
+        onDrm: (String?, String?) -> Unit
+    ) {
         val parts = prop.split("=", limit = 2)
         if (parts.size == 2) {
             val key = parts[0].trim().lowercase().removePrefix("inputstream.adaptive.")
@@ -288,7 +299,6 @@ class M3UStreamParser : StreamParser {
                 }
                 "license_key" -> onDrm(null, value)
                 "manifest_headers", 
-                "license_headers", 
                 "stream_headers" -> {
                     // key=value&key2=value2
                     value.split("&").forEach { 
@@ -298,6 +308,19 @@ class M3UStreamParser : StreamParser {
                                 headers[kv[0]] = java.net.URLDecoder.decode(kv[1], "UTF-8")
                             } catch (e: Exception) {
                                 headers[kv[0]] = kv[1] // Fallback to raw value
+                            }
+                        }
+                    }
+                }
+                "license_headers" -> {
+                    // key=value&key2=value2
+                    value.split("&").forEach { 
+                        val kv = it.split("=", limit = 2)
+                        if (kv.size == 2) {
+                            try {
+                                drmHeaders[kv[0]] = java.net.URLDecoder.decode(kv[1], "UTF-8")
+                            } catch (e: Exception) {
+                                drmHeaders[kv[0]] = kv[1] // Fallback to raw value
                             }
                         }
                     }
@@ -317,7 +340,7 @@ class M3UStreamParser : StreamParser {
         } catch (e: Exception) { "Unknown" }
     }
     
-    private fun detectDrmScheme(url: String, explicitScheme: String?, explicitLicense: String?): String? {
+    private fun detectDrmScheme(explicitScheme: String?, explicitLicense: String?): String? {
         val s = explicitScheme?.lowercase() ?: ""
         if (s.contains("widevine") || s.contains("com.widevine.alpha")) return "widevine"
         if (s.contains("playready") || s.contains("com.microsoft.playready")) return "playready"

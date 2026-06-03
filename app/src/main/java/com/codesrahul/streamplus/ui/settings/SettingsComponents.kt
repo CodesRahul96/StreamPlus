@@ -198,7 +198,7 @@ fun SettingsSwitchItem(
             )
         }
         if (showDivider) {
-            Divider(
+            HorizontalDivider(
                 modifier = Modifier.padding(start = if (icon != null) 62.dp else 16.dp, end = 16.dp),
                 thickness = 0.5.dp,
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
@@ -270,7 +270,7 @@ fun SettingsClickableItem(
             }
         }
         if (showDivider) {
-            Divider(
+            HorizontalDivider(
                 modifier = Modifier.padding(start = if (icon != null) 62.dp else 16.dp, end = 16.dp),
                 thickness = 0.5.dp,
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
