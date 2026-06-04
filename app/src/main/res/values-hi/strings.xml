@@ -242,4 +242,5 @@
     <string name="drm_desc_clearkey">AES कुंजी एक्सचेंज</string>
     <string name="drm_desc_playready">माइक्रोसॉफ्ट मानक</string>
     <string name="close_btn">बंद करें</string>
+    <string name="splash_tagline">आपका प्रीमियम स्ट्रीमिंग हब</string>
 </resources>

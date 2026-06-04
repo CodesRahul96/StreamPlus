@@ -53,7 +53,14 @@ fun MainScreen(initialTab: String? = null) {
         if (!popped) {
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastBackPressTime < 2000) {
-                (context as? android.app.Activity)?.finish()
+                var currentContext = context
+                while (currentContext is android.content.ContextWrapper) {
+                    if (currentContext is android.app.Activity) {
+                        currentContext.finish()
+                        break
+                    }
+                    currentContext = currentContext.baseContext
+                }
             } else {
                 lastBackPressTime = currentTime
                 android.widget.Toast.makeText(context, "Press back again to exit", android.widget.Toast.LENGTH_SHORT).show()

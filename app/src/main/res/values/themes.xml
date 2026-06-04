@@ -9,4 +9,10 @@
         <item name="mediaRouteTheme">@style/ThemeOverlay.MediaRouter.Dark</item>
         <item name="android:colorBackground">@android:color/black</item>
     </style>
+
+    <style name="Theme.AppSplash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#000000</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.M3UValidator</item>
+    </style>
 </resources>

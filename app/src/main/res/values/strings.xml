@@ -242,4 +242,5 @@
     <string name="drm_desc_clearkey">AES key exchange</string>
     <string name="drm_desc_playready">Microsoft standard</string>
     <string name="close_btn">Close</string>
+    <string name="splash_tagline">Your Premium Streaming Hub</string>
 </resources>

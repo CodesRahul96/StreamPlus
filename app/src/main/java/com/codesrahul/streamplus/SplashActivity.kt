@@ -1,6 +1,8 @@
 package com.codesrahul.streamplus
 
+import android.app.Activity
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -35,10 +37,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.codesrahul.streamplus.ui.theme.StreamPlusTheme
 import com.codesrahul.streamplus.ui.components.PremiumBackground
 import com.codesrahul.streamplus.ui.player.PlayerActivity
@@ -47,6 +51,9 @@ import kotlinx.coroutines.launch
 
 class SplashActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Install Android 12+ Splash Screen before super.onCreate
+        installSplashScreen()
+        
         super.onCreate(savedInstanceState)
         setContent {
             StreamPlusTheme {
@@ -59,26 +66,27 @@ class SplashActivity : ComponentActivity() {
                         scale.animateTo(
                             targetValue = 1f,
                             animationSpec = tween(
-                                durationMillis = 1000,
-                                easing = { android.view.animation.OvershootInterpolator(2f).getInterpolation(it) }
+                                durationMillis = 500,
+                                easing = { android.view.animation.OvershootInterpolator(1.5f).getInterpolation(it) }
                             )
                         )
                     }
                     launch {
-                        delay(400)
-                        alphaAnim.animateTo(1f, tween(800))
+                        delay(200)
+                        alphaAnim.animateTo(1f, tween(400))
                     }
                     launch {
                         pulseScale.animateTo(
-                            targetValue = 1.2f,
+                            targetValue = 1.15f,
                             animationSpec = infiniteRepeatable(
-                                animation = tween(1500),
+                                animation = tween(1000),
                                 repeatMode = RepeatMode.Reverse
                             )
                         )
                     }
 
-                    delay(1000L)
+                    // Reduced delay to keep app launch extremely snappy and responsive
+                    delay(700L)
 
                     val splashAction = intent?.action
                     if (splashAction == "com.codesrahul.streamplus.ACTION_PLAY_LAST") {
@@ -94,8 +102,17 @@ class SplashActivity : ComponentActivity() {
                         }
                         startActivity(mainIntent)
                     }
-                    @Suppress("DEPRECATION")
-                    overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+                    
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        overrideActivityTransition(
+                            Activity.OVERRIDE_TRANSITION_CLOSE,
+                            android.R.anim.fade_in,
+                            android.R.anim.fade_out
+                        )
+                    } else {
+                        @Suppress("DEPRECATION")
+                        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+                    }
                     finish()
                 }
 
@@ -175,7 +192,7 @@ class SplashActivity : ComponentActivity() {
                             Spacer(modifier = Modifier.height(8.dp))
 
                             Text(
-                                text = "Your Premium Streaming Hub",
+                                text = stringResource(R.string.splash_tagline),
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     letterSpacing = 2.sp
                                 ),
@@ -189,3 +206,4 @@ class SplashActivity : ComponentActivity() {
         }
     }
 }
+
