@@ -191,6 +191,27 @@
     <string name="delete_menu_item">हटाएं</string>
     <string name="unknown_artist">अज्ञात कलाकार</string>
 
+    <!-- Gallery Settings Sheet -->
+    <string name="gallery_settings_title">गैलरी सेटिंग्स</string>
+    <string name="gallery_sec_layout">लेआउट व्यू</string>
+    <string name="gallery_layout_list">सूची</string>
+    <string name="gallery_layout_grid">ग्रिड</string>
+    <string name="gallery_sec_folder_sort">फ़ोल्डर क्रम</string>
+    <string name="gallery_sort_name">नाम</string>
+    <string name="gallery_sort_count">संख्या</string>
+    <string name="gallery_sort_duration">अवधि</string>
+    <string name="gallery_sort_size">आकार</string>
+    <string name="gallery_sort_date">तारीख</string>
+    <string name="gallery_sec_video_sort">वीडियो क्रम</string>
+    <string name="gallery_sec_folder_display">फ़ोल्डर प्रदर्शन</string>
+    <string name="gallery_show_path">पथ दिखाएं</string>
+    <string name="gallery_show_count">संख्या दिखाएं</string>
+    <string name="gallery_sec_video_display">वीडियो प्रदर्शन</string>
+    <string name="gallery_show_thumbnail">थंबनेल</string>
+    <string name="gallery_show_resolution">रिज़ॉल्यूशन दिखाएं</string>
+    <string name="gallery_show_duration">अवधि दिखाएं</string>
+    <string name="gallery_show_size">फ़ाइल आकार दिखाएं</string>
+
     <!-- Direct Stream Screen -->
     <string name="direct_stream_title">डायरेक्ट स्ट्रीम</string>
     <string name="history_btn">इतिहास</string>

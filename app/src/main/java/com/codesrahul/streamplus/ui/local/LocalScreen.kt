@@ -950,12 +950,12 @@ fun GallerySettingsBottomSheet(
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Color(0xFF0F1217), // Deep dark background
-        dragHandle = { BottomSheetDefaults.DragHandle(color = Color.White.copy(0.2f)) },
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.4f)) },
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         tonalElevation = 8.dp
     ) {
@@ -967,97 +967,101 @@ fun GallerySettingsBottomSheet(
                 .verticalScroll(rememberScrollState())
         ) {
             Text(
-                "Gallery Settings", 
-                style = MaterialTheme.typography.headlineSmall, 
-                color = Color.White,
+                stringResource(R.string.gallery_settings_title),
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(vertical = 8.dp)
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             // Layout View
-            SettingsSectionHeader("Layout View")
+            SettingsSectionHeader(stringResource(R.string.gallery_sec_layout))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 GalleryOptionButton(
-                    label = "List", 
-                    isSelected = settings.galleryLayout == "List", 
+                    label = stringResource(R.string.gallery_layout_list),
+                    isSelected = settings.galleryLayout == "List",
                     icon = Icons.AutoMirrored.Filled.List,
                     modifier = Modifier.weight(1f)
                 ) { viewModel.setGalleryLayout("List") }
                 GalleryOptionButton(
-                    label = "Grid", 
-                    isSelected = settings.galleryLayout == "Grid", 
+                    label = stringResource(R.string.gallery_layout_grid),
+                    isSelected = settings.galleryLayout == "Grid",
                     icon = Icons.Default.GridView,
                     modifier = Modifier.weight(1f)
                 ) { viewModel.setGalleryLayout("Grid") }
             }
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Folder Sort
-            SettingsSectionHeader("Folder Sort")
+            SettingsSectionHeader(stringResource(R.string.gallery_sec_folder_sort))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    GalleryChip("Name", settings.folderSortField == "Name") { viewModel.setFolderSortField("Name") }
-                    GalleryChip("Count", settings.folderSortField == "Count") { viewModel.setFolderSortField("Count") }
+                    GalleryChip(stringResource(R.string.gallery_sort_name), settings.folderSortField == "Name") { viewModel.setFolderSortField("Name") }
+                    GalleryChip(stringResource(R.string.gallery_sort_count), settings.folderSortField == "Count") { viewModel.setFolderSortField("Count") }
                 }
                 IconButton(
                     onClick = { viewModel.setFolderSortAsc(!settings.folderSortAsc) },
-                    modifier = Modifier.background(Color.White.copy(0.05f), CircleShape).size(36.dp)
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(0.5f), CircleShape)
+                        .size(36.dp)
                 ) {
                     Icon(
-                         imageVector = if (settings.folderSortAsc) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
-                         contentDescription = null,
-                         tint = Color(0xFF00E5FF),
-                         modifier = Modifier.size(18.dp)
+                        imageVector = if (settings.folderSortAsc) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Video Sort
-            SettingsSectionHeader("Video Sort")
+            SettingsSectionHeader(stringResource(R.string.gallery_sec_video_sort))
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    GalleryChip("Name", settings.videoSortField == "Name", Modifier.weight(1f)) { viewModel.setVideoSortField("Name") }
-                    GalleryChip("Duration", settings.videoSortField == "Duration", Modifier.weight(1f)) { viewModel.setVideoSortField("Duration") }
+                    GalleryChip(stringResource(R.string.gallery_sort_name), settings.videoSortField == "Name", Modifier.weight(1f)) { viewModel.setVideoSortField("Name") }
+                    GalleryChip(stringResource(R.string.gallery_sort_duration), settings.videoSortField == "Duration", Modifier.weight(1f)) { viewModel.setVideoSortField("Duration") }
                 }
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        GalleryChip("Size", settings.videoSortField == "Size") { viewModel.setVideoSortField("Size") }
-                        GalleryChip("Date", settings.videoSortField == "Date") { viewModel.setVideoSortField("Date") }
+                        GalleryChip(stringResource(R.string.gallery_sort_size), settings.videoSortField == "Size") { viewModel.setVideoSortField("Size") }
+                        GalleryChip(stringResource(R.string.gallery_sort_date), settings.videoSortField == "Date") { viewModel.setVideoSortField("Date") }
                     }
                     IconButton(
                         onClick = { viewModel.setVideoSortAsc(!settings.videoSortAsc) },
-                        modifier = Modifier.background(Color.White.copy(0.05f), CircleShape).size(36.dp)
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(0.5f), CircleShape)
+                            .size(36.dp)
                     ) {
                         Icon(
-                             imageVector = if (settings.videoSortAsc) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
-                             contentDescription = null,
-                             tint = Color(0xFF00E5FF),
-                             modifier = Modifier.size(18.dp)
+                            imageVector = if (settings.videoSortAsc) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Folder Display
-            SettingsSectionHeader("Folder Display")
-            GallerySwitchItem("Show Path", settings.showFolderPath) { viewModel.setShowFolderPath(it) }
-            GallerySwitchItem("Show Count", settings.showFolderCount) { viewModel.setShowFolderCount(it) }
-            
+            SettingsSectionHeader(stringResource(R.string.gallery_sec_folder_display))
+            GallerySwitchItem(stringResource(R.string.gallery_show_path), settings.showFolderPath) { viewModel.setShowFolderPath(it) }
+            GallerySwitchItem(stringResource(R.string.gallery_show_count), settings.showFolderCount) { viewModel.setShowFolderCount(it) }
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Video Display
-            SettingsSectionHeader("Video Display")
-            GallerySwitchItem("Thumbnail", settings.showVideoThumbnail) { viewModel.setShowVideoThumbnail(it) }
-            GallerySwitchItem("Show Resolution", settings.showVideoResolution) { viewModel.setShowVideoResolution(it) }
-            GallerySwitchItem("Show Duration", settings.showVideoDuration) { viewModel.setShowVideoDuration(it) }
-            GallerySwitchItem("Show File Size", settings.showVideoSize) { viewModel.setShowVideoSize(it) }
+            SettingsSectionHeader(stringResource(R.string.gallery_sec_video_display))
+            GallerySwitchItem(stringResource(R.string.gallery_show_thumbnail), settings.showVideoThumbnail) { viewModel.setShowVideoThumbnail(it) }
+            GallerySwitchItem(stringResource(R.string.gallery_show_resolution), settings.showVideoResolution) { viewModel.setShowVideoResolution(it) }
+            GallerySwitchItem(stringResource(R.string.gallery_show_duration), settings.showVideoDuration) { viewModel.setShowVideoDuration(it) }
+            GallerySwitchItem(stringResource(R.string.gallery_show_size), settings.showVideoSize) { viewModel.setShowVideoSize(it) }
         }
     }
 }
@@ -1065,9 +1069,10 @@ fun GallerySettingsBottomSheet(
 @Composable
 fun SettingsSectionHeader(title: String) {
     Text(
-        title, 
-        style = MaterialTheme.typography.labelLarge, 
-        color = Color.White.copy(0.6f),
+        title,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(bottom = 12.dp)
     )
 }
@@ -1110,14 +1115,23 @@ fun GalleryChip(label: String, isSelected: Boolean, modifier: Modifier = Modifie
 @Composable
 fun GallerySwitchItem(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!checked) }.padding(vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(label, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyLarge)
         Switch(
-            checked = checked, 
-            onCheckedChange = onCheckedChange
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
         )
     }
 }

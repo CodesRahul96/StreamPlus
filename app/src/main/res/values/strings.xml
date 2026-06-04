@@ -191,6 +191,27 @@
     <string name="delete_menu_item">Delete</string>
     <string name="unknown_artist">Unknown Artist</string>
 
+    <!-- Gallery Settings Sheet -->
+    <string name="gallery_settings_title">Gallery Settings</string>
+    <string name="gallery_sec_layout">Layout View</string>
+    <string name="gallery_layout_list">List</string>
+    <string name="gallery_layout_grid">Grid</string>
+    <string name="gallery_sec_folder_sort">Folder Sort</string>
+    <string name="gallery_sort_name">Name</string>
+    <string name="gallery_sort_count">Count</string>
+    <string name="gallery_sort_duration">Duration</string>
+    <string name="gallery_sort_size">Size</string>
+    <string name="gallery_sort_date">Date</string>
+    <string name="gallery_sec_video_sort">Video Sort</string>
+    <string name="gallery_sec_folder_display">Folder Display</string>
+    <string name="gallery_show_path">Show Path</string>
+    <string name="gallery_show_count">Show Count</string>
+    <string name="gallery_sec_video_display">Video Display</string>
+    <string name="gallery_show_thumbnail">Thumbnail</string>
+    <string name="gallery_show_resolution">Show Resolution</string>
+    <string name="gallery_show_duration">Show Duration</string>
+    <string name="gallery_show_size">Show File Size</string>
+
     <!-- Direct Stream Screen -->
     <string name="direct_stream_title">Direct Stream</string>
     <string name="history_btn">History</string>
