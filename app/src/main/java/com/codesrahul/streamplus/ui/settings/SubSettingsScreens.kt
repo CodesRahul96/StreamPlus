@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.res.stringResource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -68,7 +69,7 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
-                    title = { Text("Appearance", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
+                    title = { Text(stringResource(com.codesrahul.streamplus.R.string.appearance_title), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
@@ -92,8 +93,8 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 // Theme Mode Section
                 SettingsCard {
                     SettingsItemHeader(
-                        title = "Theme Mode",
-                        subtitle = "Choose your preferred theme appearance",
+                        title = stringResource(com.codesrahul.streamplus.R.string.theme_mode_title),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.theme_mode_desc),
                         icon = Icons.Default.BrightnessMedium,
                         iconColor = PurpleVibe
                     )
@@ -110,16 +111,16 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         ) {
                             ThemeCard(
                                 mode = ThemeMode.SYSTEM,
-                                title = "System",
-                                desc = "Follows device theme",
+                                title = stringResource(com.codesrahul.streamplus.R.string.theme_system),
+                                desc = stringResource(com.codesrahul.streamplus.R.string.theme_system_desc),
                                 selected = settingsState.themeMode == ThemeMode.SYSTEM,
                                 onClick = { viewModel.setThemeMode(ThemeMode.SYSTEM) },
                                 modifier = Modifier.weight(1f)
                             )
                             ThemeCard(
                                 mode = ThemeMode.LIGHT,
-                                title = "Light",
-                                desc = "Always light theme",
+                                title = stringResource(com.codesrahul.streamplus.R.string.theme_light),
+                                desc = stringResource(com.codesrahul.streamplus.R.string.theme_light_desc),
                                 selected = settingsState.themeMode == ThemeMode.LIGHT,
                                 onClick = { viewModel.setThemeMode(ThemeMode.LIGHT) },
                                 modifier = Modifier.weight(1f)
@@ -131,16 +132,16 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         ) {
                             ThemeCard(
                                 mode = ThemeMode.DARK,
-                                title = "Dark",
-                                desc = "Sleek dark theme",
+                                title = stringResource(com.codesrahul.streamplus.R.string.theme_dark),
+                                desc = stringResource(com.codesrahul.streamplus.R.string.theme_dark_desc),
                                 selected = settingsState.themeMode == ThemeMode.DARK,
                                 onClick = { viewModel.setThemeMode(ThemeMode.DARK) },
                                 modifier = Modifier.weight(1f)
                             )
                             ThemeCard(
                                 mode = ThemeMode.PITCH_BLACK,
-                                title = "OLED Black",
-                                desc = "Pure black theme",
+                                title = stringResource(com.codesrahul.streamplus.R.string.theme_black),
+                                desc = stringResource(com.codesrahul.streamplus.R.string.theme_black_desc),
                                 selected = settingsState.themeMode == ThemeMode.PITCH_BLACK,
                                 onClick = { viewModel.setThemeMode(ThemeMode.PITCH_BLACK) },
                                 modifier = Modifier.weight(1f)
@@ -154,14 +155,14 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 // UI Customization Section
                 SettingsCard {
                     SettingsItemHeader(
-                        title = "Navigation Preferences",
+                        title = stringResource(com.codesrahul.streamplus.R.string.nav_pref_title),
                         icon = Icons.Default.LabelOff,
                         iconColor = TealSea
                     )
                     
                     SettingsSwitchItem(
-                        title = "Hide Navigation Labels",
-                        subtitle = "Clean bottom bar without text descriptions",
+                        title = stringResource(com.codesrahul.streamplus.R.string.hide_nav_labels),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.hide_nav_labels_desc),
                         checked = settingsState.hideNavLabels,
                         onCheckedChange = { viewModel.setHideNavLabels(it) },
                         showDivider = false
@@ -171,13 +172,17 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 // Default Tab Section
                 SettingsCard {
                     SettingsItemHeader(
-                        title = "Default Landing Tab",
-                        subtitle = "Choose which view opens when app starts",
+                        title = stringResource(com.codesrahul.streamplus.R.string.default_tab_title),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.default_tab_desc),
                         icon = Icons.Default.Home,
                         iconColor = BlueSky
                     )
                     
-                    val tabs = listOf("playlist" to "Playlist", "local" to "Gallery", "direct_play" to "Stream")
+                    val tabs = listOf(
+                        "playlist" to com.codesrahul.streamplus.R.string.nav_playlist, 
+                        "local" to com.codesrahul.streamplus.R.string.nav_gallery, 
+                        "direct_play" to com.codesrahul.streamplus.R.string.nav_stream
+                    )
                     
                     Row(
                         modifier = Modifier
@@ -185,7 +190,7 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                             .padding(horizontal = 12.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        tabs.forEach { (route, label) ->
+                        tabs.forEach { (route, labelRes) ->
                             val selected = route == settingsState.defaultTab
                             Card(
                                 modifier = Modifier
@@ -220,7 +225,7 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = label,
+                                        text = stringResource(labelRes),
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
@@ -230,6 +235,56 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
+                }
+
+                // App Language Section
+                var showLanguageDialog by remember { mutableStateOf(false) }
+                val currentLanguageName = if (settingsState.languageCode == "hi") "हिन्दी" else "English"
+                
+                SettingsCard {
+                    SettingsItemHeader(
+                        title = stringResource(com.codesrahul.streamplus.R.string.app_lang_title),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.app_lang_desc),
+                        icon = Icons.Default.Language,
+                        iconColor = TealSea
+                    )
+                    
+                    SettingsClickableItem(
+                        title = stringResource(com.codesrahul.streamplus.R.string.app_lang_title),
+                        subtitle = currentLanguageName,
+                        icon = Icons.Default.Translate,
+                        iconColor = BlueSky,
+                        onClick = { showLanguageDialog = true },
+                        showDivider = false
+                    )
+                }
+
+                if (showLanguageDialog) {
+                    val languages = listOf("en", "hi")
+                    PremiumSelectionDialog(
+                        title = stringResource(com.codesrahul.streamplus.R.string.app_lang_title),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.app_lang_desc),
+                        options = languages,
+                        selectedOption = settingsState.languageCode,
+                        onOptionSelected = { code ->
+                            viewModel.setLanguageCode(code)
+                            showLanguageDialog = false
+                        },
+                        onDismiss = { showLanguageDialog = false },
+                        labelProvider = { code ->
+                            if (code == "hi") "हिन्दी" else "English"
+                        },
+                        descriptionProvider = { code ->
+                            if (code == "hi") "हिन्दी इंटरफ़ेस और अनुवाद" else "Default English interface"
+                        },
+                        iconProvider = { code ->
+                            Icon(
+                                imageVector = if (code == "hi") Icons.Default.Translate else Icons.Default.Language,
+                                contentDescription = null,
+                                tint = if (code == settingsState.languageCode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    )
                 }
                 
                 Spacer(modifier = Modifier.height(24.dp))

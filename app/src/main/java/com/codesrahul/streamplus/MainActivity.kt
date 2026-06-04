@@ -24,20 +24,35 @@ class MainActivity : ComponentActivity() {
                 val viewModel: SettingsViewModel = hiltViewModel()
                 val settingsState by viewModel.settings.collectAsState(initial = com.codesrahul.streamplus.data.settings.AppSettings())
 
-                com.codesrahul.streamplus.ui.theme.StreamPlusTheme(
-                    themeMode = settingsState.themeMode
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val locale = androidx.compose.runtime.remember(settingsState.languageCode) { java.util.Locale(settingsState.languageCode) }
+
+                val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+                val localContext = androidx.compose.runtime.remember(locale) {
+                    val config = android.content.res.Configuration(configuration).apply {
+                        setLocale(locale)
+                    }
+                    context.createConfigurationContext(config)
+                }
+
+                androidx.compose.runtime.CompositionLocalProvider(
+                    androidx.compose.ui.platform.LocalContext provides localContext
                 ) {
-                    // A surface container using the 'background' color from the theme
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background
+                    com.codesrahul.streamplus.ui.theme.StreamPlusTheme(
+                        themeMode = settingsState.themeMode
                     ) {
-                        if (!settingsState.isLoaded) {
-                            // Render empty box to prevent MainScreen NavHost flash
-                            androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize())
-                        } else {
-                            val startTab = intent.getStringExtra("START_TAB")
-                            com.codesrahul.streamplus.ui.main.MainScreen(initialTab = startTab)
+                        // A surface container using the 'background' color from the theme
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = MaterialTheme.colorScheme.background
+                        ) {
+                            if (!settingsState.isLoaded) {
+                                // Render empty box to prevent MainScreen NavHost flash
+                                androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize())
+                            } else {
+                                val startTab = intent.getStringExtra("START_TAB")
+                                com.codesrahul.streamplus.ui.main.MainScreen(initialTab = startTab)
+                            }
                         }
                     }
                 }

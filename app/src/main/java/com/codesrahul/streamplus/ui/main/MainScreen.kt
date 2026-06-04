@@ -32,7 +32,7 @@ import com.codesrahul.streamplus.ui.settings.SettingsViewModel
 import com.codesrahul.streamplus.ui.local.LocalScreen
 
 data class NavigationItem(
-    val title: String,
+    val titleRes: Int,
     val route: String,
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector
@@ -62,10 +62,10 @@ fun MainScreen(initialTab: String? = null) {
     }
 
     val items = listOf(
-        NavigationItem("Playlist", "playlist",    Icons.Default.List,          Icons.Outlined.List),
-        NavigationItem("Gallery",  "local",        Icons.Default.VideoLibrary,   Icons.Outlined.VideoLibrary),
-        NavigationItem("Stream",   "direct_play",  Icons.Default.Podcasts,       Icons.Outlined.Podcasts),
-        NavigationItem("Settings", "settings",     Icons.Default.Settings,       Icons.Outlined.Settings)
+        NavigationItem(com.codesrahul.streamplus.R.string.nav_playlist, "playlist",    Icons.Default.List,          Icons.Outlined.List),
+        NavigationItem(com.codesrahul.streamplus.R.string.nav_gallery,  "local",        Icons.Default.VideoLibrary,   Icons.Outlined.VideoLibrary),
+        NavigationItem(com.codesrahul.streamplus.R.string.nav_stream,   "direct_play",  Icons.Default.Podcasts,       Icons.Outlined.Podcasts),
+        NavigationItem(com.codesrahul.streamplus.R.string.nav_settings, "settings",     Icons.Default.Settings,       Icons.Outlined.Settings)
     )
 
     Scaffold(
@@ -79,18 +79,19 @@ fun MainScreen(initialTab: String? = null) {
                 val currentDestination = navBackStackEntry?.destination
                 items.forEach { item ->
                     val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
+                    val titleText = androidx.compose.ui.res.stringResource(item.titleRes)
                     NavigationBarItem(
                         icon = {
                             Icon(
                                 if (selected) item.selectedIcon else item.unselectedIcon,
-                                contentDescription = item.title,
+                                contentDescription = titleText,
                                 modifier = Modifier.size(24.dp)
                             )
                         },
                         label = if (!hideLabels) {
                             {
                                 Text(
-                                    item.title,
+                                    titleText,
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
                                 )

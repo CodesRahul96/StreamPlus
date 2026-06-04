@@ -1,6 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">StreamPlus</string>
     <string name="shortcut_playlist">Playlist</string>
     <string name="shortcut_gallery">Gallery</string>
     <string name="shortcut_stream">Direct Stream</string>
+
+    <!-- Navigation -->
+    <string name="nav_playlist">Playlist</string>
+    <string name="nav_gallery">Gallery</string>
+    <string name="nav_stream">Stream</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Main Settings Titles -->
+    <string name="settings_title">Settings</string>
+    <string name="sec_aesthetics">Aesthetics</string>
+    <string name="item_appearance">Appearance</string>
+    <string name="sub_appearance">Theme, colors and UI tweaks</string>
+    <string name="sec_playback">Playback</string>
+    <string name="item_video">Video</string>
+    <string name="sub_video">Quality, PiP and decoder</string>
+    <string name="item_general">General</string>
+    <string name="sub_general">Decoder priority and networking</string>
+    <string name="sec_management">Management</string>
+    <string name="item_playlist_manage">Playlist</string>
+    <string name="sub_playlist_manage">Backups, security and organization</string>
+    <string name="item_shortcuts">Shortcuts</string>
+    <string name="sub_shortcuts">System captions and shortcuts</string>
+    <string name="item_accessibility">Accessibility</string>
+    <string name="sub_accessibility">Customize Accessibility settings</string>
+    <string name="sec_app">App</string>
+    <string name="item_version">App Version</string>
+    <string name="item_share">Share App</string>
+    <string name="sub_share">Share StreamPlus with friends</string>
+    <string name="item_about">About</string>
+    <string name="sub_about">Learn more about StreamPlus</string>
+    <string name="sec_support">Support</string>
+    <string name="item_help">Help &amp; FAQ</string>
+    <string name="sub_help">Get help and find answers</string>
+    <string name="item_feedback">Send Feedback</string>
+    <string name="sub_feedback">Help us improve StreamPlus</string>
+    <string name="item_rate">Rate App</string>
+    <string name="sub_rate">Rate StreamPlus on the store</string>
+
+    <!-- Appearance Settings -->
+    <string name="appearance_title">Appearance</string>
+    <string name="theme_mode_title">Theme Mode</string>
+    <string name="theme_mode_desc">Choose your preferred theme appearance</string>
+    <string name="nav_pref_title">Navigation Preferences</string>
+    <string name="hide_nav_labels">Hide Navigation Labels</string>
+    <string name="hide_nav_labels_desc">Clean bottom bar without text descriptions</string>
+    <string name="default_tab_title">Default Landing Tab</string>
+    <string name="default_tab_desc">Choose which view opens when app starts</string>
+    <string name="app_lang_title">App Language</string>
+    <string name="app_lang_desc">Select preferred language for the interface</string>
+    <string name="lang_english">English</string>
+    <string name="lang_hindi">Hindi (हिन्दी)</string>
+
+    <!-- Theme Modes -->
+    <string name="theme_system">System</string>
+    <string name="theme_system_desc">Follows device theme</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_light_desc">Always light theme</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_dark_desc">Sleek dark theme</string>
+    <string name="theme_black">OLED Black</string>
+    <string name="theme_black_desc">Pure black theme</string>
 </resources>

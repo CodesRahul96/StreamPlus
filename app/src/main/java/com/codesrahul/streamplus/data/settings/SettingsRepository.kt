@@ -75,6 +75,9 @@ data class AppSettings(
     val showVideoResolution: Boolean = true,
     val showVideoDuration: Boolean = true,
     val showVideoSize: Boolean = true,
+
+    // App language code
+    val languageCode: String = "en",
     
     // Internal Loading State
     val isLoaded: Boolean = false
@@ -135,6 +138,7 @@ class SettingsRepository @Inject constructor(
         val SHOW_VIDEO_RESOLUTION = booleanPreferencesKey("show_video_resolution")
         val SHOW_VIDEO_DURATION = booleanPreferencesKey("show_video_duration")
         val SHOW_VIDEO_SIZE = booleanPreferencesKey("show_video_size")
+        val LANGUAGE_CODE = stringPreferencesKey("language_code")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -193,6 +197,7 @@ class SettingsRepository @Inject constructor(
             showVideoResolution = prefs[Keys.SHOW_VIDEO_RESOLUTION] ?: true,
             showVideoDuration = prefs[Keys.SHOW_VIDEO_DURATION] ?: true,
             showVideoSize = prefs[Keys.SHOW_VIDEO_SIZE] ?: true,
+            languageCode = prefs[Keys.LANGUAGE_CODE] ?: "en",
             isLoaded = true
         )
     }
@@ -371,6 +376,10 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setAutoOrientation(enabled: Boolean) {
         // Deprecated, supersceeded by setPlayerOrientation
+    }
+
+    suspend fun setLanguageCode(code: String) {
+        context.dataStore.edit { it[Keys.LANGUAGE_CODE] = code }
     }
 
     suspend fun factoryReset() {

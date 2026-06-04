@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">StreamPlus</string>
+    <string name="shortcut_playlist">प्लेलिस्ट</string>
+    <string name="shortcut_gallery">गैलरी</string>
+    <string name="shortcut_stream">डायरेक्ट स्ट्रीम</string>
+
+    <!-- Navigation -->
+    <string name="nav_playlist">प्लेलिस्ट</string>
+    <string name="nav_gallery">गैलरी</string>
+    <string name="nav_stream">स्ट्रीम</string>
+    <string name="nav_settings">सेटिंग्स</string>
+
+    <!-- Main Settings Titles -->
+    <string name="settings_title">सेटिंग्स</string>
+    <string name="sec_aesthetics">दिखावट और शैली</string>
+    <string name="item_appearance">दिखावट</string>
+    <string name="sub_appearance">थीम, रंग और यूआई सेटिंग्स</string>
+    <string name="sec_playback">प्लेबैक</string>
+    <string name="item_video">वीडियो</string>
+    <string name="sub_video">क्वालिटी, पिप और डिकोडर</string>
+    <string name="item_general">सामान्य</string>
+    <string name="sub_general">डिकोडर प्राथमिकता और नेटवर्किंग</string>
+    <string name="sec_management">प्रबंधन</string>
+    <string name="item_playlist_manage">प्लेलिस्ट</string>
+    <string name="sub_playlist_manage">बैकअप, सुरक्षा और संगठन</string>
+    <string name="item_shortcuts">शॉर्टकट</string>
+    <string name="sub_shortcuts">सिस्टम कैप्शन और शॉर्टकट</string>
+    <string name="item_accessibility">अभिगम्यता</string>
+    <string name="sub_accessibility">अभिगम्यता सेटिंग्स बदलें</string>
+    <string name="sec_app">ऐप</string>
+    <string name="item_version">ऐप संस्करण</string>
+    <string name="item_share">ऐप शेयर करें</string>
+    <string name="sub_share">दोस्तों के साथ ऐप शेयर करें</string>
+    <string name="item_about">ऐप के बारे में</string>
+    <string name="sub_about">ऐप के बारे में और जानें</string>
+    <string name="sec_support">सहायता</string>
+    <string name="item_help">सहायता और एफएक्यू</string>
+    <string name="sub_help">मदद लें और उत्तर खोजें</string>
+    <string name="item_feedback">प्रतिक्रिया भेजें</string>
+    <string name="sub_feedback">ऐप सुधारने में हमारी मदद करें</string>
+    <string name="item_rate">ऐप को रेट करें</string>
+    <string name="sub_rate">प्ले स्टोर पर ऐप को रेट करें</string>
+
+    <!-- Appearance Settings -->
+    <string name="appearance_title">दिखावट</string>
+    <string name="theme_mode_title">थीम मोड</string>
+    <string name="theme_mode_desc">अपनी पसंदीदा थीम का चयन करें</string>
+    <string name="nav_pref_title">नेविगेशन प्राथमिकताएं</string>
+    <string name="hide_nav_labels">नेविगेशन लेबल छिपाएं</string>
+    <string name="hide_nav_labels_desc">टेक्स्ट के बिना साफ बॉटम बार</string>
+    <string name="default_tab_title">डिफ़ॉल्ट लैंडिंग टैब</string>
+    <string name="default_tab_desc">चुनें कि ऐप शुरू होने पर कौन सा स्क्रीन खुलता है</string>
+    <string name="app_lang_title">ऐप की भाषा</string>
+    <string name="app_lang_desc">ऐप इंटरफ़ेस के लिए अपनी पसंदीदा भाषा चुनें</string>
+    <string name="lang_english">English</string>
+    <string name="lang_hindi">हिन्दी</string>
+
+    <!-- Theme Modes -->
+    <string name="theme_system">सिस्टम</string>
+    <string name="theme_system_desc">डिवाइस थीम का पालन करें</string>
+    <string name="theme_light">लाइट</string>
+    <string name="theme_light_desc">हमेशा लाइट थीम</string>
+    <string name="theme_dark">डार्क</string>
+    <string name="theme_dark_desc">आकर्षक डार्क थीम</string>
+    <string name="theme_black">ओएलईडी ब्लैक</string>
+    <string name="theme_black_desc">शुद्ध ब्लैक थीम</string>
+</resources>

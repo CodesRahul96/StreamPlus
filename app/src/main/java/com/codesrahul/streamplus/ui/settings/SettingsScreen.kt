@@ -13,6 +13,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -93,7 +94,7 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                 TopAppBar(
                     title = {
                         Text(
-                            "Settings", 
+                            stringResource(com.codesrahul.streamplus.R.string.settings_title), 
                             style = MaterialTheme.typography.titleLarge, 
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -123,11 +124,11 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                 SettingsHeaderBanner()
 
                 // ── Aesthetics ───────────────────────────────────────────
-                SettingsSectionHeader("Aesthetics")
+                SettingsSectionHeader(stringResource(com.codesrahul.streamplus.R.string.sec_aesthetics))
                 SettingsCard {
                     SettingsClickableItem(
-                        title = "Appearance",
-                        subtitle = "Theme, colors and UI tweaks",
+                        title = stringResource(com.codesrahul.streamplus.R.string.item_appearance),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.sub_appearance),
                         icon = Icons.Default.Palette,
                         iconColor = PurpleVibe,
                         onClick = { onNavigate("appearance") },
@@ -135,20 +136,20 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                     )
                 }
 
-                // ── Core Features ────────────────────────────────────────
-                SettingsSectionHeader("Playback")
+                // ── Playback ─────────────────────────────────────────────
+                SettingsSectionHeader(stringResource(com.codesrahul.streamplus.R.string.sec_playback))
                 SettingsCard {
                     SettingsClickableItem(
-                        title = "Video",
-                        subtitle = "Quality, PiP and decoder",
+                        title = stringResource(com.codesrahul.streamplus.R.string.item_video),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.sub_video),
                         icon = Icons.Default.VideoSettings,
                         iconColor = BlueSky,
                         onClick = { onNavigate("advance_video") },
                         showDivider = true
                     )
                     SettingsClickableItem(
-                        title = "General",
-                        subtitle = "Decoder priority and networking",
+                        title = stringResource(com.codesrahul.streamplus.R.string.item_general),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.sub_general),
                         icon = Icons.Default.Sync,
                         iconColor = TealSea,
                         onClick = { onNavigate("general") },
@@ -157,27 +158,27 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                 }
 
                 // ── Management ───────────────────────────────────────────
-                SettingsSectionHeader("Management")
+                SettingsSectionHeader(stringResource(com.codesrahul.streamplus.R.string.sec_management))
                 SettingsCard {
                     SettingsClickableItem(
-                        title = "Playlist",
-                        subtitle = "Backups, security and organization",
+                        title = stringResource(com.codesrahul.streamplus.R.string.item_playlist_manage),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.sub_playlist_manage),
                         icon = Icons.Default.PlaylistPlay,
                         iconColor = GreenApple,
                         onClick = { onNavigate("playlist_channel") },
                         showDivider = true
                     )
                     SettingsClickableItem(
-                        title = "Shortcuts",
-                        subtitle = "System captions and shortcuts",
+                        title = stringResource(com.codesrahul.streamplus.R.string.item_shortcuts),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.sub_shortcuts),
                         icon = Icons.Default.TouchApp,
                         iconColor = OrangeWarm,
                         onClick = { onNavigate("shortcuts") },
                         showDivider = true
                     )
                     SettingsClickableItem(
-                        title = "Accessibility",
-                        subtitle = "Customize Accessibility settings",
+                        title = stringResource(com.codesrahul.streamplus.R.string.item_accessibility),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.sub_accessibility),
                         icon = Icons.Default.Accessibility,
                         iconColor = BlueSky,
                         onClick = { onNavigate("accessibility") },
@@ -186,7 +187,7 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                 }
 
                 // ── App ──────────────────────────────────────────────────
-                SettingsSectionHeader("App")
+                SettingsSectionHeader(stringResource(com.codesrahul.streamplus.R.string.sec_app))
                 SettingsCard {
                     val version = remember {
                         try {
@@ -194,7 +195,7 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                         } catch (e: Exception) { "1.0.0" }
                     }
                     SettingsClickableItem(
-                        title = "App Version",
+                        title = stringResource(com.codesrahul.streamplus.R.string.item_version),
                         subtitle = version,
                         icon = Icons.Default.Info,
                         iconColor = TealSea,
@@ -203,8 +204,8 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                     )
                     
                     SettingsClickableItem(
-                        title = "Share App",
-                        subtitle = "Share StreamPlus with friends",
+                        title = stringResource(com.codesrahul.streamplus.R.string.item_share),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.sub_share),
                         icon = Icons.Default.Share,
                         iconColor = BlueSky,
                         onClick = {
@@ -218,8 +219,8 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                         showDivider = true
                     )
                     SettingsClickableItem(
-                        title = "About",
-                        subtitle = "Learn more about StreamPlus",
+                        title = stringResource(com.codesrahul.streamplus.R.string.item_about),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.sub_about),
                         icon = Icons.Default.Description,
                         iconColor = BlueSky,
                         onClick = { showAboutDialog = true },
@@ -228,19 +229,19 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                 }
 
                 // ── Support ──────────────────────────────────────────────
-                SettingsSectionHeader("Support")
+                SettingsSectionHeader(stringResource(com.codesrahul.streamplus.R.string.sec_support))
                 SettingsCard {
                     SettingsClickableItem(
-                        title = "Help & FAQ",
-                        subtitle = "Get help and find answers",
+                        title = stringResource(com.codesrahul.streamplus.R.string.item_help),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.sub_help),
                         icon = Icons.Default.Help,
                         iconColor = BlueSky,
                         onClick = { showHelpDialog = true },
                         showDivider = true
                     )
                     SettingsClickableItem(
-                        title = "Send Feedback",
-                        subtitle = "Help us improve StreamPlus",
+                        title = stringResource(com.codesrahul.streamplus.R.string.item_feedback),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.sub_feedback),
                         icon = Icons.Default.Feedback,
                         iconColor = TealSea,
                         onClick = {
@@ -258,8 +259,8 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                         showDivider = true
                     )
                     SettingsClickableItem(
-                        title = "Rate App",
-                        subtitle = "Rate StreamPlus on the store",
+                        title = stringResource(com.codesrahul.streamplus.R.string.item_rate),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.sub_rate),
                         icon = Icons.Default.Star,
                         iconColor = OrangeWarm,
                         onClick = {

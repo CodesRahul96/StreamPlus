@@ -220,7 +220,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.setShowVideoSize(show) }
     }
 
-    fun setAutoOrientation(enabled: Boolean) {
-        viewModelScope.launch { settingsRepository.setAutoOrientation(enabled) }
+    fun setLanguageCode(code: String) {
+        viewModelScope.launch { settingsRepository.setLanguageCode(code) }
     }
 }
