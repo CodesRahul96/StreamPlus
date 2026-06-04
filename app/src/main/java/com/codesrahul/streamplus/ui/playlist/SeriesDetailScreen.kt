@@ -25,19 +25,24 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.AnimatedVisibilityScope
 import com.codesrahul.streamplus.ui.components.PremiumBackground
 import com.codesrahul.streamplus.ui.components.shimmerEffect
 import com.codesrahul.streamplus.ui.util.tvFocusable
 import com.codesrahul.streamplus.ui.util.glassmorphic
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun SeriesDetailScreen(
     playlistId: Int,
     seriesId: Int,
     seriesName: String,
     onBack: () -> Unit,
-    viewModel: SeriesDetailViewModel = hiltViewModel()
+    viewModel: SeriesDetailViewModel = hiltViewModel(),
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     val seriesInfo by viewModel.seriesInfo.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -88,10 +93,23 @@ fun SeriesDetailScreen(
                         Column(modifier = Modifier.fillMaxSize()) {
                             // Backdrop and Info Header
                             Box(modifier = Modifier.height(200.dp).fillMaxWidth()) {
+                                val sharedTransitionModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+                                    with(sharedTransitionScope) {
+                                        Modifier.sharedElement(
+                                            rememberSharedContentState(key = "series_cover_${seriesId}"),
+                                            animatedVisibilityScope = animatedVisibilityScope
+                                        )
+                                    }
+                                } else {
+                                    Modifier
+                                }
+
                                 AsyncImage(
                                     model = info.info?.cover ?: "",
                                     contentDescription = null,
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier
+                                        .then(sharedTransitionModifier)
+                                        .fillMaxSize(),
                                     contentScale = ContentScale.Crop,
                                     alpha = 0.4f
                                 )

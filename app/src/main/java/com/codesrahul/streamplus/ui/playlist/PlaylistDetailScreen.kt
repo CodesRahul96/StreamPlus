@@ -39,12 +39,14 @@ import com.codesrahul.streamplus.ui.settings.SettingsViewModel
 import com.codesrahul.streamplus.ui.util.tvFocusable
 import com.codesrahul.streamplus.ui.util.glassmorphic
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun PlaylistDetailScreen(
     onBack: () -> Unit,
     onNavigate: (String) -> Unit,
-    viewModel: PlaylistDetailViewModel = hiltViewModel()
+    viewModel: PlaylistDetailViewModel = hiltViewModel(),
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     val playlist by viewModel.playlist.collectAsState()
     val filteredChannels by viewModel.filteredChannels.collectAsState()
@@ -127,14 +129,62 @@ fun PlaylistDetailScreen(
                     ) {
                         TopAppBar(
                             title = {
-                                Column {
-                                    Text(
-                                        playlist?.name ?: "Playlist",
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    if (!isLoading && viewModel.channels.value.isNotEmpty()) {
-                                        Text("${filteredChannels.size} channels", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    playlist?.let { currentPlaylist ->
+                                        val resolvedIcon = if (currentPlaylist.icon == "default") settingsState.defaultPlaylistIcon.lowercase() else currentPlaylist.icon.lowercase()
+                                        
+                                        val sharedTransitionModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+                                            with(sharedTransitionScope) {
+                                                Modifier.sharedElement(
+                                                    rememberSharedContentState(key = "playlist_logo_${currentPlaylist.id}"),
+                                                    animatedVisibilityScope = animatedVisibilityScope
+                                                )
+                                            }
+                                        } else {
+                                            Modifier
+                                        }
+
+                                        Box(
+                                            modifier = Modifier
+                                                .then(sharedTransitionModifier)
+                                                .padding(end = 12.dp)
+                                                .size(36.dp)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(
+                                                    if (currentPlaylist.color != -16777216) Color(currentPlaylist.color).copy(alpha = 0.15f)
+                                                    else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = when (resolvedIcon) {
+                                                    "tv"       -> Icons.Default.Tv
+                                                    "movie"    -> Icons.Default.Movie
+                                                    "sports"   -> Icons.Default.SportsSoccer
+                                                    "music"    -> Icons.Default.MusicNote
+                                                    "news"     -> Icons.Default.Public
+                                                    "game"     -> Icons.Default.Games
+                                                    "code"     -> Icons.Default.Code
+                                                    "grid"     -> Icons.Default.GridView
+                                                    "card"     -> Icons.Default.ContactPage
+                                                    "compact"  -> Icons.Default.ViewHeadline
+                                                    else       -> Icons.Default.List
+                                                },
+                                                contentDescription = null,
+                                                tint = if (currentPlaylist.color != -16777216) Color(currentPlaylist.color) else MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                    Column {
+                                        Text(
+                                            playlist?.name ?: "Playlist",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        if (!isLoading && viewModel.channels.value.isNotEmpty()) {
+                                            Text("${filteredChannels.size} channels", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
                                     }
                                 }
                             },
@@ -337,7 +387,9 @@ fun PlaylistDetailScreen(
                                     isFavorite = isFav,
                                     onToggleFavorite = onToggleFav,
                                     onClick = onItemClick,
-                                    cardAspectRatio = cardAspectRatio
+                                    cardAspectRatio = cardAspectRatio,
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = animatedVisibilityScope
                                 )
                             }
                         }
@@ -349,6 +401,7 @@ fun PlaylistDetailScreen(
 }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ChannelItem(
     channel: M3UItem,
@@ -357,18 +410,39 @@ fun ChannelItem(
     isFavorite: Boolean = false,
     onToggleFavorite: (() -> Unit)? = null,
     onClick: () -> Unit,
-    cardAspectRatio: Float = 0.85f
+    cardAspectRatio: Float = 0.85f,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     if (channel.isVod) {
-        VodPosterItem(channel, hideImage, isFavorite, onToggleFavorite, onClick, cardAspectRatio)
+        VodPosterItem(
+            channel = channel,
+            hideImage = hideImage,
+            isFavorite = isFavorite,
+            onToggleFavorite = onToggleFavorite,
+            onClick = onClick,
+            aspectRatio = cardAspectRatio,
+            sharedTransitionScope = sharedTransitionScope,
+            animatedVisibilityScope = animatedVisibilityScope
+        )
     } else {
         LiveChannelItem(channel, hideImage, currentProgram, isFavorite, onToggleFavorite, onClick, cardAspectRatio)
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onToggleFavorite: (() -> Unit)?, onClick: () -> Unit, aspectRatio: Float = 0.85f, modifier: Modifier = Modifier) {
+fun VodPosterItem(
+    channel: M3UItem,
+    hideImage: Boolean,
+    isFavorite: Boolean,
+    onToggleFavorite: (() -> Unit)?,
+    onClick: () -> Unit,
+    aspectRatio: Float = 0.85f,
+    modifier: Modifier = Modifier,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
+) {
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -399,10 +473,26 @@ fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onT
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     if (channel.logoUrl.isNotBlank() && !hideImage) {
+                        val isSeries = channel.streamType == "series"
+                        val seriesId = if (isSeries) channel.url.split("/").last().toIntOrNull() ?: channel.id else channel.id
+                        
+                        val sharedTransitionModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+                            with(sharedTransitionScope) {
+                                Modifier.sharedElement(
+                                    rememberSharedContentState(key = "series_cover_${seriesId}"),
+                                    animatedVisibilityScope = animatedVisibilityScope
+                                )
+                            }
+                        } else {
+                            Modifier
+                        }
+
                         AsyncImage(
                             model = channel.logoUrl,
                             contentDescription = null,
-                            modifier = Modifier.fillMaxSize().padding(8.dp), 
+                            modifier = Modifier
+                                .then(sharedTransitionModifier)
+                                .fillMaxSize().padding(8.dp), 
                             contentScale = ContentScale.Fit
                         )
                     } else {

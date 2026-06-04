@@ -51,12 +51,14 @@ import com.codesrahul.streamplus.ui.util.tvFocusable
 import com.codesrahul.streamplus.ui.util.glassmorphic
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun PlaylistScreen(
     onPlaylistClick: (Int) -> Unit,
     onChannelClick: (M3UItem) -> Unit = {},
-    viewModel: PlaylistViewModel = hiltViewModel()
+    viewModel: PlaylistViewModel = hiltViewModel(),
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
@@ -409,7 +411,9 @@ fun PlaylistScreen(
                                                 settingsState = settingsState,
                                                 onClick = onPlaylistClickLambda,
                                                 onEdit = onEditLambda,
-                                                onPinToggle = onPinToggleLambda
+                                                onPinToggle = onPinToggleLambda,
+                                                sharedTransitionScope = sharedTransitionScope,
+                                                animatedVisibilityScope = animatedVisibilityScope
                                             )
                                         }
                                     }
@@ -684,7 +688,7 @@ fun PlaylistScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun PlaylistItem(
     playlist: PlaylistEntity,
@@ -692,7 +696,9 @@ fun PlaylistItem(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
     onEdit: () -> Unit,
-    onPinToggle: () -> Unit
+    onPinToggle: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     val hideUri = settingsState.hidePlaylistUri
     val resolvedIcon = if (playlist.icon == "default") settingsState.defaultPlaylistIcon.lowercase() else playlist.icon.lowercase()
@@ -712,9 +718,21 @@ fun PlaylistItem(
             modifier = Modifier.padding(12.dp).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val sharedTransitionModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+                with(sharedTransitionScope) {
+                    Modifier.sharedElement(
+                        rememberSharedContentState(key = "playlist_logo_${playlist.id}"),
+                        animatedVisibilityScope = animatedVisibilityScope
+                    )
+                }
+            } else {
+                Modifier
+            }
+
             // Colored icon box
             Box(
                 modifier = Modifier
+                    .then(sharedTransitionModifier)
                     .size(52.dp)
                     .clip(RoundedCornerShape(14.dp))
                     .background(
