@@ -42,6 +42,8 @@ import com.codesrahul.streamplus.ui.components.PremiumBackground
 import com.codesrahul.streamplus.ui.player.PlayerActivity
 import com.codesrahul.streamplus.util.UserAgentManager
 import com.codesrahul.streamplus.ui.util.tvFocusable
+import androidx.compose.ui.res.stringResource
+import com.codesrahul.streamplus.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -147,7 +149,7 @@ fun DirectPlayScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            "Direct Stream",
+                            stringResource(R.string.direct_stream_title),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
@@ -159,7 +161,7 @@ fun DirectPlayScreen(
                     windowInsets = WindowInsets(0.dp),
                     actions = {
                         IconButton(onClick = { onNavigateToHistory?.invoke() }) {
-                            Icon(Icons.Default.History, contentDescription = "History")
+                            Icon(Icons.Default.History, contentDescription = stringResource(R.string.history_btn))
                         }
                     }
                 )
@@ -170,8 +172,8 @@ fun DirectPlayScreen(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor  = MaterialTheme.colorScheme.onPrimary,
                     shape = RoundedCornerShape(16.dp),
-                    icon = { Icon(Icons.Default.PlayArrow, contentDescription = "Play", modifier = Modifier.size(24.dp)) },
-                    text = { Text("Play Stream", fontWeight = FontWeight.Bold) }
+                    icon = { Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.play_stream_btn), modifier = Modifier.size(24.dp)) },
+                    text = { Text(stringResource(R.string.play_stream_btn), fontWeight = FontWeight.Bold) }
                 )
             }
         ) { padding ->
@@ -204,7 +206,7 @@ fun DirectPlayScreen(
                         }
                         Spacer(modifier = Modifier.width(14.dp))
                         Text(
-                            "Source Details",
+                            stringResource(R.string.source_details_sec),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -218,7 +220,7 @@ fun DirectPlayScreen(
                         ) {
                             Icon(Icons.Default.ContentPaste, null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Paste", fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.paste_btn), fontWeight = FontWeight.SemiBold)
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
@@ -246,10 +248,10 @@ fun DirectPlayScreen(
                             }
                             if (urlError && raw.isNotBlank()) urlError = false
                         },
-                        label = { Text("Stream URL") },
-                        placeholder = { Text("https://example.com/playlist.m3u8", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.4f)) },
+                        label = { Text(stringResource(R.string.stream_url_label)) },
+                        placeholder = { Text(stringResource(R.string.stream_url_placeholder), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.4f)) },
                         isError = urlError,
-                        supportingText = if (urlError) { { Text("Please enter a valid URL") } } else null,
+                        supportingText = if (urlError) { { Text(stringResource(R.string.invalid_url_error)) } } else null,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true,
@@ -263,8 +265,8 @@ fun DirectPlayScreen(
                     OutlinedTextField(
                         value = streamTitle,
                         onValueChange = { streamTitle = it },
-                        label = { Text("Display Title") },
-                        placeholder = { Text("My Awesome Stream (Optional)", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.4f)) },
+                        label = { Text(stringResource(R.string.display_title_label)) },
+                        placeholder = { Text(stringResource(R.string.display_title_placeholder), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.4f)) },
                         leadingIcon = { Icon(Icons.Default.Title, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary.copy(0.6f)) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
@@ -296,9 +298,9 @@ fun DirectPlayScreen(
                         }
                         Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("User Agent", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.user_agent_sec), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Text(
-                                text = "Compatibility mode: $selectedUAName",
+                                text = stringResource(R.string.compatibility_mode_desc, selectedUAName),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -322,7 +324,7 @@ fun DirectPlayScreen(
                         ElevatedFilterChip(
                             selected = selectedUAName == "Custom",
                             onClick = { showUADialog = true },
-                            label = { Text("Options…") },
+                            label = { Text(stringResource(R.string.options_btn)) },
                             leadingIcon = { Icon(Icons.Default.Tune, null, modifier = Modifier.size(14.dp)) },
                             shape = RoundedCornerShape(10.dp)
                         )
@@ -334,7 +336,7 @@ fun DirectPlayScreen(
                             OutlinedTextField(
                                 value = customUserAgent,
                                 onValueChange = { customUserAgent = it },
-                                label = { Text("Custom User Agent String") },
+                                label = { Text(stringResource(R.string.custom_ua_label)) },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
                                 textStyle = MaterialTheme.typography.bodySmall,
@@ -366,14 +368,14 @@ fun DirectPlayScreen(
                         }
                         Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Advanced Options", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            val summary = listOfNotNull(
-                                "Referer".takeIf { referer.isNotBlank() },
-                                "Cookie".takeIf  { cookie.isNotBlank()  },
-                                "Origin".takeIf  { origin.isNotBlank()  },
-                                "DRM: $drmScheme".takeIf { drmScheme != "None" }
-                            ).joinToString(" · ").ifBlank { "Headers, DRM settings" }
-                            Text(summary, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.advanced_options_sec), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                val summary = listOfNotNull(
+                                    stringResource(R.string.referer_label).takeIf { referer.isNotBlank() },
+                                    stringResource(R.string.cookie_label).takeIf  { cookie.isNotBlank()  },
+                                    stringResource(R.string.origin_label).takeIf  { origin.isNotBlank()  },
+                                    "DRM: $drmScheme".takeIf { drmScheme != "None" }
+                                ).joinToString(" · ").ifBlank { stringResource(R.string.advanced_options_default_desc) }
+                                Text(summary, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Icon(
                             Icons.Default.ExpandMore,
@@ -412,7 +414,7 @@ fun DirectPlayScreen(
                                 Icon(Icons.Default.Security, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("DRM Protection", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                                    Text(stringResource(R.string.drm_protection_label), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                                     Text(drmScheme, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                                 }
                                 Icon(Icons.Default.ArrowForwardIos, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.4f))
@@ -422,7 +424,7 @@ fun DirectPlayScreen(
                                 AdvancedTextField(
                                     value = drmLicenseUrl,
                                     onValueChange = { drmLicenseUrl = it },
-                                    label = "DRM License URL",
+                                    label = stringResource(R.string.drm_license_url_label),
                                     icon = Icons.Default.VpnKey
                                 )
                             }
@@ -519,7 +521,7 @@ fun UserAgentSelectionDialog(
                     .fillMaxWidth()
             ) {
                 Text(
-                    "Select Device Profile",
+                    stringResource(R.string.select_device_profile_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 20.dp)
@@ -533,7 +535,7 @@ fun UserAgentSelectionDialog(
                     val allOptions = com.codesrahul.streamplus.util.UserAgentManager.presets.map { it.name } + "Custom"
                     allOptions.forEach { option ->
                         val preset = com.codesrahul.streamplus.util.UserAgentManager.presets.find { it.name == option }
-                        val desc   = preset?.description ?: "Manually enter a custom UA string"
+                        val desc   = preset?.description ?: stringResource(R.string.custom_ua_dialog_desc)
                         val isSelected = option == currentSelection
                         
                         Row(
@@ -562,7 +564,7 @@ fun UserAgentSelectionDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel", fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.cancel_btn), fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -586,7 +588,7 @@ fun DrmSelectionDialog(
         ) {
             Column(modifier = Modifier.padding(24.dp).fillMaxWidth()) {
                 Text(
-                    "Digital Rights (DRM)",
+                    stringResource(R.string.drm_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 20.dp)
@@ -613,10 +615,10 @@ fun DrmSelectionDialog(
                             Text(option, style = MaterialTheme.typography.bodyLarge, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)
                             Text(
                                 text = when (option) {
-                                    "None"      -> "No protection required"
-                                    "Widevine"  -> "DASH/HLS standards"
-                                    "ClearKey"  -> "AES key exchange"
-                                    "PlayReady" -> "Microsoft standard"
+                                    "None"      -> stringResource(R.string.drm_desc_none)
+                                    "Widevine"  -> stringResource(R.string.drm_desc_widevine)
+                                    "ClearKey"  -> stringResource(R.string.drm_desc_clearkey)
+                                    "PlayReady" -> stringResource(R.string.drm_desc_playready)
                                     else -> ""
                                 },
                                 style = MaterialTheme.typography.labelSmall,
@@ -627,7 +629,7 @@ fun DrmSelectionDialog(
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
-                    Text("Close", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.close_btn), fontWeight = FontWeight.SemiBold)
                 }
             }
         }

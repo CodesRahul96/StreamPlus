@@ -130,6 +130,7 @@
     <string name="delete_playlist_confirm_desc">क्या आप वाकई इस प्लेलिस्ट को हटाना चाहते हैं? इस प्लेलिस्ट से जुड़े सभी चैनल और कैश किए गए स्ट्रीम हटा दिए जाएंगे।</string>
     <string name="delete_btn">हटाएं</string>
     <string name="cancel_btn">रद्द करें</string>
+    <string name="back_btn">वापस</string>
     <string name="confirm_btn">पुष्टि करें</string>
     <string name="playlist_name">प्लेलिस्ट का नाम</string>
     <string name="m3u_url_placeholder">एम3यू यूआरएल या जेएसओएन पथ</string>
@@ -158,4 +159,66 @@
     <string name="faq_q5">क्या मैं स्थानीय वीडियो चला सकता हूँ?</string>
     <string name="faq_a5">हां, अपने डिवाइस पर संग्रहीत वीडियो ब्राउज़ करने और चलाने के लिए गैलरी टैब पर जाएं।</string>
     <string name="faq_title">सहायता और अक्सर पूछे जाने वाले प्रश्न</string>
+
+    <!-- Gallery / Local Screen -->
+    <string name="local_permission_desc">स्थानीय मीडिया लोड करने के लिए अनुमति की आवश्यकता है</string>
+    <string name="tab_video">वीडियो</string>
+    <string name="tab_music">संगीत</string>
+    <string name="selection_mode_count">%1$d चयनित</string>
+    <string name="gallery_title">गैलरी</string>
+    <string name="music_library_title">संगीत लाइब्रेरी</string>
+    <string name="video_folders_count">%1$d वीडियो फ़ोल्डर</string>
+    <string name="music_folders_count">%1$d संगीत फ़ोल्डर</string>
+    <string name="select_all_btn">सभी चुनें</string>
+    <string name="refresh_btn">ताज़ा करें</string>
+    <string name="settings_btn">सेटिंग्स</string>
+    <string name="empty_videos_msg">कोई वीडियो नहीं मिला</string>
+    <string name="empty_music_msg">कोई संगीत नहीं मिला</string>
+    <string name="delete_video_title">वीडियो हटाएं</string>
+    <string name="delete_song_title">गाना हटाएं</string>
+    <string name="delete_media_confirm">क्या आप वाकई इस मीडिया फ़ाइल को हटाना चाहते हैं?</string>
+    <string name="rename_video_title">वीडियो का नाम बदलें</string>
+    <string name="rename_song_title">गाने का नाम बदलें</string>
+    <string name="new_name_label">नया नाम</string>
+    <string name="search_videos_placeholder">वीडियो खोजें...</string>
+    <string name="close_search_desc">खोज बंद करें</string>
+    <string name="media_count_videos">%1$d वीडियो</string>
+    <string name="media_count_songs">%1$d गाने</string>
+    <string name="empty_msg_no_videos">कोई वीडियो नहीं मिला</string>
+    <string name="empty_msg_no_songs">कोई संगीत नहीं मिला</string>
+    <string name="empty_msg_no_results">\"%1$s\" के लिए कोई परिणाम नहीं</string>
+    <string name="rename_menu_item">नाम बदलें</string>
+    <string name="delete_menu_item">हटाएं</string>
+    <string name="unknown_artist">अज्ञात कलाकार</string>
+
+    <!-- Direct Stream Screen -->
+    <string name="direct_stream_title">डायरेक्ट स्ट्रीम</string>
+    <string name="history_btn">इतिहास</string>
+    <string name="play_stream_btn">स्ट्रीम चलाएं</string>
+    <string name="source_details_sec">स्रोत विवरण</string>
+    <string name="paste_btn">पेस्ट करें</string>
+    <string name="stream_url_label">स्ट्रीम यूआरएल</string>
+    <string name="stream_url_placeholder">https://example.com/playlist.m3u8</string>
+    <string name="invalid_url_error">कृपया एक मान्य यूआरएल दर्ज करें</string>
+    <string name="display_title_label">शीर्षक प्रदर्शित करें</string>
+    <string name="display_title_placeholder">मेरी बेहतरीन स्ट्रीम (वैकल्पिक)</string>
+    <string name="user_agent_sec">यूजर एजेंट</string>
+    <string name="compatibility_mode_desc">अनुकूलता मोड: %1$s</string>
+    <string name="options_btn">विकल्प…</string>
+    <string name="custom_ua_label">कस्टम यूजर एजेंट स्ट्रिंग</string>
+    <string name="advanced_options_sec">उन्नत विकल्प</string>
+    <string name="advanced_options_default_desc">हेडर, डीआरएम सेटिंग्स</string>
+    <string name="referer_label">रेफ़रर</string>
+    <string name="cookie_label">कुकी</string>
+    <string name="origin_label">ओरिजिन</string>
+    <string name="drm_protection_label">डीआरएम सुरक्षा</string>
+    <string name="drm_license_url_label">डीआरएम लाइसेंस यूआरएल</string>
+    <string name="select_device_profile_title">डिवाइस प्रोफ़ाइल चुनें</string>
+    <string name="custom_ua_dialog_desc">मैन्युअल रूप से एक कस्टम यूए स्ट्रिंग दर्ज करें</string>
+    <string name="drm_title">डिजिटल अधिकार (DRM)</string>
+    <string name="drm_desc_none">कोई सुरक्षा आवश्यक नहीं है</string>
+    <string name="drm_desc_widevine">DASH/HLS मानक</string>
+    <string name="drm_desc_clearkey">AES कुंजी एक्सचेंज</string>
+    <string name="drm_desc_playready">माइक्रोसॉफ्ट मानक</string>
+    <string name="close_btn">बंद करें</string>
 </resources>

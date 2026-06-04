@@ -55,6 +55,8 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.codesrahul.streamplus.ui.settings.SettingsViewModel
+import androidx.compose.ui.res.stringResource
+import com.codesrahul.streamplus.R
 import java.util.concurrent.TimeUnit
 
 enum class MediaType { VIDEO, AUDIO }
@@ -103,7 +105,7 @@ fun LocalScreen() {
 
     PermissionBox(
         permissionState = permissionState,
-        description = "Permission needed to load local media"
+        description = stringResource(R.string.local_permission_desc)
     ) {
         val currentType by viewModel.mediaType.collectAsState()
         
@@ -117,12 +119,12 @@ fun LocalScreen() {
                 Tab(
                     selected = currentType == MediaType.VIDEO,
                     onClick = { viewModel.setMediaType(MediaType.VIDEO) },
-                    text = { Text("Video", fontWeight = if (currentType == MediaType.VIDEO) FontWeight.Bold else FontWeight.Medium) }
+                    text = { Text(stringResource(R.string.tab_video), fontWeight = if (currentType == MediaType.VIDEO) FontWeight.Bold else FontWeight.Medium) }
                 )
                 Tab(
                     selected = currentType == MediaType.AUDIO,
                     onClick = { viewModel.setMediaType(MediaType.AUDIO) },
-                    text = { Text("Music", fontWeight = if (currentType == MediaType.AUDIO) FontWeight.Bold else FontWeight.Medium) }
+                    text = { Text(stringResource(R.string.tab_music), fontWeight = if (currentType == MediaType.AUDIO) FontWeight.Bold else FontWeight.Medium) }
                 )
             }
 
@@ -187,14 +189,14 @@ fun LocalMediaGrid(
                         title = {
                             Column {
                                     Text(
-                                        if (isSelectionMode) "${selectedFolders.size} Selected" else if (viewModel.mediaType.value == MediaType.VIDEO) "Gallery" else "Music Library",
+                                        if (isSelectionMode) stringResource(R.string.selection_mode_count, selectedFolders.size) else if (viewModel.mediaType.value == MediaType.VIDEO) stringResource(R.string.gallery_title) else stringResource(R.string.music_library_title),
                                         style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold
                                     )
-                                    val countText = if (viewModel.mediaType.value == MediaType.VIDEO) "video folders" else "music folders"
                                     if (!isSelectionMode && folders.isNotEmpty()) {
+                                        val countText = if (viewModel.mediaType.value == MediaType.VIDEO) stringResource(R.string.video_folders_count, folders.size) else stringResource(R.string.music_folders_count, folders.size)
                                         Text(
-                                            "${folders.size} $countText",
+                                            countText,
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -214,7 +216,7 @@ fun LocalMediaGrid(
                                     selectedFolders.clear()
                                     selectedFolders.addAll(folders.map { it.name })
                                 }) {
-                                    Icon(Icons.Filled.SelectAll, contentDescription = "Select All")
+                                    Icon(Icons.Filled.SelectAll, contentDescription = stringResource(R.string.select_all_btn))
                                 }
                                 IconButton(onClick = {
                                     val uris = selectedFolders.flatMap { folder ->
@@ -232,20 +234,20 @@ fun LocalMediaGrid(
                                     selectedFolders.clear()
                                     viewModel.refreshFolders()
                                 }) {
-                                    Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                                    Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.delete_menu_item), tint = MaterialTheme.colorScheme.error)
                                 }
                                 IconButton(onClick = {
                                     isSelectionMode = false
                                     selectedFolders.clear()
                                 }) {
-                                    Icon(Icons.Filled.Close, contentDescription = "Cancel")
+                                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.cancel_btn))
                                 }
                             } else {
                                 IconButton(onClick = { viewModel.refreshFolders() }) {
-                                    Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
+                                    Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.refresh_btn))
                                 }
                                 IconButton(onClick = onShowSettings) {
-                                    Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                                    Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings_btn))
                                 }
                             }
                         }
@@ -256,7 +258,7 @@ fun LocalMediaGrid(
                     Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             val emptyIcon = if (viewModel.mediaType.value == MediaType.VIDEO) Icons.Default.VideoLibrary else Icons.Default.LibraryMusic
-                            val emptyText = if (viewModel.mediaType.value == MediaType.VIDEO) "No videos found" else "No music found"
+                            val emptyText = if (viewModel.mediaType.value == MediaType.VIDEO) stringResource(R.string.empty_videos_msg) else stringResource(R.string.empty_music_msg)
                             Icon(
                                 emptyIcon,
                                 contentDescription = null,
@@ -345,7 +347,7 @@ fun LocalMediaList(
     }
     
     val currentType by viewModel.mediaType.collectAsState()
-    val typeLabel = if (currentType == MediaType.VIDEO) "videos" else "songs"
+    val typeLabel = if (currentType == MediaType.VIDEO) stringResource(R.string.tab_video).lowercase() else stringResource(R.string.tab_music).lowercase()
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -358,8 +360,8 @@ fun LocalMediaList(
     if (videoToDelete != null) {
         AlertDialog(
             onDismissRequest = { videoToDelete = null },
-            title = { Text(if (currentType == MediaType.VIDEO) "Delete Video" else "Delete Song") },
-            text = { Text("Are you sure you want to delete \"${videoToDelete?.title}\"?") },
+            title = { Text(if (currentType == MediaType.VIDEO) stringResource(R.string.delete_video_title) else stringResource(R.string.delete_song_title)) },
+            text = { Text(stringResource(R.string.delete_media_confirm)) },
             confirmButton = {
                 TextButton(onClick = {
                     videoToDelete?.let { video ->
@@ -370,10 +372,10 @@ fun LocalMediaList(
                     }
                     videoToDelete = null
                     viewModel.selectFolder(folderName)
-                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.delete_menu_item), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { videoToDelete = null }) { Text("Cancel") }
+                TextButton(onClick = { videoToDelete = null }) { Text(stringResource(R.string.cancel_btn)) }
             }
         )
     }
@@ -381,12 +383,12 @@ fun LocalMediaList(
     if (videoToRename != null) {
         AlertDialog(
             onDismissRequest = { videoToRename = null },
-            title = { Text("Rename Video") },
+            title = { Text(if (currentType == MediaType.VIDEO) stringResource(R.string.rename_video_title) else stringResource(R.string.rename_song_title)) },
             text = {
                 OutlinedTextField(
                     value = newName,
                     onValueChange = { newName = it },
-                    label = { Text("New Name") },
+                    label = { Text(stringResource(R.string.new_name_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
@@ -401,10 +403,10 @@ fun LocalMediaList(
                     }
                     videoToRename = null
                     viewModel.selectFolder(folderName)
-                }) { Text("Rename") }
+                }) { Text(stringResource(R.string.rename_menu_item)) }
             },
             dismissButton = {
-                TextButton(onClick = { videoToRename = null }) { Text("Cancel") }
+                TextButton(onClick = { videoToRename = null }) { Text(stringResource(R.string.cancel_btn)) }
             }
         )
     }
@@ -423,7 +425,7 @@ fun LocalMediaList(
                             OutlinedTextField(
                                 value = searchQuery,
                                 onValueChange = { searchQuery = it },
-                                placeholder = { Text("Search videos...", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f)) },
+                                placeholder = { Text(stringResource(R.string.search_videos_placeholder), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f)) },
                                 modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
                                 singleLine = true,
                                 shape = RoundedCornerShape(12.dp),
@@ -445,7 +447,7 @@ fun LocalMediaList(
                                 isSearchActive = false
                                 searchQuery = ""
                             }) {
-                                Icon(Icons.Filled.Close, contentDescription = "Close Search")
+                                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close_search_desc))
                             }
                         }
                     )
@@ -467,15 +469,15 @@ fun LocalMediaList(
                         scrollBehavior = scrollBehavior,
                         navigationIcon = {
                             IconButton(onClick = onBack) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back_btn))
                             }
                         },
                         actions = {
                             IconButton(onClick = onShowSettings) {
-                                Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                                Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings_btn))
                             }
                             IconButton(onClick = { viewModel.refreshFolders() }) {
-                                Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
+                                Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.refresh_btn))
                             }
                         }
                     )
@@ -487,7 +489,11 @@ fun LocalMediaList(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.SearchOff, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f))
                     Spacer(modifier = Modifier.height(12.dp))
-                    val emptyMsg = if (searchQuery.isEmpty()) "No $typeLabel found" else "No results for \"$searchQuery\""
+                    val emptyMsg = if (searchQuery.isEmpty()) {
+                        if (currentType == MediaType.VIDEO) stringResource(R.string.empty_msg_no_videos) else stringResource(R.string.empty_msg_no_songs)
+                    } else {
+                        stringResource(R.string.empty_msg_no_results, searchQuery)
+                    }
                     Text(emptyMsg, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -632,12 +638,12 @@ fun VideoPosterItem(
                             onDismissRequest = { showMenu = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Rename") },
+                                text = { Text(stringResource(R.string.rename_menu_item)) },
                                 leadingIcon = { Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp)) },
                                 onClick = { showMenu = false; onRename() }
                             )
                             DropdownMenuItem(
-                                text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                                text = { Text(stringResource(R.string.delete_menu_item), color = MaterialTheme.colorScheme.error) },
                                 leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp)) },
                                 onClick = { showMenu = false; onDelete() }
                             )
@@ -660,7 +666,7 @@ fun VideoPosterItem(
             Row(modifier = Modifier.padding(horizontal = 4.dp)) {
                 if (video.mediaType == MediaType.AUDIO) {
                     Text(
-                        text = video.artist ?: "Unknown Artist",
+                        text = video.artist ?: stringResource(R.string.unknown_artist),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
                         maxLines = 1,
@@ -735,7 +741,7 @@ fun VideoPosterItem(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (video.mediaType == MediaType.AUDIO) {
                         Text(
-                            text = video.artist ?: "Unknown Artist",
+                            text = video.artist ?: stringResource(R.string.unknown_artist),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
                             maxLines = 1,
@@ -770,8 +776,8 @@ fun VideoPosterItem(
                 Icon(Icons.Default.MoreVert, null)
             }
             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                DropdownMenuItem(text = { Text("Rename") }, onClick = { showMenu = false; onRename() })
-                DropdownMenuItem(text = { Text("Delete", color = MaterialTheme.colorScheme.error) }, onClick = { showMenu = false; onDelete() })
+                DropdownMenuItem(text = { Text(stringResource(R.string.rename_menu_item)) }, onClick = { showMenu = false; onRename() })
+                DropdownMenuItem(text = { Text(stringResource(R.string.delete_menu_item), color = MaterialTheme.colorScheme.error) }, onClick = { showMenu = false; onDelete() })
             }
         }
     }
