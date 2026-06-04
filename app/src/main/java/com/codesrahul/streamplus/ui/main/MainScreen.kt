@@ -123,6 +123,7 @@ fun MainScreen(initialTab: String? = null) {
     ) { innerPadding ->
         @OptIn(ExperimentalSharedTransitionApi::class)
         SharedTransitionLayout {
+            val topLevelRoutes = remember { setOf("playlist", "local", "direct_play", "settings") }
             NavHost(
                 navController = navController,
                 startDestination = initialTab ?: when (settingsState.defaultTab) {
@@ -131,16 +132,28 @@ fun MainScreen(initialTab: String? = null) {
                 },
                 modifier = Modifier.padding(innerPadding),
                 enterTransition = { 
-                    fadeIn(animationSpec = tween(300)) + slideInHorizontally(
-                        initialOffsetX = { fullWidth -> fullWidth / 8 },
-                        animationSpec = tween(300)
-                    ) 
+                    val initialRoute = initialState.destination.route
+                    val targetRoute = targetState.destination.route
+                    if (initialRoute in topLevelRoutes && targetRoute in topLevelRoutes) {
+                        fadeIn(animationSpec = tween(150))
+                    } else {
+                        fadeIn(animationSpec = tween(300)) + slideInHorizontally(
+                            initialOffsetX = { fullWidth -> fullWidth / 8 },
+                            animationSpec = tween(300)
+                        )
+                    }
                 },
                 exitTransition = { 
-                    fadeOut(animationSpec = tween(300)) + slideOutHorizontally(
-                        targetOffsetX = { fullWidth -> -fullWidth / 8 },
-                        animationSpec = tween(300)
-                    )
+                    val initialRoute = initialState.destination.route
+                    val targetRoute = targetState.destination.route
+                    if (initialRoute in topLevelRoutes && targetRoute in topLevelRoutes) {
+                        fadeOut(animationSpec = tween(150))
+                    } else {
+                        fadeOut(animationSpec = tween(300)) + slideOutHorizontally(
+                            targetOffsetX = { fullWidth -> -fullWidth / 8 },
+                            animationSpec = tween(300)
+                        )
+                    }
                 }
             ) {
                 composable("playlist") {

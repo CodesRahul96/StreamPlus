@@ -165,9 +165,7 @@ fun LocalMediaGrid(
     var isSelectionMode by remember { mutableStateOf(false) }
     val selectedFolders = remember { mutableStateListOf<String>() }
 
-    LaunchedEffect(Unit) {
-        viewModel.refreshFolders()
-    }
+
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -243,6 +241,9 @@ fun LocalMediaGrid(
                                     Icon(Icons.Filled.Close, contentDescription = "Cancel")
                                 }
                             } else {
+                                IconButton(onClick = { viewModel.refreshFolders() }) {
+                                    Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
+                                }
                                 IconButton(onClick = onShowSettings) {
                                     Icon(Icons.Filled.Settings, contentDescription = "Settings")
                                 }
