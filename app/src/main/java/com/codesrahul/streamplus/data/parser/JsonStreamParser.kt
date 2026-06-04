@@ -139,9 +139,9 @@ class JsonStreamParser : StreamParser {
         }
 
         return M3UItem(
-            name = name,
+            name = name.take(300).trim(),
             url = url,
-            group = group,
+            group = group.take(100).trim(),
             logoUrl = logo,
             status = StreamStatus.UNKNOWN,
             headers = headers,

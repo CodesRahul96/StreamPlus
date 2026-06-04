@@ -71,7 +71,7 @@ class PlaylistDetailViewModel @Inject constructor(
                 afterTypeFiler
             } else {
                 afterTypeFiler.filter { ch ->
-                    (group == "All" || ch.group == group) &&
+                    (group == "All" || ch.group.take(100).trim() == group) &&
                     (ch.name.contains(query, ignoreCase = true) || ch.url.contains(query, ignoreCase = true))
                 }
             }
@@ -84,7 +84,7 @@ class PlaylistDetailViewModel @Inject constructor(
         kotlinx.coroutines.withContext(Dispatchers.Default) {
             buildList {
                 add("All")
-                channels.map { it.group }.distinct().filter { it.isNotBlank() }.sorted().forEach { add(it) }
+                channels.map { it.group.take(100).trim() }.distinct().filter { it.isNotBlank() }.sorted().forEach { add(it) }
             }
         }
     }

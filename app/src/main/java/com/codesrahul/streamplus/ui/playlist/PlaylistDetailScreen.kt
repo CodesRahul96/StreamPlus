@@ -113,7 +113,14 @@ fun PlaylistDetailScreen(
                         Tab(
                             selected = selectedGroup == group,
                             onClick = { viewModel.setSelectedGroup(group) },
-                            text = { Text(group, fontWeight = if (selectedGroup == group) FontWeight.Bold else FontWeight.Medium) }
+                            text = { 
+                                Text(
+                                    text = group, 
+                                    fontWeight = if (selectedGroup == group) FontWeight.Bold else FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                ) 
+                            }
                         )
                     }
                 }

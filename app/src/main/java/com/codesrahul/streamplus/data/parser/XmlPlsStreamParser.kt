@@ -34,7 +34,7 @@ class XmlPlsStreamParser : StreamParser {
                 for ((idx, fileUrl) in files) {
                     val title = titles[idx] ?: "Stream $idx"
                     items.add(M3UItem(
-                        name = title,
+                        name = title.take(300).trim(),
                         url = fileUrl,
                         group = "PLS Playlist",
                         logoUrl = "",
@@ -62,7 +62,7 @@ class XmlPlsStreamParser : StreamParser {
                         val url = refRegex.find(entryContent)?.groupValues?.get(1)?.trim()
                         if (!url.isNullOrBlank()) {
                             items.add(M3UItem(
-                                name = title,
+                                name = title.take(300).trim(),
                                 url = url,
                                 group = "ASX Playlist",
                                 logoUrl = "",
@@ -93,7 +93,7 @@ class XmlPlsStreamParser : StreamParser {
                             ?: linkRegex.find(itemContent)?.groupValues?.get(1)?.trim()
                         if (!url.isNullOrBlank()) {
                             items.add(M3UItem(
-                                name = title,
+                                name = title.take(300).trim(),
                                 url = url,
                                 group = "RSS Playlist",
                                 logoUrl = "",
@@ -118,7 +118,7 @@ class XmlPlsStreamParser : StreamParser {
                             android.net.Uri.parse(url).lastPathSegment?.substringBefore(".") ?: "WPL Stream"
                         } catch (e: Exception) { "WPL Stream" }
                         items.add(M3UItem(
-                            name = title,
+                            name = title.take(300).trim(),
                             url = url,
                             group = "WPL Playlist",
                             logoUrl = "",

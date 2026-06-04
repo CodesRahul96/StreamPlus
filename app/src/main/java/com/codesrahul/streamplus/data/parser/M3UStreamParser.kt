@@ -58,10 +58,13 @@ class M3UStreamParser : StreamParser {
             val finalName = if (currentName.isBlank()) extractNameFromUrl(finalUrl) else currentName
             val detectedScheme = detectDrmScheme(currentDrmScheme, currentDrmLicense)
 
+            val sanitizedName = finalName.take(300).trim()
+            val sanitizedGroup = (if (currentGroup.isBlank()) "Uncategorized" else currentGroup).take(100).trim()
+
             items.add(M3UItem(
-                name = finalName,
+                name = sanitizedName,
                 url = finalUrl,
-                group = if (currentGroup.isBlank()) "Uncategorized" else currentGroup,
+                group = sanitizedGroup,
                 logoUrl = currentLogo,
                 status = StreamStatus.UNKNOWN,
                 headers = mergedHeaders,
@@ -71,9 +74,9 @@ class M3UStreamParser : StreamParser {
                 userAgent = mergedHeaders["User-Agent"] ?: currentUserAgent,
                 isPlaylist = false,
                 epgId = currentEpgId,
-                isVod = currentDuration > 0 || isVodGroup(currentGroup)
+                isVod = currentDuration > 0 || isVodGroup(sanitizedGroup)
             ))
-            Log.d("M3UParser", "Created item: $finalName, UA=${mergedHeaders["User-Agent"]}, DRM Scheme=${detectedScheme}")
+            Log.d("M3UParser", "Created item: $sanitizedName, UA=${mergedHeaders["User-Agent"]}, DRM Scheme=${detectedScheme}")
         }
 
         reader.useLines { lines ->
