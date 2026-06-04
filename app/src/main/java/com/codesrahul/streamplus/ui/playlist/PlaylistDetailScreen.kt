@@ -37,6 +37,7 @@ import com.codesrahul.streamplus.data.settings.AppSettings
 import com.codesrahul.streamplus.ui.components.PremiumBackground
 import com.codesrahul.streamplus.ui.settings.SettingsViewModel
 import com.codesrahul.streamplus.ui.util.tvFocusable
+import com.codesrahul.streamplus.ui.util.glassmorphic
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -367,19 +368,20 @@ fun ChannelItem(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onToggleFavorite: (() -> Unit)?, onClick: () -> Unit, aspectRatio: Float = 0.85f) {
+fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onToggleFavorite: (() -> Unit)?, onClick: () -> Unit, aspectRatio: Float = 0.85f, modifier: Modifier = Modifier) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .aspectRatio(aspectRatio)
             .tvFocusable(cornerRadius = 16.dp)
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClick)
+            .glassmorphic(cornerRadius = 16.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            containerColor = Color.Transparent
         ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        border = null,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             
@@ -462,19 +464,20 @@ fun VodPosterItem(channel: M3UItem, hideImage: Boolean, isFavorite: Boolean, onT
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String?, isFavorite: Boolean, onToggleFavorite: (() -> Unit)?, onClick: () -> Unit, aspectRatio: Float = 0.85f) {
+fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String?, isFavorite: Boolean, onToggleFavorite: (() -> Unit)?, onClick: () -> Unit, aspectRatio: Float = 0.85f, modifier: Modifier = Modifier) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .aspectRatio(aspectRatio)
             .tvFocusable(cornerRadius = 16.dp)
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClick)
+            .glassmorphic(cornerRadius = 16.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            containerColor = Color.Transparent
         ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        border = null,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             

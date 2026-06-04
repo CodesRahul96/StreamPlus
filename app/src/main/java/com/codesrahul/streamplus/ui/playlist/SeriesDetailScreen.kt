@@ -26,7 +26,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.codesrahul.streamplus.ui.components.PremiumBackground
+import com.codesrahul.streamplus.ui.components.shimmerEffect
 import com.codesrahul.streamplus.ui.util.tvFocusable
+import com.codesrahul.streamplus.ui.util.glassmorphic
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,9 +78,7 @@ fun SeriesDetailScreen(
         ) { padding ->
             Box(modifier = Modifier.fillMaxSize().padding(padding)) {
                 if (isLoading) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
+                    ShimmerSeriesDetail()
                 } else if (error != null) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(error!!, color = MaterialTheme.colorScheme.error)
@@ -198,9 +198,12 @@ fun EpisodeItem(
         modifier = Modifier
             .fillMaxWidth()
             .tvFocusable(cornerRadius = 12.dp)
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClick)
+            .glassmorphic(cornerRadius = 12.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(0.3f))
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        border = null,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -231,3 +234,86 @@ fun EpisodeItem(
         }
     }
 }
+
+@Composable
+fun ShimmerSeriesDetail() {
+    Column(modifier = Modifier.fillMaxSize()) {
+        // 1. Backdrop shimmer
+        Box(
+            modifier = Modifier
+                .height(200.dp)
+                .fillMaxWidth()
+                .shimmerEffect()
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 2. Season chips shimmers
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            repeat(3) {
+                Box(
+                    modifier = Modifier
+                        .size(100.dp, 36.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .shimmerEffect()
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 3. Episode list shimmers
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            repeat(5) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                    border = null,
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    Box(modifier = Modifier.fillMaxWidth().glassmorphic(cornerRadius = 12.dp)) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(80.dp, 45.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .shimmerEffect()
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(0.6f)
+                                        .height(16.dp)
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .shimmerEffect()
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(0.3f)
+                                        .height(12.dp)
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .shimmerEffect()
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

@@ -48,6 +48,7 @@ import com.codesrahul.streamplus.ui.settings.SettingsViewModel
 import com.codesrahul.streamplus.ui.player.PlayerActivity
 import com.codesrahul.streamplus.util.UserAgentManager
 import com.codesrahul.streamplus.ui.util.tvFocusable
+import com.codesrahul.streamplus.ui.util.glassmorphic
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -700,11 +701,12 @@ fun PlaylistItem(
         modifier = modifier
             .fillMaxWidth()
             .tvFocusable(cornerRadius = 16.dp)
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            .clickable(onClick = onClick)
+            .glassmorphic(cornerRadius = 16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        border = null
     ) {
         Row(
             modifier = Modifier.padding(12.dp).fillMaxWidth(),
@@ -1091,11 +1093,11 @@ fun SearchResultItem(channel: M3UItem, onClick: () -> Unit) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RecentlyWatchedCard(entry: M3UItem, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Surface(
-        modifier = modifier.tvFocusable(cornerRadius = 14.dp).clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    Box(
+        modifier = modifier
+            .tvFocusable(cornerRadius = 14.dp)
+            .clickable(onClick = onClick)
+            .glassmorphic(cornerRadius = 14.dp)
     ) {
         Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(52.dp)) {
@@ -1133,11 +1135,11 @@ fun FavouriteChannelCard(
     onClick: () -> Unit,
     onRemove: () -> Unit
 ) {
-    Surface(
-        modifier = modifier.tvFocusable(cornerRadius = 14.dp).clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    Box(
+        modifier = modifier
+            .tvFocusable(cornerRadius = 14.dp)
+            .clickable(onClick = onClick)
+            .glassmorphic(cornerRadius = 14.dp)
     ) {
         Box {
             Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {

@@ -12,7 +12,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.clip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.Alignment
 
+/**
+ * A theme-adaptive shimmer modifier that interpolates based on the current theme's surface/on-surface colors.
+ */
 fun Modifier.shimmerEffect(): Modifier = composed {
     val transition = rememberInfiniteTransition()
     val translateAnim = transition.animateFloat(
@@ -24,10 +32,11 @@ fun Modifier.shimmerEffect(): Modifier = composed {
         )
     )
 
+    val baseColor = MaterialTheme.colorScheme.onSurface
     val shimmerColors = listOf(
-        Color.LightGray.copy(alpha = 0.6f),
-        Color.LightGray.copy(alpha = 0.2f),
-        Color.LightGray.copy(alpha = 0.6f),
+        baseColor.copy(alpha = 0.12f),
+        baseColor.copy(alpha = 0.04f),
+        baseColor.copy(alpha = 0.12f),
     )
 
     val brush = Brush.linearGradient(
@@ -41,23 +50,23 @@ fun Modifier.shimmerEffect(): Modifier = composed {
 
 @Composable
 fun ShimmerChannelItem(aspectRatio: Float = 0.85f) {
-    androidx.compose.material3.Card(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(aspectRatio), 
         shape = RoundedCornerShape(16.dp),
-        colors = androidx.compose.material3.CardDefaults.cardColors(
-            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
         ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f)),
-        elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 0.dp)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.1f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             // Logo placeholder
             Box(
                 modifier = Modifier
                     .size(60.dp)
-                    .align(androidx.compose.ui.Alignment.Center)
+                    .align(Alignment.Center)
                     .padding(bottom = 30.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .shimmerEffect()
@@ -66,13 +75,13 @@ fun ShimmerChannelItem(aspectRatio: Float = 0.85f) {
             // Text placeholders at bottom
             Box(
                 modifier = Modifier
-                    .align(androidx.compose.ui.Alignment.BottomCenter)
+                    .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .height(50.dp)
                     .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
                 Column(
-                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally, 
+                    horizontalAlignment = Alignment.CenterHorizontally, 
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Box(
@@ -102,7 +111,7 @@ fun ShimmerPlaylistItem() {
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
-        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
