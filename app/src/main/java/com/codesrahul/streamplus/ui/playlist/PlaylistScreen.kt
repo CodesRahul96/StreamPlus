@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -95,17 +96,17 @@ fun PlaylistScreen(
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text("Playlists", fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium) }
+                    text = { Text(stringResource(com.codesrahul.streamplus.R.string.playlists_tab), fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium) }
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text("Favorites", fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium) }
+                    text = { Text(stringResource(com.codesrahul.streamplus.R.string.favorites_tab), fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium) }
                 )
                 Tab(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
-                    text = { Text("Recent", fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Medium) }
+                    text = { Text(stringResource(com.codesrahul.streamplus.R.string.recent_tab), fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Medium) }
                 )
             }
 
@@ -118,9 +119,9 @@ fun PlaylistScreen(
                             Column {
                                 Text(
                                     text = when (selectedTab) {
-                                        0 -> "Playlists"
-                                        1 -> "Favorites"
-                                        else -> "Recently Watched"
+                                        0 -> stringResource(com.codesrahul.streamplus.R.string.playlists_tab)
+                                        1 -> stringResource(com.codesrahul.streamplus.R.string.favorites_tab)
+                                        else -> stringResource(com.codesrahul.streamplus.R.string.recent_tab)
                                     },
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold
@@ -157,7 +158,7 @@ fun PlaylistScreen(
                                     onDismissRequest = { showMenu = false }
                                 ) {
                                     DropdownMenuItem(
-                                        text = { Text("Add Playlist URL") },
+                                        text = { Text(stringResource(com.codesrahul.streamplus.R.string.add_playlist_url)) },
                                         onClick = {
                                             showMenu = false
                                             showAddDialog = true
@@ -165,7 +166,7 @@ fun PlaylistScreen(
                                         leadingIcon = { Icon(Icons.Default.AddLink, null, modifier = Modifier.size(20.dp)) }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Login with Xtream Codes") },
+                                        text = { Text(stringResource(com.codesrahul.streamplus.R.string.login_xtream)) },
                                         onClick = {
                                             showMenu = false
                                             showXtreamDialog = true
@@ -173,7 +174,7 @@ fun PlaylistScreen(
                                         leadingIcon = { Icon(Icons.Default.AccountCircle, null, modifier = Modifier.size(20.dp)) }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Add Local Playlist") },
+                                        text = { Text(stringResource(com.codesrahul.streamplus.R.string.add_local_playlist)) },
                                         onClick = {
                                             showMenu = false
                                             filePickerLauncher.launch("*/*")
@@ -332,7 +333,7 @@ fun PlaylistScreen(
                                             value = searchQuery,
                                             onValueChange = viewModel::onSearchQueryChange,
                                             modifier = Modifier.fillMaxWidth(),
-                                            placeholder = { Text("Search all playlists…") },
+                                            placeholder = { Text(stringResource(com.codesrahul.streamplus.R.string.search_playlists_placeholder)) },
                                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                                             trailingIcon = {
                                                 if (searchQuery.isNotEmpty()) {
@@ -666,8 +667,8 @@ fun PlaylistScreen(
     playlistToDelete?.let { playlist ->
         AlertDialog(
             onDismissRequest = { playlistToDelete = null },
-            title = { Text("Delete Playlist", fontWeight = FontWeight.Bold) },
-            text = { Text("Are you sure you want to delete \"${playlist.name}\"? All channels and cached streams associated with this playlist will be removed.") },
+            title = { Text(stringResource(com.codesrahul.streamplus.R.string.delete_playlist_confirm_title), fontWeight = FontWeight.Bold) },
+            text = { Text(stringResource(com.codesrahul.streamplus.R.string.delete_playlist_confirm_desc)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -676,12 +677,12 @@ fun PlaylistScreen(
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Delete", fontWeight = FontWeight.Bold)
+                    Text(stringResource(com.codesrahul.streamplus.R.string.delete_btn), fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { playlistToDelete = null }) {
-                    Text("Cancel")
+                    Text(stringResource(com.codesrahul.streamplus.R.string.cancel_btn))
                 }
             }
         )
@@ -852,12 +853,12 @@ fun PlaylistDialog(
         AlertDialog(
             shape = RoundedCornerShape(16.dp),
             onDismissRequest = { showCustomUADialog = false },
-            title = { Text("Custom User Agent") },
+            title = { Text(stringResource(com.codesrahul.streamplus.R.string.custom_ua_title)) },
             text = {
                 OutlinedTextField(
                     value = customUAInput,
                     onValueChange = { customUAInput = it },
-                    label = { Text("UA String") },
+                    label = { Text(stringResource(com.codesrahul.streamplus.R.string.ua_string_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
@@ -867,10 +868,10 @@ fun PlaylistDialog(
                     userAgentValue = customUAInput.ifBlank { UserAgentManager.DEFAULT_UA }
                     userAgentDisplay = "Custom"
                     showCustomUADialog = false
-                }) { Text("Confirm") }
+                }) { Text(stringResource(com.codesrahul.streamplus.R.string.confirm_btn)) }
             },
             dismissButton = {
-                TextButton(onClick = { showCustomUADialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showCustomUADialog = false }) { Text(stringResource(com.codesrahul.streamplus.R.string.cancel_btn)) }
             }
         )
     }
@@ -896,7 +897,7 @@ fun PlaylistDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it; isNameModified = true },
-                    label = { Text("Playlist Name") },
+                    label = { Text(stringResource(com.codesrahul.streamplus.R.string.playlist_name)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true
@@ -923,7 +924,7 @@ fun PlaylistDialog(
                             } catch (e: Exception) {}
                         }
                     },
-                    label = { Text("M3U URL or JSON Path") },
+                    label = { Text(stringResource(com.codesrahul.streamplus.R.string.m3u_url_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     trailingIcon = { Icon(Icons.Default.Link, null, modifier = Modifier.size(20.dp)) }
@@ -932,10 +933,10 @@ fun PlaylistDialog(
                 OutlinedTextField(
                     value = epgUrl,
                     onValueChange = { epgUrl = it },
-                    label = { Text("EPG URL (XMLTV)") },
+                    label = { Text(stringResource(com.codesrahul.streamplus.R.string.epg_url_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    placeholder = { Text("Optional .xml or .xml.gz") },
+                    placeholder = { Text(stringResource(com.codesrahul.streamplus.R.string.epg_optional)) },
                     trailingIcon = { Icon(Icons.Default.FormatListBulleted, null, modifier = Modifier.size(20.dp)) }
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -948,7 +949,7 @@ fun PlaylistDialog(
                         value = userAgentDisplay,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("User Agent") },
+                        label = { Text(stringResource(com.codesrahul.streamplus.R.string.user_agent_label)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isUserAgentExpanded) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
@@ -981,7 +982,7 @@ fun PlaylistDialog(
                 }
                 
                 Spacer(modifier = Modifier.height(20.dp))
-                Text("Icon & Theme", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Text(stringResource(com.codesrahul.streamplus.R.string.icon_theme_sec), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 LazyRow(
@@ -1053,11 +1054,11 @@ fun PlaylistDialog(
         },
         dismissButton = {
             Row {
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                TextButton(onClick = onDismiss) { Text(stringResource(com.codesrahul.streamplus.R.string.cancel_btn)) }
                 if (onDelete != null) {
                     Spacer(modifier = Modifier.width(8.dp))
                     TextButton(onClick = onDelete, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
-                        Text("Delete", fontWeight = FontWeight.Bold)
+                        Text(stringResource(com.codesrahul.streamplus.R.string.delete_btn), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -1242,7 +1243,7 @@ fun XtreamPlaylistDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Provider Name") },
+                    label = { Text(stringResource(com.codesrahul.streamplus.R.string.provider_name)) },
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true
@@ -1250,7 +1251,7 @@ fun XtreamPlaylistDialog(
                 OutlinedTextField(
                     value = serverUrl,
                     onValueChange = { serverUrl = it },
-                    label = { Text("Server URL (http://example.com:port)") },
+                    label = { Text(stringResource(com.codesrahul.streamplus.R.string.server_url_label)) },
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true
@@ -1258,7 +1259,7 @@ fun XtreamPlaylistDialog(
                 OutlinedTextField(
                     value = username,
                     onValueChange = { username = it },
-                    label = { Text("Username") },
+                    label = { Text(stringResource(com.codesrahul.streamplus.R.string.username_label)) },
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true
@@ -1266,7 +1267,7 @@ fun XtreamPlaylistDialog(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Password") },
+                    label = { Text(stringResource(com.codesrahul.streamplus.R.string.password_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true
@@ -1293,7 +1294,7 @@ fun XtreamPlaylistDialog(
         dismissButton = {
             Row {
                 TextButton(onClick = onDismiss) {
-                    Text("Cancel")
+                    Text(stringResource(com.codesrahul.streamplus.R.string.cancel_btn))
                 }
                 if (onDelete != null) {
                     Spacer(modifier = Modifier.width(8.dp))
@@ -1301,7 +1302,7 @@ fun XtreamPlaylistDialog(
                         onClick = onDelete,
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                     ) {
-                        Text("Delete", fontWeight = FontWeight.Bold)
+                        Text(stringResource(com.codesrahul.streamplus.R.string.delete_btn), fontWeight = FontWeight.Bold)
                     }
                 }
             }

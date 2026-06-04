@@ -551,7 +551,7 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
-                    title = { Text("Playlist Settings", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
+                    title = { Text(stringResource(com.codesrahul.streamplus.R.string.playlist_settings_title), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
@@ -574,7 +574,7 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             ) {
                 SettingsCard {
                     SettingsClickableItem(
-                        title = "Default Playlist Icon",
+                        title = stringResource(com.codesrahul.streamplus.R.string.default_playlist_icon),
                         subtitle = settingsState.defaultPlaylistIcon,
                         icon = Icons.Default.List,
                         iconColor = BlueSky,
@@ -583,7 +583,7 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     )
                     
                     SettingsClickableItem(
-                        title = "Sort Order",
+                        title = stringResource(com.codesrahul.streamplus.R.string.sort_order),
                         subtitle = settingsState.playlistSortOrder,
                         icon = Icons.Default.SortByAlpha,
                         iconColor = OrangeWarm,
@@ -592,8 +592,8 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     )
                     
                     SettingsSwitchItem(
-                        title = "Mask Playlist URLs",
-                        subtitle = "Hide the actual URL for security & privacy",
+                        title = stringResource(com.codesrahul.streamplus.R.string.mask_playlist_urls),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.mask_playlist_urls_desc),
                         icon = Icons.Default.VpnKey,
                         iconColor = RedAlpha,
                         checked = settingsState.hidePlaylistUri,
@@ -602,8 +602,8 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     )
                     
                     SettingsClickableItem(
-                        title = "QR Share",
-                        subtitle = "Generate a QR code for any playlist URL",
+                        title = stringResource(com.codesrahul.streamplus.R.string.qr_share),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.qr_share_desc),
                         icon = Icons.Default.QrCode,
                         iconColor = PurpleVibe,
                         onClick = { showQrDialog = true },
@@ -611,8 +611,8 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     )
                     
                     SettingsClickableItem(
-                        title = "Import & Export",
-                        subtitle = "Backup or restore your playlists data",
+                        title = stringResource(com.codesrahul.streamplus.R.string.import_export),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.import_export_desc),
                         icon = Icons.Default.Backup,
                         iconColor = GreenApple,
                         onClick = { showExportImportDialog = true },
@@ -790,8 +790,8 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
 
     if (showIconDialog) {
         PremiumSelectionDialog(
-            title = "Default Layout Icon",
-            subtitle = "Choose layout option for playlist channels",
+            title = stringResource(com.codesrahul.streamplus.R.string.default_playlist_icon),
+            subtitle = stringResource(com.codesrahul.streamplus.R.string.default_playlist_icon_desc),
             options = listOf("List", "Grid", "Card", "Compact"),
             selectedOption = settingsState.defaultPlaylistIcon,
             onOptionSelected = { viewModel.setDefaultPlaylistIcon(it) },
@@ -814,8 +814,8 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
 
     if (showSortDialog) {
         PremiumSelectionDialog(
-            title = "Sort Order",
-            subtitle = "Define how your playlists are ordered",
+            title = stringResource(com.codesrahul.streamplus.R.string.sort_order),
+            subtitle = stringResource(com.codesrahul.streamplus.R.string.sort_order_desc),
             options = listOf("Name", "Added Date", "Category", "Last Watched"),
             selectedOption = settingsState.playlistSortOrder,
             onOptionSelected = { viewModel.setPlaylistSortOrder(it) },
@@ -848,7 +848,7 @@ fun GeneralSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
-                    title = { Text("General Settings", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
+                    title = { Text(stringResource(com.codesrahul.streamplus.R.string.general_settings_title), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
@@ -871,7 +871,7 @@ fun GeneralSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             ) {
                 SettingsCard {
                     SettingsClickableItem(
-                        title = "Decoder Backend",
+                        title = stringResource(com.codesrahul.streamplus.R.string.decoder_backend),
                         subtitle = when(settingsState.decoderPriority) {
                             1 -> "Application (Software)"
                             2 -> "Hardware Only (Strict)"
@@ -884,8 +884,8 @@ fun GeneralSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     )
                     
                     SettingsSwitchItem(
-                        title = "Tunneled Playback",
-                        subtitle = "Enable audio tunneling for supported 4K/HDR content",
+                        title = stringResource(com.codesrahul.streamplus.R.string.tunneled_playback),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.tunneled_playback_desc),
                         icon = Icons.Default.VerticalAlignCenter,
                         iconColor = PurpleVibe,
                         checked = settingsState.enableTunneling,
@@ -894,8 +894,8 @@ fun GeneralSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     )
                     
                     SettingsSwitchItem(
-                        title = "Dolby Vision Support",
-                        subtitle = "Enable support for Dolby Vision Profile 7",
+                        title = stringResource(com.codesrahul.streamplus.R.string.dolby_vision_support),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.dolby_vision_support_desc),
                         icon = Icons.Default.CastConnected,
                         iconColor = OrangeWarm,
                         checked = settingsState.dolbyVision,
@@ -917,8 +917,8 @@ fun GeneralSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
         )
         val selectedOption = options.find { it.first == settingsState.decoderPriority } ?: options[0]
         PremiumSelectionDialog(
-            title = "Decoder Backend",
-            subtitle = "Select video decoding engine priority",
+            title = stringResource(com.codesrahul.streamplus.R.string.decoder_backend),
+            subtitle = stringResource(com.codesrahul.streamplus.R.string.decoder_backend_desc),
             options = options,
             selectedOption = selectedOption,
             onOptionSelected = { viewModel.setDecoderPriority(it.first) },
@@ -962,7 +962,7 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
-                    title = { Text("Video Settings", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
+                    title = { Text(stringResource(com.codesrahul.streamplus.R.string.video_settings_title), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
@@ -985,7 +985,7 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             ) {
                 SettingsCard {
                     SettingsClickableItem(
-                        title = "Video Quality",
+                        title = stringResource(com.codesrahul.streamplus.R.string.video_quality),
                         subtitle = settingsState.videoQuality,
                         icon = Icons.Default.HighQuality,
                         iconColor = BlueSky,
@@ -994,7 +994,7 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     )
                     
                     SettingsClickableItem(
-                        title = "Default Audio Track",
+                        title = stringResource(com.codesrahul.streamplus.R.string.default_audio_track),
                         subtitle = settingsState.defaultAudioLanguage,
                         icon = Icons.Default.Audiotrack,
                         iconColor = TealSea,
@@ -1003,7 +1003,7 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     )
 
                     SettingsClickableItem(
-                        title = "Network Buffer",
+                        title = stringResource(com.codesrahul.streamplus.R.string.network_buffer),
                         subtitle = "${settingsState.networkBufferSize} seconds",
                         icon = Icons.Default.Waves,
                         iconColor = PurpleVibe,
@@ -1013,7 +1013,7 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     
                     val aspectOptions = listOf("Fit", "Fill", "Zoom")
                     SettingsClickableItem(
-                        title = "Default Aspect Ratio",
+                        title = stringResource(com.codesrahul.streamplus.R.string.default_aspect_ratio),
                         subtitle = aspectOptions.getOrElse(settingsState.defaultAspectRatio) { "Fit" },
                         icon = Icons.Default.AspectRatio,
                         iconColor = OrangeWarm,
@@ -1022,8 +1022,8 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     )
                     
                     SettingsSwitchItem(
-                        title = "Auto Refresh Rate",
-                        subtitle = "Switch display refresh rate to match video frame rate",
+                        title = stringResource(com.codesrahul.streamplus.R.string.frame_rate_matching),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.frame_rate_matching_desc),
                         icon = Icons.Default.Speed,
                         iconColor = GreenApple,
                         checked = settingsState.autoFrameRate,
@@ -1032,8 +1032,8 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     )
                     
                     SettingsSwitchItem(
-                        title = "Auto Picture-in-Picture",
-                        subtitle = "Switch to PiP mode when leaving the app",
+                        title = stringResource(com.codesrahul.streamplus.R.string.auto_pip),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.auto_pip_desc),
                         icon = Icons.Default.PictureInPicture,
                         iconColor = BlueSky,
                         checked = settingsState.autoPip,
@@ -1042,8 +1042,8 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     )
                     
                     SettingsSwitchItem(
-                        title = "Skip Silence",
-                        subtitle = "Skip silent parts in the audio stream",
+                        title = stringResource(com.codesrahul.streamplus.R.string.skip_silence),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.skip_silence_desc),
                         icon = Icons.Default.SkipNext,
                         iconColor = RedAlpha,
                         checked = settingsState.skipSilence,
@@ -1052,8 +1052,8 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     )
                     
                     SettingsSwitchItem(
-                        title = "Repeat Toggle",
-                        subtitle = "Enable controls to loop play single media",
+                        title = stringResource(com.codesrahul.streamplus.R.string.repeat_mode),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.repeat_mode_desc),
                         icon = Icons.Default.Repeat,
                         iconColor = TealSea,
                         checked = settingsState.repeatMode,
@@ -1062,7 +1062,7 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     )
 
                     SettingsClickableItem(
-                        title = "Player Orientation",
+                        title = stringResource(com.codesrahul.streamplus.R.string.screen_rotation),
                         subtitle = settingsState.playerOrientation.name.lowercase().replaceFirstChar { it.uppercase() },
                         icon = Icons.Default.CropRotate,
                         iconColor = OrangeWarm,
@@ -1071,8 +1071,8 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     )
 
                     SettingsSwitchItem(
-                        title = "Force Widevine L3",
-                        subtitle = "Useful for devices with broken L1 certification (fixes black screen)",
+                        title = stringResource(com.codesrahul.streamplus.R.string.software_decoder),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.software_decoder_desc),
                         icon = Icons.Default.Security,
                         iconColor = GreenApple,
                         checked = settingsState.forceWidevineL3,
@@ -1089,8 +1089,8 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
     if (showQualityDialog) {
         val options = listOf("Auto (Recommended)", "High", "Medium", "Low", "Data Saver")
         PremiumSelectionDialog(
-            title = "Video Quality",
-            subtitle = "Set default streaming video resolution quality",
+            title = stringResource(com.codesrahul.streamplus.R.string.video_quality),
+            subtitle = stringResource(com.codesrahul.streamplus.R.string.video_quality_desc),
             options = options,
             selectedOption = settingsState.videoQuality,
             onOptionSelected = { viewModel.setVideoQuality(it) },
@@ -1122,10 +1122,16 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
     }
 
     if (showAudioDialog) {
-        val options = listOf("Auto", "English", "Hindi", "Spanish", "French", "German", "Russian", "Arabic", "Chinese", "Japanese", "Portuguese")
+        val options = listOf(
+            "Auto", "English", "Hindi", "Bengali", "Telugu", "Marathi", "Tamil", "Urdu", 
+            "Gujarati", "Kannada", "Odia", "Malayalam", "Punjabi", "Sanskrit", 
+            "Assamese", "Maithili", "Santali", "Kashmiri", "Nepali", "Konkani", 
+            "Sindhi", "Dogri", "Manipuri", "Bodo", "Spanish", "French", 
+            "German", "Russian", "Arabic", "Chinese", "Japanese", "Portuguese"
+        )
         PremiumSelectionDialog(
-            title = "Audio Track Language",
-            subtitle = "Select default playback language when available",
+            title = stringResource(com.codesrahul.streamplus.R.string.default_audio_track),
+            subtitle = stringResource(com.codesrahul.streamplus.R.string.default_audio_track_desc),
             options = options,
             selectedOption = settingsState.defaultAudioLanguage,
             onOptionSelected = { viewModel.setDefaultAudioLanguage(it) },
@@ -1144,8 +1150,8 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
     if (showBufferDialog) {
         val options = listOf(10, 20, 30, 45, 60, 90, 120)
         PremiumSelectionDialog(
-            title = "Network Buffer Size",
-            subtitle = "Set seconds of video pre-cached before playing",
+            title = stringResource(com.codesrahul.streamplus.R.string.network_buffer),
+            subtitle = stringResource(com.codesrahul.streamplus.R.string.network_buffer_desc),
             options = options,
             selectedOption = settingsState.networkBufferSize,
             onOptionSelected = { viewModel.setNetworkBufferSize(it) },
@@ -1181,8 +1187,8 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
         val aspectOptions = listOf("Fit", "Fill", "Zoom")
         val selectedOption = aspectOptions.getOrNull(settingsState.defaultAspectRatio) ?: "Fit"
         PremiumSelectionDialog(
-            title = "Aspect Ratio",
-            subtitle = "Default screen rendering dimension layout",
+            title = stringResource(com.codesrahul.streamplus.R.string.default_aspect_ratio),
+            subtitle = stringResource(com.codesrahul.streamplus.R.string.default_aspect_ratio_desc),
             options = aspectOptions,
             selectedOption = selectedOption,
             onOptionSelected = { option ->
@@ -1214,8 +1220,8 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
 
     if (showOrientationDialog) {
         PremiumSelectionDialog(
-            title = "Player Orientation",
-            subtitle = "Define full screen player rotation preference",
+            title = stringResource(com.codesrahul.streamplus.R.string.screen_rotation),
+            subtitle = stringResource(com.codesrahul.streamplus.R.string.screen_rotation_desc),
             options = PlayerOrientation.entries,
             selectedOption = settingsState.playerOrientation,
             onOptionSelected = { viewModel.setPlayerOrientation(it) },
@@ -1254,7 +1260,7 @@ fun ShortcutsSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
-                    title = { Text("Shortcuts & Gestures", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
+                    title = { Text(stringResource(com.codesrahul.streamplus.R.string.gesture_accessibility_title), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
@@ -1278,8 +1284,8 @@ fun ShortcutsSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 SettingsSectionHeader("Player Gestures")
                 SettingsCard {
                     SettingsSwitchItem(
-                        title = "Volume Gestures",
-                        subtitle = "Swipe up/down on the right side to adjust volume",
+                        title = stringResource(com.codesrahul.streamplus.R.string.volume_gesture),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.volume_gesture_desc),
                         icon = Icons.Default.VolumeUp,
                         iconColor = BlueSky,
                         checked = settingsState.volumeGestures,
@@ -1287,8 +1293,8 @@ fun ShortcutsSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         showDivider = true
                     )
                     SettingsSwitchItem(
-                        title = "Brightness Gestures",
-                        subtitle = "Swipe up/down on the left side to adjust brightness",
+                        title = stringResource(com.codesrahul.streamplus.R.string.brightness_gesture),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.brightness_gesture_desc),
                         icon = Icons.Default.BrightnessMedium,
                         iconColor = PurpleVibe,
                         checked = settingsState.brightnessGestures,
@@ -1300,8 +1306,8 @@ fun ShortcutsSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 SettingsSectionHeader("System Shortcuts")
                 SettingsCard {
                     SettingsClickableItem(
-                        title = "Captioning Preferences",
-                        subtitle = "Configure caption formats and typography in Android settings",
+                        title = stringResource(com.codesrahul.streamplus.R.string.system_captions),
+                        subtitle = stringResource(com.codesrahul.streamplus.R.string.system_captions_desc),
                         icon = Icons.Default.ClosedCaption,
                         iconColor = TealSea,
                         onClick = {

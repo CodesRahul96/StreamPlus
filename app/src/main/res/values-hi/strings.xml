@@ -65,4 +65,97 @@
     <string name="theme_dark_desc">आकर्षक डार्क थीम</string>
     <string name="theme_black">ओएलईडी ब्लैक</string>
     <string name="theme_black_desc">शुद्ध ब्लैक थीम</string>
+
+    <!-- Sub Settings Screens -->
+    <string name="playlist_settings_title">प्लेलिस्ट सेटिंग्स</string>
+    <string name="default_playlist_icon">डिफ़ॉल्ट प्लेलिस्ट आइकन</string>
+    <string name="default_playlist_icon_desc">प्लेलिस्ट चैनलों के लिए लेआउट विकल्प चुनें</string>
+    <string name="sort_order">क्रमबद्धता</string>
+    <string name="sort_order_desc">तय करें कि आपकी प्लेलिस्ट कैसे व्यवस्थित की जाती हैं</string>
+    <string name="mask_playlist_urls">प्लेलिस्ट यूआरएल छिपाएं</string>
+    <string name="mask_playlist_urls_desc">सुरक्षा और गोपनीयता के लिए वास्तविक यूआरएल छिपाएं</string>
+    <string name="qr_share">क्यूआर शेयर</string>
+    <string name="qr_share_desc">किसी भी प्लेलिस्ट यूआरएल के लिए एक क्यूआर कोड बनाएं</string>
+    <string name="import_export">आयात और निर्यात</string>
+    <string name="import_export_desc">अपनी प्लेलिस्ट डेटा का बैकअप लें या पुनर्स्थापित करें</string>
+
+    <string name="general_settings_title">सामान्य सेटिंग्स</string>
+    <string name="decoder_backend">डिकोडर बैकएंड</string>
+    <string name="decoder_backend_desc">वीडियो डिकोडिंग इंजन प्राथमिकता चुनें</string>
+    <string name="tunneled_playback">टनेल्ड प्लेबैक</string>
+    <string name="tunneled_playback_desc">समर्थित 4K/HDR सामग्री के लिए ऑडियो टनलिंग सक्षम करें</string>
+    <string name="dolby_vision_support">डॉल्बी विजन सपोर्ट</string>
+    <string name="dolby_vision_support_desc">डॉल्बी विजन प्रोफाइल 7 के लिए सपोर्ट सक्षम करें</string>
+
+    <string name="video_settings_title">वीडियो सेटिंग्स</string>
+    <string name="video_quality">वीडियो गुणवत्ता</string>
+    <string name="video_quality_desc">डिफ़ॉल्ट स्ट्रीमिंग वीडियो रिज़ॉल्यूशन गुणवत्ता सेट करें</string>
+    <string name="default_audio_track">डिफ़ॉल्ट ऑडियो ट्रैक</string>
+    <string name="default_audio_track_desc">उपलब्ध होने पर डिफ़ॉल्ट प्लेबैक भाषा चुनें</string>
+    <string name="network_buffer">नेटवर्क बफर</string>
+    <string name="network_buffer_desc">खेलने से पहले वीडियो प्री-कैश के सेकंड सेट करें</string>
+    <string name="default_aspect_ratio">डिफ़ॉल्ट पहलू अनुपात</string>
+    <string name="default_aspect_ratio_desc">डिफ़ॉल्ट स्क्रीन रेंडरिंग आयाम लेआउट</string>
+    <string name="screen_rotation">स्क्रीन रोटेशन</string>
+    <string name="screen_rotation_desc">पूर्ण स्क्रीन प्लेयर रोटेशन प्राथमिकता को परिभाषित करें</string>
+    <string name="frame_rate_matching">फ्रेम दर मिलान</string>
+    <string name="frame_rate_matching_desc">वीडियो फ्रेम दर से मिलान करने के लिए डिस्प्ले रिफ्रेश दर बदलें</string>
+    <string name="auto_pip">ऑटो पिप</string>
+    <string name="auto_pip_desc">ऐप छोड़ते समय पिप मोड पर स्विच करें</string>
+    <string name="skip_silence">मौन छोड़ें</string>
+    <string name="skip_silence_desc">ऑडियो स्ट्रीम में मूक भागों को छोड़ें</string>
+    <string name="repeat_mode">दोहराएं मोड</string>
+    <string name="repeat_mode_desc">सिंगल मीडिया को लूप प्ले करने के लिए नियंत्रण सक्षम करें</string>
+    <string name="software_decoder">सॉफ्टवेयर डिकोडर बाध्य करें</string>
+    <string name="software_decoder_desc">टूटी हुई एल1 प्रमाणन वाले उपकरणों के लिए उपयोगी (काली स्क्रीन को ठीक करता है)</string>
+
+    <string name="gesture_accessibility_title">इशारे और अभिगम्यता</string>
+    <string name="volume_gesture">वॉल्यूम जेस्चर</string>
+    <string name="volume_gesture_desc">वॉल्यूम समायोजित करने के लिए दाईं ओर ऊपर/नीचे स्वाइप करें</string>
+    <string name="brightness_gesture">ब्राइटनेस जेस्चर</string>
+    <string name="brightness_gesture_desc">चमक समायोजित करने के लिए बाईं ओर ऊपर/नीचे स्वाइप करें</string>
+    <string name="system_captions">सिस्टम उपशीर्षक</string>
+    <string name="system_captions_desc">Android सेटिंग्स में उपशीर्षक स्वरूपों और टाइपोग्राफी को कॉन्फ़िगर करें</string>
+
+    <!-- Playlist Screen -->
+    <string name="playlists_tab">प्लेलिस्ट</string>
+    <string name="favorites_tab">पसंदीदा</string>
+    <string name="recent_tab">हाल ही में</string>
+    <string name="add_playlist">प्लेलिस्ट जोड़ें</string>
+    <string name="add_playlist_url">प्लेलिस्ट यूआरएल जोड़ें</string>
+    <string name="login_xtream">एक्सट्रीम कोड्स से लॉगिन करें</string>
+    <string name="add_local_playlist">स्थानीय प्लेलिस्ट जोड़ें</string>
+    <string name="search_playlists_placeholder">सभी प्लेलिस्ट खोजें...</string>
+    <string name="delete_playlist_confirm_title">प्लेलिस्ट हटाएं</string>
+    <string name="delete_playlist_confirm_desc">क्या आप वाकई इस प्लेलिस्ट को हटाना चाहते हैं? इस प्लेलिस्ट से जुड़े सभी चैनल और कैश किए गए स्ट्रीम हटा दिए जाएंगे।</string>
+    <string name="delete_btn">हटाएं</string>
+    <string name="cancel_btn">रद्द करें</string>
+    <string name="confirm_btn">पुष्टि करें</string>
+    <string name="playlist_name">प्लेलिस्ट का नाम</string>
+    <string name="m3u_url_placeholder">एम3यू यूआरएल या जेएसओएन पथ</string>
+    <string name="epg_url_placeholder">ईपीजी यूआरएल (एक्सएमएलटीवी)</string>
+    <string name="epg_optional">वैकल्पिक .xml या .xml.gz</string>
+    <string name="user_agent_label">यूज़र एजेंट</string>
+    <string name="custom_ua_title">कस्टम यूज़र एजेंट</string>
+    <string name="ua_string_label">यूआ स्ट्रिंग</string>
+    <string name="icon_theme_sec">आइकन और थीम</string>
+    <string name="provider_name">प्रदाता का नाम</string>
+    <string name="server_url_label">सर्वर यूआरएल (http://example.com:पोर्ट)</string>
+    <string name="username_label">यूज़रनेम</string>
+    <string name="password_label">पासवर्ड</string>
+
+    <!-- Settings FAQs -->
+    <string name="accessibility_title">अभिगम्यता</string>
+    <string name="got_it_btn">समझ गया</string>
+    <string name="faq_q1">मैं प्लेलिस्ट कैसे जोड़ूं?</string>
+    <string name="faq_a1">प्लेलिस्ट टैब पर जाएं, \'+\' बटन पर क्लिक करें, और अपना एम3यू यूआरएल दर्ज करें या एक स्थानीय फ़ाइल चुनें।</string>
+    <string name="faq_q2">डीआरएम क्या है?</string>
+    <string name="faq_a2">डिजिटल राइट्स मैनेजमेंट। कुछ चैनलों को खेलने के लिए लाइसेंस यूआरएल और एक विशिष्ट योजना (जैसे वाइडवाइन) की आवश्यकता होती है।</string>
+    <string name="faq_q3">मेरा स्ट्रीम लैग क्यों हो रहा है?</string>
+    <string name="faq_a3">अपना इंटरनेट कनेक्शन जांचें या सेटिंग्स &gt; सामान्य में \'नेटवर्क बफर आकार\' बदलने का प्रयास करें।</string>
+    <string name="faq_q4">पिक्चर-इन-पिक्चर का उपयोग कैसे करें?</string>
+    <string name="faq_a4">सेटिंग्स &gt; वीडियो सेटिंग्स में \'ऑटो पिप\' सक्षम करें। जब आप ऐप छोड़ेंगे तो प्लेयर छोटा हो जाएगा।</string>
+    <string name="faq_q5">क्या मैं स्थानीय वीडियो चला सकता हूँ?</string>
+    <string name="faq_a5">हां, अपने डिवाइस पर संग्रहीत वीडियो ब्राउज़ करने और चलाने के लिए गैलरी टैब पर जाएं।</string>
+    <string name="faq_title">सहायता और अक्सर पूछे जाने वाले प्रश्न</string>
 </resources>

@@ -538,7 +538,7 @@ fun AccessibilitySettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
-                    title = { Text("Accessibility", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
+                    title = { Text(stringResource(com.codesrahul.streamplus.R.string.accessibility_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -751,7 +751,7 @@ fun HelpFaqDialog(onDismiss: () -> Unit) {
                     .fillMaxWidth()
             ) {
                 Text(
-                    "Help & FAQ", 
+                    stringResource(com.codesrahul.streamplus.R.string.faq_title), 
                     style = MaterialTheme.typography.titleLarge, 
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -764,11 +764,26 @@ fun HelpFaqDialog(onDismiss: () -> Unit) {
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    FaqItem("How do I add a playlist?", "Go to the Playlists tab, click the '+' button, and enter your M3U URL or select a local file.")
-                    FaqItem("What is DRM?", "Digital Rights Management. Some channels require a license URL and a specific scheme (like Widevine) to play.")
-                    FaqItem("Why is my stream lagging?", "Check your internet connection or try changing the 'Network Buffer Size' in Settings > General.")
-                    FaqItem("How to use Picture-in-Picture?", "Enable 'Auto PiP' in Settings > Video settings. The player will minimize when you leave the app.")
-                    FaqItem("Can I play local videos?", "Yes, go to the Gallery tab to browse and play videos stored on your device.")
+                    FaqItem(
+                        stringResource(com.codesrahul.streamplus.R.string.faq_q1),
+                        stringResource(com.codesrahul.streamplus.R.string.faq_a1)
+                    )
+                    FaqItem(
+                        stringResource(com.codesrahul.streamplus.R.string.faq_q2),
+                        stringResource(com.codesrahul.streamplus.R.string.faq_a2)
+                    )
+                    FaqItem(
+                        stringResource(com.codesrahul.streamplus.R.string.faq_q3),
+                        stringResource(com.codesrahul.streamplus.R.string.faq_a3)
+                    )
+                    FaqItem(
+                        stringResource(com.codesrahul.streamplus.R.string.faq_q4),
+                        stringResource(com.codesrahul.streamplus.R.string.faq_a4)
+                    )
+                    FaqItem(
+                        stringResource(com.codesrahul.streamplus.R.string.faq_q5),
+                        stringResource(com.codesrahul.streamplus.R.string.faq_a5)
+                    )
                 }
                 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -777,7 +792,7 @@ fun HelpFaqDialog(onDismiss: () -> Unit) {
                     modifier = Modifier.align(Alignment.End), 
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Got it", fontWeight = FontWeight.Bold)
+                    Text(stringResource(com.codesrahul.streamplus.R.string.got_it_btn), fontWeight = FontWeight.Bold)
                 }
             }
         }

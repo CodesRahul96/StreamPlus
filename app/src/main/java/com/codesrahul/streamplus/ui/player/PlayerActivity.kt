@@ -667,7 +667,40 @@ fun PlayerScreen(
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()
 
-        val preferredLang = settingsState.defaultAudioLanguage.takeIf { it != "Auto" }?.lowercase()
+        val audioLanguagesMap = mapOf(
+            "English" to "en",
+            "Hindi" to "hi",
+            "Bengali" to "bn",
+            "Telugu" to "te",
+            "Marathi" to "mr",
+            "Tamil" to "ta",
+            "Urdu" to "ur",
+            "Gujarati" to "gu",
+            "Kannada" to "kn",
+            "Odia" to "or",
+            "Malayalam" to "ml",
+            "Punjabi" to "pa",
+            "Sanskrit" to "sa",
+            "Assamese" to "as",
+            "Maithili" to "mai",
+            "Santali" to "sat",
+            "Kashmiri" to "ks",
+            "Nepali" to "ne",
+            "Konkani" to "kok",
+            "Sindhi" to "sd",
+            "Dogri" to "doi",
+            "Manipuri" to "mni",
+            "Bodo" to "brx",
+            "Spanish" to "es",
+            "French" to "fr",
+            "German" to "de",
+            "Russian" to "ru",
+            "Arabic" to "ar",
+            "Chinese" to "zh",
+            "Japanese" to "ja",
+            "Portuguese" to "pt"
+        )
+        val preferredLang = audioLanguagesMap[settingsState.defaultAudioLanguage] ?: settingsState.defaultAudioLanguage.takeIf { it != "Auto" }?.lowercase()
 
         val player = ExoPlayer.Builder(context, renderersFactory)
             .setMediaSourceFactory(mediaSourceFactory)
@@ -1658,14 +1691,16 @@ private fun showTrackSelectionDialog(context: Context, player: ExoPlayer, trackT
                     }
                 }
                 C.TRACK_TYPE_AUDIO -> {
-                    val lang = format.language?.uppercase() ?: "Unknown"
-                    val labelText = format.label ?: "Audio"
-                    "$labelText [$lang]"
+                    val lang = format.language
+                    val friendlyLang = getFriendlyLanguageName(lang)
+                    val labelText = format.label
+                    if (labelText != null) "$labelText [$friendlyLang]" else friendlyLang
                 }
                 C.TRACK_TYPE_TEXT -> {
-                    val lang = format.language?.uppercase() ?: "Unknown"
-                    val labelText = format.label ?: "Subtitle"
-                    "$labelText [$lang]"
+                    val lang = format.language
+                    val friendlyLang = getFriendlyLanguageName(lang)
+                    val labelText = format.label
+                    if (labelText != null) "$labelText [$friendlyLang]" else friendlyLang
                 }
                 else -> format.label ?: "Track ${options.size + 1}"
             }
@@ -1795,5 +1830,44 @@ private fun formatElapsedTime(timeMs: Long): String {
         }
     }
 }
+
+private fun getFriendlyLanguageName(langCode: String?): String {
+    if (langCode.isNullOrBlank()) return "Unknown"
+    return when(langCode.lowercase()) {
+        "en", "eng" -> "English"
+        "hi", "hin" -> "Hindi"
+        "bn", "ben" -> "Bengali"
+        "te", "tel" -> "Telugu"
+        "mr", "mar" -> "Marathi"
+        "ta", "tam" -> "Tamil"
+        "ur", "urd" -> "Urdu"
+        "gu", "guj" -> "Gujarati"
+        "kn", "kan" -> "Kannada"
+        "or", "ori" -> "Odia"
+        "ml", "mal" -> "Malayalam"
+        "pa", "pan" -> "Punjabi"
+        "sa", "san" -> "Sanskrit"
+        "as", "asm" -> "Assamese"
+        "mai" -> "Maithili"
+        "sat" -> "Santali"
+        "ks", "kas" -> "Kashmiri"
+        "ne", "nep" -> "Nepali"
+        "kok" -> "Konkani"
+        "sd", "snd" -> "Sindhi"
+        "doi" -> "Dogri"
+        "mni" -> "Manipuri"
+        "brx" -> "Bodo"
+        "es", "spa" -> "Spanish"
+        "fr", "fra", "fre" -> "French"
+        "de", "deu", "ger" -> "German"
+        "ru", "rus" -> "Russian"
+        "ar", "ara" -> "Arabic"
+        "zh", "zho", "chi" -> "Chinese"
+        "ja", "jpn" -> "Japanese"
+        "pt", "por" -> "Portuguese"
+        else -> langCode.uppercase()
+    }
+}
+
 
 

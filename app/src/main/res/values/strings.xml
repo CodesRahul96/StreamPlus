@@ -65,4 +65,97 @@
     <string name="theme_dark_desc">Sleek dark theme</string>
     <string name="theme_black">OLED Black</string>
     <string name="theme_black_desc">Pure black theme</string>
+
+    <!-- Sub Settings Screens -->
+    <string name="playlist_settings_title">Playlist Settings</string>
+    <string name="default_playlist_icon">Default Playlist Icon</string>
+    <string name="default_playlist_icon_desc">Choose layout option for playlist channels</string>
+    <string name="sort_order">Sort Order</string>
+    <string name="sort_order_desc">Define how your playlists are ordered</string>
+    <string name="mask_playlist_urls">Mask Playlist URLs</string>
+    <string name="mask_playlist_urls_desc">Hide the actual URL for security &amp; privacy</string>
+    <string name="qr_share">QR Share</string>
+    <string name="qr_share_desc">Generate a QR code for any playlist URL</string>
+    <string name="import_export">Import &amp; Export</string>
+    <string name="import_export_desc">Backup or restore your playlists data</string>
+
+    <string name="general_settings_title">General Settings</string>
+    <string name="decoder_backend">Decoder Backend</string>
+    <string name="decoder_backend_desc">Select video decoding engine priority</string>
+    <string name="tunneled_playback">Tunneled Playback</string>
+    <string name="tunneled_playback_desc">Enable audio tunneling for supported 4K/HDR content</string>
+    <string name="dolby_vision_support">Dolby Vision Support</string>
+    <string name="dolby_vision_support_desc">Enable support for Dolby Vision Profile 7</string>
+
+    <string name="video_settings_title">Video Settings</string>
+    <string name="video_quality">Video Quality</string>
+    <string name="video_quality_desc">Set default streaming video resolution quality</string>
+    <string name="default_audio_track">Default Audio Track</string>
+    <string name="default_audio_track_desc">Select default playback language when available</string>
+    <string name="network_buffer">Network Buffer</string>
+    <string name="network_buffer_desc">Set seconds of video pre-cached before playing</string>
+    <string name="default_aspect_ratio">Default Aspect Ratio</string>
+    <string name="default_aspect_ratio_desc">Default screen rendering dimension layout</string>
+    <string name="screen_rotation">Screen Rotation</string>
+    <string name="screen_rotation_desc">Define full screen player rotation preference</string>
+    <string name="frame_rate_matching">Frame Rate Matching</string>
+    <string name="frame_rate_matching_desc">Switch display refresh rate to match video frame rate</string>
+    <string name="auto_pip">Auto PiP</string>
+    <string name="auto_pip_desc">Switch to PiP mode when leaving the app</string>
+    <string name="skip_silence">Skip Silence</string>
+    <string name="skip_silence_desc">Skip silent parts in the audio stream</string>
+    <string name="repeat_mode">Repeat Mode</string>
+    <string name="repeat_mode_desc">Enable controls to loop play single media</string>
+    <string name="software_decoder">Force Software Decoder</string>
+    <string name="software_decoder_desc">Useful for devices with broken L1 certification (fixes black screen)</string>
+
+    <string name="gesture_accessibility_title">Gesture &amp; Accessibility</string>
+    <string name="volume_gesture">Volume Gesture</string>
+    <string name="volume_gesture_desc">Swipe up/down on the right side to adjust volume</string>
+    <string name="brightness_gesture">Brightness Gesture</string>
+    <string name="brightness_gesture_desc">Swipe up/down on the left side to adjust brightness</string>
+    <string name="system_captions">System Captions</string>
+    <string name="system_captions_desc">Configure caption formats and typography in Android settings</string>
+
+    <!-- Playlist Screen -->
+    <string name="playlists_tab">Playlists</string>
+    <string name="favorites_tab">Favorites</string>
+    <string name="recent_tab">Recent</string>
+    <string name="add_playlist">Add Playlist</string>
+    <string name="add_playlist_url">Add Playlist URL</string>
+    <string name="login_xtream">Login with Xtream Codes</string>
+    <string name="add_local_playlist">Add Local Playlist</string>
+    <string name="search_playlists_placeholder">Search all playlists…</string>
+    <string name="delete_playlist_confirm_title">Delete Playlist</string>
+    <string name="delete_playlist_confirm_desc">Are you sure you want to delete this playlist? All channels and cached streams associated with this playlist will be removed.</string>
+    <string name="delete_btn">Delete</string>
+    <string name="cancel_btn">Cancel</string>
+    <string name="confirm_btn">Confirm</string>
+    <string name="playlist_name">Playlist Name</string>
+    <string name="m3u_url_placeholder">M3U URL or JSON Path</string>
+    <string name="epg_url_placeholder">EPG URL (XMLTV)</string>
+    <string name="epg_optional">Optional .xml or .xml.gz</string>
+    <string name="user_agent_label">User Agent</string>
+    <string name="custom_ua_title">Custom User Agent</string>
+    <string name="ua_string_label">UA String</string>
+    <string name="icon_theme_sec">Icon &amp; Theme</string>
+    <string name="provider_name">Provider Name</string>
+    <string name="server_url_label">Server URL (http://example.com:port)</string>
+    <string name="username_label">Username</string>
+    <string name="password_label">Password</string>
+
+    <!-- Settings FAQs -->
+    <string name="faq_title">Help &amp; FAQ</string>
+    <string name="accessibility_title">Accessibility</string>
+    <string name="got_it_btn">Got it</string>
+    <string name="faq_q1">How do I add a playlist?</string>
+    <string name="faq_a1">Go to the Playlists tab, click the \'+\' button, and enter your M3U URL or select a local file.</string>
+    <string name="faq_q2">What is DRM?</string>
+    <string name="faq_a2">Digital Rights Management. Some channels require a license URL and a specific scheme (like Widevine) to play.</string>
+    <string name="faq_q3">Why is my stream lagging?</string>
+    <string name="faq_a3">Check your internet connection or try changing the \'Network Buffer Size\' in Settings &gt; General.</string>
+    <string name="faq_q4">How to use Picture-in-Picture?</string>
+    <string name="faq_a4">Enable \'Auto PiP\' in Settings &gt; Video settings. The player will minimize when you leave the app.</string>
+    <string name="faq_q5">Can I play local videos?</string>
+    <string name="faq_a5">Yes, go to the Gallery tab to browse and play videos stored on your device.</string>
 </resources>
