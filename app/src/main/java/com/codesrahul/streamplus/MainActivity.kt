@@ -32,7 +32,8 @@ class MainActivity : ComponentActivity() {
                     val config = android.content.res.Configuration(configuration).apply {
                         setLocale(locale)
                     }
-                    context.createConfigurationContext(config)
+                    val configContext = context.createConfigurationContext(config)
+                    LocalizedContext(context, configContext)
                 }
 
                 androidx.compose.runtime.CompositionLocalProvider(
@@ -57,5 +58,17 @@ class MainActivity : ComponentActivity() {
                     }
                 }
         }
+    }
+}
+
+class LocalizedContext(
+    base: android.content.Context,
+    private val localizedContext: android.content.Context
+) : android.content.ContextWrapper(base) {
+    override fun getResources(): android.content.res.Resources {
+        return localizedContext.resources
+    }
+    override fun getAssets(): android.content.res.AssetManager {
+        return localizedContext.assets
     }
 }
