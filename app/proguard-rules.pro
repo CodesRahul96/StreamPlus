@@ -34,6 +34,9 @@
     @retrofit2.http.* <methods>;
 }
 
+# Keep Xtream API Response and DTO Models
+-keep class com.codesrahul.streamplus.data.remote.model.** { *; }
+
 # Hilt Dependencies
 -keep,allowobfuscation,allowshrinking @interface dagger.hilt.**
 -keep class dagger.hilt.** { *; }

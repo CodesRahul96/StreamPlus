@@ -3,6 +3,7 @@ package com.codesrahul.streamplus.data.repository
 import com.codesrahul.streamplus.data.remote.XtreamApiService
 import com.codesrahul.streamplus.data.remote.model.*
 import com.codesrahul.streamplus.domain.repository.XtreamRepository
+import com.codesrahul.streamplus.domain.repository.XtreamResult
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -15,7 +16,7 @@ class XtreamRepositoryImpl(
     private suspend fun <T> safeApiCall(
         serverUrl: String,
         apiCall: suspend () -> Response<T>
-    ): Result<T> {
+    ): XtreamResult<T> {
         return try {
             // Retrofit does not allow dynamic base URLs easily per-request without an interceptor. 
             // We use a custom Interceptor that reads a Header, but since we cannot inject headers
@@ -30,13 +31,13 @@ class XtreamRepositoryImpl(
             val response = apiCall()
             if (response.isSuccessful) {
                 response.body()?.let {
-                    Result.success(it)
-                } ?: Result.failure(Exception("Empty response body"))
+                    XtreamResult.Success(it)
+                } ?: XtreamResult.Failure(Exception("Empty response body"))
             } else {
-                Result.failure(Exception("API call failed: ${response.code()} ${response.message()}"))
+                XtreamResult.Failure(Exception("API call failed: ${response.code()} ${response.message()}"))
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            XtreamResult.Failure(e)
         }
     }
 
