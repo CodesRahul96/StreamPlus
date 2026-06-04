@@ -17,7 +17,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -95,37 +98,57 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         iconColor = PurpleVibe
                     )
                     
-                    SegmentedButton(
-                        options = ThemeMode.values().toList(),
-                        selectedOption = settingsState.themeMode,
-                        onOptionSelected = { viewModel.setThemeMode(it) },
-                        labelProvider = { it.name.lowercase().replaceFirstChar { c -> c.uppercase() }.replace("_", " ") },
-                        iconProvider = { mode ->
-                            Icon(
-                                imageVector = when(mode) {
-                                    ThemeMode.SYSTEM -> Icons.Default.SettingsSuggest
-                                    ThemeMode.LIGHT -> Icons.Default.LightMode
-                                    ThemeMode.DARK -> Icons.Default.DarkMode
-                                    ThemeMode.PITCH_BLACK -> Icons.Default.NightsStay
-                                },
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            ThemeCard(
+                                mode = ThemeMode.SYSTEM,
+                                title = "System",
+                                desc = "Follows device theme",
+                                selected = settingsState.themeMode == ThemeMode.SYSTEM,
+                                onClick = { viewModel.setThemeMode(ThemeMode.SYSTEM) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            ThemeCard(
+                                mode = ThemeMode.LIGHT,
+                                title = "Light",
+                                desc = "Always light theme",
+                                selected = settingsState.themeMode == ThemeMode.LIGHT,
+                                onClick = { viewModel.setThemeMode(ThemeMode.LIGHT) },
+                                modifier = Modifier.weight(1f)
                             )
                         }
-                    )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            ThemeCard(
+                                mode = ThemeMode.DARK,
+                                title = "Dark",
+                                desc = "Sleek dark theme",
+                                selected = settingsState.themeMode == ThemeMode.DARK,
+                                onClick = { viewModel.setThemeMode(ThemeMode.DARK) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            ThemeCard(
+                                mode = ThemeMode.PITCH_BLACK,
+                                title = "OLED Black",
+                                desc = "Pure black theme",
+                                selected = settingsState.themeMode == ThemeMode.PITCH_BLACK,
+                                onClick = { viewModel.setThemeMode(ThemeMode.PITCH_BLACK) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
                     
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = when(settingsState.themeMode) {
-                            ThemeMode.SYSTEM -> "Follows device settings"
-                            ThemeMode.LIGHT -> "Always Light"
-                            ThemeMode.DARK -> "Always Dark"
-                            ThemeMode.PITCH_BLACK -> "Pitch Black OLED (Power Saving)"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        modifier = Modifier.padding(start = 16.dp, bottom = 12.dp)
-                    )
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
 
                 // UI Customization Section
@@ -156,28 +179,167 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     
                     val tabs = listOf("playlist" to "Playlist", "local" to "Gallery", "direct_play" to "Stream")
                     
-                    SegmentedButton(
-                        options = tabs,
-                        selectedOption = tabs.find { it.first == settingsState.defaultTab } ?: tabs[0],
-                        onOptionSelected = { viewModel.setDefaultTab(it.first) },
-                        labelProvider = { it.second },
-                        iconProvider = { tab ->
-                            Icon(
-                                imageVector = when(tab.first) {
-                                    "playlist" -> Icons.Default.PlaylistPlay
-                                    "local" -> Icons.Default.VideoLibrary
-                                    "direct_play" -> Icons.Default.Stream
-                                    else -> Icons.Default.Home
-                                },
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        tabs.forEach { (route, label) ->
+                            val selected = route == settingsState.defaultTab
+                            Card(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(72.dp)
+                                    .clickable { viewModel.setDefaultTab(route) },
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(
+                                    width = if (selected) 2.dp else 1.dp,
+                                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+                                ),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
+                                                     else MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = when(route) {
+                                            "playlist" -> Icons.Default.PlaylistPlay
+                                            "local" -> Icons.Default.VideoLibrary
+                                            "direct_play" -> Icons.Default.Podcasts
+                                            else -> Icons.Default.Home
+                                        },
+                                        contentDescription = null,
+                                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
                         }
-                    )
+                    }
                     Spacer(modifier = Modifier.height(12.dp))
                 }
                 
                 Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ThemeCard(
+    mode: ThemeMode,
+    title: String,
+    desc: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .height(130.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(
+            width = if (selected) 2.dp else 1.dp,
+            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+        ),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f) 
+                             else MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(
+                        when (mode) {
+                            ThemeMode.SYSTEM -> Brush.horizontalGradient(listOf(Color(0xFFE5E5EA), Color(0xFF1C1C1E)))
+                            ThemeMode.LIGHT -> Brush.verticalGradient(listOf(Color(0xFFF2F2F7), Color(0xFFE5E5EA)))
+                            ThemeMode.DARK -> Brush.verticalGradient(listOf(Color(0xFF1C1C1E), Color(0xFF2C2C2E)))
+                            ThemeMode.PITCH_BLACK -> Brush.verticalGradient(listOf(Color.Black, Color(0xFF1C1C1E)))
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = when(mode) {
+                            ThemeMode.SYSTEM -> Icons.Default.SettingsSuggest
+                            ThemeMode.LIGHT -> Icons.Default.LightMode
+                            ThemeMode.DARK -> Icons.Default.DarkMode
+                            ThemeMode.PITCH_BLACK -> Icons.Default.NightsStay
+                        },
+                        contentDescription = null,
+                        tint = when(mode) {
+                            ThemeMode.SYSTEM -> Color.Gray
+                            ThemeMode.LIGHT -> Color(0xFFFF9500)
+                            ThemeMode.DARK -> Color(0xFF5E5CE6)
+                            ThemeMode.PITCH_BLACK -> Color(0xFF30D158)
+                        },
+                        modifier = Modifier.size(20.dp)
+                    )
+                    
+                    if (selected) {
+                        Box(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(10.dp)
+                            )
+                        }
+                    }
+                }
+            }
+            
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = desc,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
             }
         }
     }
@@ -572,125 +734,51 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
     }
 
     if (showIconDialog) {
-        val options = listOf("List", "Grid", "Card", "Compact")
-        androidx.compose.ui.window.Dialog(onDismissRequest = { showIconDialog = false }) {
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                border = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .glassmorphic(cornerRadius = 24.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
-                        .padding(24.dp)
-                ) {
-                    Text("Default Layout Icon", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Column {
-                        options.forEach { option ->
-                            val isSelected = option == settingsState.defaultPlaylistIcon
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        viewModel.setDefaultPlaylistIcon(option)
-                                        showIconDialog = false
-                                    }
-                                    .background(
-                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                                        else Color.Transparent
-                                    )
-                                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = isSelected,
-                                    onClick = null,
-                                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
-                                )
-                                Text(
-                                    text = option,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(start = 16.dp)
-                                )
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    TextButton(onClick = { showIconDialog = false }, modifier = Modifier.align(Alignment.End)) {
-                        Text("Cancel", fontWeight = FontWeight.Bold)
-                    }
-                }
+        PremiumSelectionDialog(
+            title = "Default Layout Icon",
+            subtitle = "Choose layout option for playlist channels",
+            options = listOf("List", "Grid", "Card", "Compact"),
+            selectedOption = settingsState.defaultPlaylistIcon,
+            onOptionSelected = { viewModel.setDefaultPlaylistIcon(it) },
+            onDismiss = { showIconDialog = false },
+            labelProvider = { it },
+            iconProvider = { option ->
+                Icon(
+                    imageVector = when(option) {
+                        "Grid" -> Icons.Default.GridView
+                        "Card" -> Icons.Default.FeaturedPlayList
+                        "Compact" -> Icons.Default.DensityMedium
+                        else -> Icons.Default.List
+                    },
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
-        }
+        )
     }
 
     if (showSortDialog) {
-        val options = listOf("Name", "Added Date", "Category", "Last Watched")
-        androidx.compose.ui.window.Dialog(onDismissRequest = { showSortDialog = false }) {
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                border = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .glassmorphic(cornerRadius = 24.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
-                        .padding(24.dp)
-                ) {
-                    Text("Sort Order", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Column {
-                        options.forEach { option ->
-                            val isSelected = option == settingsState.playlistSortOrder
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        viewModel.setPlaylistSortOrder(option)
-                                        showSortDialog = false
-                                    }
-                                    .background(
-                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                                        else Color.Transparent
-                                    )
-                                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = isSelected,
-                                    onClick = null,
-                                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
-                                )
-                                Text(
-                                    text = option,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(start = 16.dp)
-                                )
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    TextButton(onClick = { showSortDialog = false }, modifier = Modifier.align(Alignment.End)) {
-                        Text("Cancel", fontWeight = FontWeight.Bold)
-                    }
-                }
+        PremiumSelectionDialog(
+            title = "Sort Order",
+            subtitle = "Define how your playlists are ordered",
+            options = listOf("Name", "Added Date", "Category", "Last Watched"),
+            selectedOption = settingsState.playlistSortOrder,
+            onOptionSelected = { viewModel.setPlaylistSortOrder(it) },
+            onDismiss = { showSortDialog = false },
+            labelProvider = { it },
+            iconProvider = { option ->
+                Icon(
+                    imageVector = when(option) {
+                        "Name" -> Icons.Default.SortByAlpha
+                        "Added Date" -> Icons.Default.CalendarToday
+                        "Category" -> Icons.Default.Category
+                        else -> Icons.Default.History
+                    },
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
-        }
+        )
     }
 }
 
@@ -772,63 +860,35 @@ fun GeneralSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             1 to "Application (Software)",
             2 to "Hardware Only (Strict)"
         )
-        androidx.compose.ui.window.Dialog(onDismissRequest = { showDecoderDialog = false }) {
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                border = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .glassmorphic(cornerRadius = 24.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
-                        .padding(24.dp)
-                ) {
-                    Text("Decoder Backend", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Column {
-                        options.forEach { (value, label) ->
-                            val isSelected = value == settingsState.decoderPriority
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        viewModel.setDecoderPriority(value)
-                                        showDecoderDialog = false
-                                    }
-                                    .background(
-                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                                        else Color.Transparent
-                                    )
-                                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = isSelected,
-                                    onClick = null,
-                                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
-                                )
-                                Text(
-                                    text = label,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(start = 16.dp)
-                                )
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    TextButton(onClick = { showDecoderDialog = false }, modifier = Modifier.align(Alignment.End)) {
-                        Text("Cancel", fontWeight = FontWeight.Bold)
-                    }
+        val selectedOption = options.find { it.first == settingsState.decoderPriority } ?: options[0]
+        PremiumSelectionDialog(
+            title = "Decoder Backend",
+            subtitle = "Select video decoding engine priority",
+            options = options,
+            selectedOption = selectedOption,
+            onOptionSelected = { viewModel.setDecoderPriority(it.first) },
+            onDismiss = { showDecoderDialog = false },
+            labelProvider = { it.second },
+            descriptionProvider = { option ->
+                when(option.first) {
+                    0 -> "Recommended for most devices. Balance of performance & power."
+                    1 -> "CPU-based rendering. Best compatibility, higher battery use."
+                    2 -> "Strict HW only. Smooth playback, may fail on unsupported codecs."
+                    else -> ""
                 }
+            },
+            iconProvider = { option ->
+                Icon(
+                    imageVector = when(option.first) {
+                        0 -> Icons.Default.Settings
+                        1 -> Icons.Default.Code
+                        else -> Icons.Default.Memory
+                    },
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
-        }
+        )
     }
 }
 
@@ -973,306 +1033,158 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
 
     if (showQualityDialog) {
         val options = listOf("Auto (Recommended)", "High", "Medium", "Low", "Data Saver")
-        androidx.compose.ui.window.Dialog(onDismissRequest = { showQualityDialog = false }) {
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                border = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .glassmorphic(cornerRadius = 24.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
-                        .padding(24.dp)
-                ) {
-                    Text("Video Quality", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Column {
-                        options.forEach { option ->
-                            val isSelected = option == settingsState.videoQuality
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        viewModel.setVideoQuality(option)
-                                        showQualityDialog = false
-                                    }
-                                    .background(
-                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                                        else Color.Transparent
-                                    )
-                                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = isSelected,
-                                    onClick = null,
-                                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
-                                )
-                                Text(
-                                    text = option,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(start = 16.dp)
-                                )
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    TextButton(onClick = { showQualityDialog = false }, modifier = Modifier.align(Alignment.End)) {
-                        Text("Cancel", fontWeight = FontWeight.Bold)
-                    }
+        PremiumSelectionDialog(
+            title = "Video Quality",
+            subtitle = "Set default streaming video resolution quality",
+            options = options,
+            selectedOption = settingsState.videoQuality,
+            onOptionSelected = { viewModel.setVideoQuality(it) },
+            onDismiss = { showQualityDialog = false },
+            labelProvider = { it },
+            descriptionProvider = { option ->
+                when(option) {
+                    "Auto (Recommended)" -> "Automatically select best quality based on connection speed."
+                    "High" -> "Use highest available quality stream (up to 4K/1080p)."
+                    "Medium" -> "Balanced quality for standard definition viewing (720p)."
+                    "Low" -> "Standard definition video quality (480p)."
+                    "Data Saver" -> "Minimize cellular data usage. Limits stream quality."
+                    else -> ""
                 }
+            },
+            iconProvider = { option ->
+                Icon(
+                    imageVector = when(option) {
+                        "Auto (Recommended)" -> Icons.Default.AutoMode
+                        "High" -> Icons.Default.HighQuality
+                        "Data Saver" -> Icons.Default.DataUsage
+                        else -> Icons.Default.VideoSettings
+                    },
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
-        }
+        )
     }
 
     if (showAudioDialog) {
         val options = listOf("Auto", "English", "Hindi", "Spanish", "French", "German", "Russian", "Arabic", "Chinese", "Japanese", "Portuguese")
-        androidx.compose.ui.window.Dialog(onDismissRequest = { showAudioDialog = false }) {
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                border = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .glassmorphic(cornerRadius = 24.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
-                        .padding(24.dp)
-                ) {
-                    Text("Audio Track Language", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                        options.forEach { option ->
-                            val isSelected = option == settingsState.defaultAudioLanguage
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        viewModel.setDefaultAudioLanguage(option)
-                                        showAudioDialog = false
-                                    }
-                                    .background(
-                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                                        else Color.Transparent
-                                    )
-                                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = isSelected,
-                                    onClick = null,
-                                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
-                                )
-                                Text(
-                                    text = option,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(start = 16.dp)
-                                )
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    TextButton(onClick = { showAudioDialog = false }, modifier = Modifier.align(Alignment.End)) {
-                        Text("Cancel", fontWeight = FontWeight.Bold)
-                    }
-                }
+        PremiumSelectionDialog(
+            title = "Audio Track Language",
+            subtitle = "Select default playback language when available",
+            options = options,
+            selectedOption = settingsState.defaultAudioLanguage,
+            onOptionSelected = { viewModel.setDefaultAudioLanguage(it) },
+            onDismiss = { showAudioDialog = false },
+            labelProvider = { it },
+            iconProvider = { option ->
+                Icon(
+                    imageVector = if (option == "Auto") Icons.Default.Language else Icons.Default.Translate,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
-        }
+        )
     }
 
     if (showBufferDialog) {
         val options = listOf(10, 20, 30, 45, 60, 90, 120)
-        androidx.compose.ui.window.Dialog(onDismissRequest = { showBufferDialog = false }) {
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                border = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .glassmorphic(cornerRadius = 24.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
-                        .padding(24.dp)
-                ) {
-                    Text("Network Buffer Size", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Column {
-                        options.forEach { seconds ->
-                            val isSelected = seconds == settingsState.networkBufferSize
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        viewModel.setNetworkBufferSize(seconds)
-                                        showBufferDialog = false
-                                    }
-                                    .background(
-                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                                        else Color.Transparent
-                                    )
-                                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = isSelected,
-                                    onClick = null,
-                                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
-                                )
-                                Text(
-                                    text = "$seconds seconds",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(start = 16.dp)
-                                )
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    TextButton(onClick = { showBufferDialog = false }, modifier = Modifier.align(Alignment.End)) {
-                        Text("Cancel", fontWeight = FontWeight.Bold)
-                    }
+        PremiumSelectionDialog(
+            title = "Network Buffer Size",
+            subtitle = "Set seconds of video pre-cached before playing",
+            options = options,
+            selectedOption = settingsState.networkBufferSize,
+            onOptionSelected = { viewModel.setNetworkBufferSize(it) },
+            onDismiss = { showBufferDialog = false },
+            labelProvider = { "$it seconds" },
+            descriptionProvider = { seconds ->
+                when(seconds) {
+                    10 -> "Ultra low latency, might buffer on slower networks."
+                    20 -> "Balanced buffering for standard connections."
+                    30 -> "Recommended. Good for most network speeds."
+                    45 -> "Sufficient pre-caching for minor network drops."
+                    60 -> "High buffer, ideal for highly unstable connections."
+                    90 -> "Very high buffer, requires more device memory."
+                    120 -> "Maximum pre-caching buffer, best for extreme environments."
+                    else -> ""
                 }
+            },
+            iconProvider = { option ->
+                Icon(
+                    imageVector = when {
+                        option <= 20 -> Icons.Default.OfflineBolt
+                        option <= 45 -> Icons.Default.Speed
+                        else -> Icons.Default.CloudQueue
+                    },
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
-        }
+        )
     }
 
     if (showAspectRatioDialog) {
         val aspectOptions = listOf("Fit", "Fill", "Zoom")
-        androidx.compose.ui.window.Dialog(onDismissRequest = { showAspectRatioDialog = false }) {
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                border = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .glassmorphic(cornerRadius = 24.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
-                        .padding(24.dp)
-                ) {
-                    Text("Aspect Ratio", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Column {
-                        aspectOptions.forEachIndexed { index, option ->
-                            val isSelected = index == settingsState.defaultAspectRatio
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        viewModel.setDefaultAspectRatio(index)
-                                        showAspectRatioDialog = false
-                                    }
-                                    .background(
-                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                                        else Color.Transparent
-                                    )
-                                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = isSelected,
-                                    onClick = null,
-                                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
-                                )
-                                Text(
-                                    text = option,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(start = 16.dp)
-                                )
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    TextButton(onClick = { showAspectRatioDialog = false }, modifier = Modifier.align(Alignment.End)) {
-                        Text("Cancel", fontWeight = FontWeight.Bold)
-                    }
+        val selectedOption = aspectOptions.getOrNull(settingsState.defaultAspectRatio) ?: "Fit"
+        PremiumSelectionDialog(
+            title = "Aspect Ratio",
+            subtitle = "Default screen rendering dimension layout",
+            options = aspectOptions,
+            selectedOption = selectedOption,
+            onOptionSelected = { option ->
+                viewModel.setDefaultAspectRatio(aspectOptions.indexOf(option))
+            },
+            onDismiss = { showAspectRatioDialog = false },
+            labelProvider = { it },
+            descriptionProvider = { option ->
+                when(option) {
+                    "Fit" -> "Preserve original aspect ratio. May show black bars."
+                    "Fill" -> "Stretch video to cover full screen dimensions."
+                    "Zoom" -> "Crop video slightly to fill screen without stretching."
+                    else -> ""
                 }
+            },
+            iconProvider = { option ->
+                Icon(
+                    imageVector = when(option) {
+                        "Fit" -> Icons.Default.CenterFocusStrong
+                        "Fill" -> Icons.Default.AspectRatio
+                        else -> Icons.Default.ZoomOutMap
+                    },
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
-        }
+        )
     }
 
     if (showOrientationDialog) {
-        androidx.compose.ui.window.Dialog(onDismissRequest = { showOrientationDialog = false }) {
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                border = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .glassmorphic(cornerRadius = 24.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
-                        .padding(24.dp)
-                ) {
-                    Text("Player Orientation", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Column {
-                        PlayerOrientation.entries.forEach { orientation ->
-                            val isSelected = orientation == settingsState.playerOrientation
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        viewModel.setPlayerOrientation(orientation)
-                                        showOrientationDialog = false
-                                    }
-                                    .background(
-                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                                        else Color.Transparent
-                                    )
-                                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = isSelected,
-                                    onClick = null,
-                                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
-                                )
-                                Text(
-                                    text = orientation.name.lowercase().replaceFirstChar { it.uppercase() },
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(start = 16.dp)
-                                )
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    TextButton(onClick = { showOrientationDialog = false }, modifier = Modifier.align(Alignment.End)) {
-                        Text("Cancel", fontWeight = FontWeight.Bold)
-                    }
+        PremiumSelectionDialog(
+            title = "Player Orientation",
+            subtitle = "Define full screen player rotation preference",
+            options = PlayerOrientation.entries,
+            selectedOption = settingsState.playerOrientation,
+            onOptionSelected = { viewModel.setPlayerOrientation(it) },
+            onDismiss = { showOrientationDialog = false },
+            labelProvider = { it.name.lowercase().replaceFirstChar { char -> char.uppercase() } },
+            descriptionProvider = { option ->
+                when(option) {
+                    PlayerOrientation.AUTO -> "Matches physical device orientation dynamically."
+                    PlayerOrientation.LANDSCAPE -> "Locks player to horizontal widescreen orientation."
+                    PlayerOrientation.PORTRAIT -> "Locks player to vertical portrait orientation."
                 }
+            },
+            iconProvider = { option ->
+                Icon(
+                    imageVector = when(option) {
+                        PlayerOrientation.AUTO -> Icons.Default.ScreenRotation
+                        PlayerOrientation.LANDSCAPE -> Icons.Default.StayCurrentLandscape
+                        PlayerOrientation.PORTRAIT -> Icons.Default.StayCurrentPortrait
+                    },
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
-        }
+        )
     }
 }
 

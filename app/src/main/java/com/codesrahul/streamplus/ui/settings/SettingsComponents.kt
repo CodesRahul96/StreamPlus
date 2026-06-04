@@ -1,9 +1,13 @@
 package com.codesrahul.streamplus.ui.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -16,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.ui.graphics.Brush
 import com.codesrahul.streamplus.ui.util.glassmorphic
 import com.codesrahul.streamplus.ui.util.tvFocusable
@@ -316,6 +321,147 @@ fun SettingsClickableItem(
                 thickness = 0.5.dp,
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
             )
+        }
+    }
+}
+
+@Composable
+fun <T> PremiumSelectionDialog(
+    title: String,
+    subtitle: String? = null,
+    options: List<T>,
+    selectedOption: T,
+    onOptionSelected: (T) -> Unit,
+    onDismiss: () -> Unit,
+    labelProvider: (T) -> String,
+    descriptionProvider: ((T) -> String)? = null,
+    iconProvider: (@Composable (T) -> Unit)? = null
+) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+            border = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .glassmorphic(cornerRadius = 24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
+                    .padding(24.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (subtitle != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .heightIn(max = 300.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    options.forEach { option ->
+                        val isSelected = option == selectedOption
+                        
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    onOptionSelected(option)
+                                    onDismiss()
+                                }
+                                .background(
+                                    if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+                                    else Color.Transparent
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                            else Color.White.copy(alpha = 0.05f),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (iconProvider != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(
+                                            if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    iconProvider(option)
+                                }
+                                Spacer(modifier = Modifier.width(16.dp))
+                            }
+                            
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = labelProvider(option),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                )
+                                if (descriptionProvider != null) {
+                                    Text(
+                                        text = descriptionProvider(option),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                    )
+                                }
+                            }
+                            
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = "Selected",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .border(
+                                            width = 1.5.dp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                            shape = CircleShape
+                                        )
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text("Cancel", fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }
