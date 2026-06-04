@@ -338,10 +338,17 @@ class PlaylistRepositoryImpl @Inject constructor(
                 if (forceRefresh || e.message?.contains("401") == true) throw e
                 Pair(cachedChannels, null)
             }
-        } else if (url.startsWith("content://") || url.startsWith("file://")) {
+        } else if (url.startsWith("content://") || url.startsWith("file://") || url.startsWith("/")) {
             try {
-                context.contentResolver.openInputStream(Uri.parse(url))?.use { inputStream ->
-                    resolveUniversal(inputStream, url)
+                val uri = Uri.parse(url)
+                val inputStream = if (uri.scheme == "file" || url.startsWith("/")) {
+                    val path = uri.path ?: url
+                    File(path).inputStream()
+                } else {
+                    context.contentResolver.openInputStream(uri)
+                }
+                inputStream?.use { stream ->
+                    resolveUniversal(stream, url)
                 } ?: Pair(emptyList<M3UItem>(), null)
             } catch (e: Exception) {
                 android.util.Log.e("PlaylistRepo", "Error loading local playlist: $url", e)

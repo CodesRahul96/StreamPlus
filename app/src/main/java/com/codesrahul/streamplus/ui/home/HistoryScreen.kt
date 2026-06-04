@@ -215,7 +215,7 @@ fun HistoryItem(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = item.name.ifBlank { "Unknown Stream" },
+                        text = (item.name.ifBlank { "Unknown Stream" }).take(200),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,

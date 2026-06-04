@@ -766,7 +766,7 @@ fun PlaylistItem(
             
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = playlist.name,
+                    text = playlist.name.take(200),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -1094,7 +1094,7 @@ fun SearchResultItem(channel: M3UItem, onClick: () -> Unit) {
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    channel.name,
+                    channel.name.take(200),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
@@ -1135,7 +1135,7 @@ fun RecentlyWatchedCard(entry: M3UItem, modifier: Modifier = Modifier, onClick: 
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                entry.name,
+                entry.name.take(200),
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
@@ -1182,7 +1182,7 @@ fun FavouriteChannelCard(
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    favorite.name,
+                    favorite.name.take(200),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,

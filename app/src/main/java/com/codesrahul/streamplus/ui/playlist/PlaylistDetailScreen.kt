@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -102,26 +104,49 @@ fun PlaylistDetailScreen(
                 }
             } else if (groups.size > 1) {
                 val selectedTabIndex = groups.indexOf(selectedGroup).coerceAtLeast(0)
-                ScrollableTabRow(
-                    selectedTabIndex = selectedTabIndex,
-                    containerColor = Color.Transparent,
-                    contentColor = MaterialTheme.colorScheme.primary,
-                    edgePadding = 16.dp,
-                    divider = {}
+                val listState = rememberLazyListState()
+                
+                LaunchedEffect(selectedTabIndex) {
+                    if (selectedTabIndex >= 0 && selectedTabIndex < groups.size) {
+                        listState.animateScrollToItem(selectedTabIndex)
+                    }
+                }
+                
+                LazyRow(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    groups.forEachIndexed { index, group ->
-                        Tab(
-                            selected = selectedGroup == group,
-                            onClick = { viewModel.setSelectedGroup(group) },
-                            text = { 
-                                Text(
-                                    text = group, 
-                                    fontWeight = if (selectedGroup == group) FontWeight.Bold else FontWeight.Medium,
-                                    maxLines = 1,
-                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                                ) 
-                            }
-                        )
+                    items(
+                        count = groups.size,
+                        key = { index -> groups[index] }
+                    ) { index ->
+                        val group = groups[index]
+                        val isSelected = selectedGroup == group
+                        
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(
+                                    if (isSelected) MaterialTheme.colorScheme.primary 
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                )
+                                .clickable { viewModel.setSelectedGroup(group) }
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = group,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary 
+                                        else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -673,7 +698,7 @@ fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String
                 )
                 if (!currentProgram.isNullOrBlank()) {
                     Text(
-                        text = currentProgram,
+                        text = currentProgram.take(200),
                         style = androidx.compose.ui.text.TextStyle(
                             fontSize = MaterialTheme.typography.labelSmall.fontSize * 0.9f,
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
