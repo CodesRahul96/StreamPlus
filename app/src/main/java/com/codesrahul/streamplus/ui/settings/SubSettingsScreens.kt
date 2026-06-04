@@ -1,5 +1,5 @@
 package com.codesrahul.streamplus.ui.settings
- 
+
 import com.codesrahul.streamplus.data.settings.ThemeMode
 import com.codesrahul.streamplus.data.settings.PlayerOrientation
 
@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.core.content.FileProvider
 import com.google.zxing.BarcodeFormat
@@ -43,6 +44,16 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import com.codesrahul.streamplus.ui.util.glassmorphic
+import com.codesrahul.streamplus.ui.util.tvFocusable
+
+// Specific named color shades for icon containers (iOS-inspired)
+private val GreenApple  = Color(0xFF34C759)
+private val BlueSky     = Color(0xFF007AFF)
+private val PurpleVibe  = Color(0xFF5E5CE6)
+private val OrangeWarm  = Color(0xFFFF9500)
+private val RedAlpha    = Color(0xFFFF3B30)
+private val TealSea     = Color(0xFF5AC8FA)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,14 +65,14 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
-                    title = { Text("Appearance", fontWeight = FontWeight.Bold) },
+                    title = { Text("Appearance", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                        containerColor = Color.Transparent,
                         titleContentColor = MaterialTheme.colorScheme.onSurface,
                         navigationIconContentColor = MaterialTheme.colorScheme.primary,
                         scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
@@ -80,7 +91,8 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     SettingsItemHeader(
                         title = "Theme Mode",
                         subtitle = "Choose your preferred theme appearance",
-                        icon = Icons.Default.BrightnessMedium
+                        icon = Icons.Default.BrightnessMedium,
+                        iconColor = PurpleVibe
                     )
                     
                     SegmentedButton(
@@ -105,26 +117,28 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = when(settingsState.themeMode) {
-                            ThemeMode.SYSTEM -> "Follows device"
+                            ThemeMode.SYSTEM -> "Follows device settings"
                             ThemeMode.LIGHT -> "Always Light"
                             ThemeMode.DARK -> "Always Dark"
-                            ThemeMode.PITCH_BLACK -> "Pitch Black OLED"
+                            ThemeMode.PITCH_BLACK -> "Pitch Black OLED (Power Saving)"
                         },
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(start = 16.dp, bottom = 12.dp)
                     )
                 }
-
 
                 // UI Customization Section
                 SettingsCard {
                     SettingsItemHeader(
-                        title = "Hide Navigation Labels",
-                        icon = Icons.Default.LabelOff
+                        title = "Navigation Preferences",
+                        icon = Icons.Default.LabelOff,
+                        iconColor = TealSea
                     )
                     
                     SettingsSwitchItem(
-                        title = "Bottom navigation labels are ${if (settingsState.hideNavLabels) "hidden" else "visible"}",
+                        title = "Hide Navigation Labels",
+                        subtitle = "Clean bottom bar without text descriptions",
                         checked = settingsState.hideNavLabels,
                         onCheckedChange = { viewModel.setHideNavLabels(it) },
                         showDivider = false
@@ -134,9 +148,10 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 // Default Tab Section
                 SettingsCard {
                     SettingsItemHeader(
-                        title = "Default Tab",
-                        subtitle = "Choose which tab opens when app starts",
-                        icon = Icons.Default.Home
+                        title = "Default Landing Tab",
+                        subtitle = "Choose which view opens when app starts",
+                        icon = Icons.Default.Home,
+                        iconColor = BlueSky
                     )
                     
                     val tabs = listOf("playlist" to "Playlist", "local" to "Gallery", "direct_play" to "Stream")
@@ -159,6 +174,7 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                             )
                         }
                     )
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
                 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -169,44 +185,69 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
 
 @Composable
 fun ThemeModeDialog(currentMode: ThemeMode, onSelect: (ThemeMode) -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Theme Mode") },
-        text = {
-            Column {
-                ThemeMode.values().forEach { mode ->
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .selectable(
-                                selected = (mode == currentMode),
-                                onClick = {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+            border = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .glassmorphic(cornerRadius = 24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
+                    .padding(24.dp)
+            ) {
+                Text(
+                    "Theme Mode", 
+                    style = MaterialTheme.typography.titleLarge, 
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Column {
+                    ThemeMode.values().forEach { mode ->
+                        val isSelected = mode == currentMode
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
                                     onSelect(mode)
                                     onDismiss()
                                 }
+                                .background(
+                                    if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                    else Color.Transparent
+                                )
+                                .padding(horizontal = 12.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = null,
+                                colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
                             )
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = (mode == currentMode),
-                            onClick = null
-                        )
-                        Text(
-                            text = mode.name.lowercase().replaceFirstChar { it.uppercase() }.replace("_", " "),
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(start = 16.dp)
-                        )
+                            Text(
+                                text = mode.name.lowercase().replaceFirstChar { it.uppercase() }.replace("_", " "),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(start = 16.dp)
+                            )
+                        }
                     }
                 }
+                Spacer(modifier = Modifier.height(16.dp))
+                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
+                    Text("Cancel", fontWeight = FontWeight.Bold)
+                }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
         }
-    )
+    }
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -220,11 +261,9 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
     var showQrDialog by remember { mutableStateOf(false) }
     var showExportImportDialog by remember { mutableStateOf(false) }
 
-    // QR Share state
     var qrUrlInput by remember { mutableStateOf("") }
     var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
-    // Export launcher
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri: Uri? ->
@@ -258,7 +297,6 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
         showExportImportDialog = false
     }
 
-    // Import launcher
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -296,14 +334,14 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
-                    title = { Text("Playlist", fontWeight = FontWeight.Bold) },
+                    title = { Text("Playlist Settings", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                        containerColor = Color.Transparent,
                         titleContentColor = MaterialTheme.colorScheme.onSurface,
                         navigationIconContentColor = MaterialTheme.colorScheme.primary,
                         scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
@@ -322,6 +360,7 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         title = "Default Playlist Icon",
                         subtitle = settingsState.defaultPlaylistIcon,
                         icon = Icons.Default.List,
+                        iconColor = BlueSky,
                         onClick = { showIconDialog = true },
                         showDivider = true
                     )
@@ -330,6 +369,7 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         title = "Sort Order",
                         subtitle = settingsState.playlistSortOrder,
                         icon = Icons.Default.SortByAlpha,
+                        iconColor = OrangeWarm,
                         onClick = { showSortDialog = true },
                         showDivider = true
                     )
@@ -338,6 +378,7 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         title = "Mask Playlist URLs",
                         subtitle = "Hide the actual URL for security & privacy",
                         icon = Icons.Default.VpnKey,
+                        iconColor = RedAlpha,
                         checked = settingsState.hidePlaylistUri,
                         onCheckedChange = { viewModel.setHidePlaylistUri(it) },
                         showDivider = true
@@ -347,6 +388,7 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         title = "QR Share",
                         subtitle = "Generate a QR code for any playlist URL",
                         icon = Icons.Default.QrCode,
+                        iconColor = PurpleVibe,
                         onClick = { showQrDialog = true },
                         showDivider = true
                     )
@@ -355,6 +397,7 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         title = "Import & Export",
                         subtitle = "Backup or restore your playlists data",
                         icon = Icons.Default.Backup,
+                        iconColor = GreenApple,
                         onClick = { showExportImportDialog = true },
                         showDivider = false
                     )
@@ -365,19 +408,32 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
         }
     }
 
-    // ── QR Share Dialog ────────────────────────────────────────────────────────
     if (showQrDialog) {
-        AlertDialog(
-            onDismissRequest = { showQrDialog = false; qrBitmap = null },
-            title = { Text("QR Share") },
-            text = {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showQrDialog = false; qrBitmap = null }) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                border = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .glassmorphic(cornerRadius = 24.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
+                        .padding(24.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Text("QR Share Generator", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
                         value = qrUrlInput,
                         onValueChange = { qrUrlInput = it; qrBitmap = null },
-                        label = { Text("Playlist URL") },
+                        label = { Text("Playlist M3U URL") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     qrBitmap?.let { bmp ->
@@ -385,11 +441,14 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                             Image(
                                 painter = androidx.compose.ui.graphics.painter.BitmapPainter(bmp.asImageBitmap()),
                                 contentDescription = "QR Code",
-                                modifier = Modifier.size(220.dp)
+                                modifier = Modifier
+                                    .size(200.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.White)
+                                    .padding(8.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        // Share QR image via system sheet
+                        Spacer(modifier = Modifier.height(16.dp))
                         Button(
                             onClick = {
                                 try {
@@ -411,165 +470,227 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                                     Toast.makeText(context, "Share failed: ${e.message}", Toast.LENGTH_SHORT).show()
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(Icons.Default.Share, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Share QR Image")
+                            Text("Share QR Code", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { showQrDialog = false; qrBitmap = null }) {
+                            Text("Cancel", fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                val url = qrUrlInput.trim()
+                                if (url.isBlank()) {
+                                    Toast.makeText(context, "Please enter a URL", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
+                                try {
+                                    val size = 512
+                                    val bitMatrix = MultiFormatWriter().encode(url, BarcodeFormat.QR_CODE, size, size)
+                                    val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565)
+                                    for (x in 0 until size) {
+                                        for (y in 0 until size) {
+                                            bmp.setPixel(x, y, if (bitMatrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+                                        }
+                                    }
+                                    qrBitmap = bmp
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Failed to generate QR: ${e.message}", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Generate", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val url = qrUrlInput.trim()
-                        if (url.isBlank()) {
-                            Toast.makeText(context, "Please enter a URL", Toast.LENGTH_SHORT).show()
-                            return@Button
-                        }
-                        try {
-                            val size = 512
-                            val bitMatrix = MultiFormatWriter().encode(url, BarcodeFormat.QR_CODE, size, size)
-                            val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565)
-                            for (x in 0 until size) {
-                                for (y in 0 until size) {
-                                    bmp.setPixel(x, y, if (bitMatrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
-                                }
-                            }
-                            qrBitmap = bmp
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "Failed to generate QR: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                ) { Text("Generate") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showQrDialog = false; qrBitmap = null }) { Text("Close") }
             }
-        )
+        }
     }
 
-    // ── Import & Export Dialog ─────────────────────────────────────────────────
     if (showExportImportDialog) {
-        AlertDialog(
-            onDismissRequest = { showExportImportDialog = false },
-            title = { Text("Import & Export") },
-            text = {
-                Column {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showExportImportDialog = false }) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                border = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .glassmorphic(cornerRadius = 24.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
+                        .padding(24.dp)
+                ) {
+                    Text("Backup & Restore", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        "Export saves all your playlists to a JSON file.\nImport loads playlists from a previously exported file.",
+                        "Export saves your loaded playlist directories into a clean JSON file. Import reconstructs them locally.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                        lineHeight = 20.sp
                     )
                     Spacer(modifier = Modifier.height(20.dp))
                     Button(
-                        onClick = {
-                            exportLauncher.launch("streamplus_playlists_backup.json")
-                        },
-                        modifier = Modifier.fillMaxWidth()
+                        onClick = { exportLauncher.launch("streamplus_playlists_backup.json") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(Icons.Default.FileUpload, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Export Playlists")
+                        Text("Export Backup JSON", fontWeight = FontWeight.Bold)
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedButton(
                         onClick = { importLauncher.launch("application/json") },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(Icons.Default.FileDownload, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Import Playlists")
+                        Text("Import Backup JSON", fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(onClick = { showExportImportDialog = false }, modifier = Modifier.align(Alignment.End)) {
+                        Text("Close", fontWeight = FontWeight.Bold)
                     }
                 }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showExportImportDialog = false }) { Text("Cancel") }
             }
-        )
+        }
     }
 
-    // ── Icon & Sort dialogs ────────────────────────────────────────────────────
     if (showIconDialog) {
         val options = listOf("List", "Grid", "Card", "Compact")
-        AlertDialog(
-            onDismissRequest = { showIconDialog = false },
-            title = { Text("Default Playlist Icon") },
-            text = {
-                Column {
-                    options.forEach { option ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = (option == settingsState.defaultPlaylistIcon),
-                                    onClick = {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showIconDialog = false }) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                border = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .glassmorphic(cornerRadius = 24.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
+                        .padding(24.dp)
+                ) {
+                    Text("Default Layout Icon", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Column {
+                        options.forEach { option ->
+                            val isSelected = option == settingsState.defaultPlaylistIcon
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
                                         viewModel.setDefaultPlaylistIcon(option)
                                         showIconDialog = false
                                     }
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                        else Color.Transparent
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = null,
+                                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
                                 )
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = (option == settingsState.defaultPlaylistIcon),
-                                onClick = null
-                            )
-                            Text(
-                                text = option,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 16.dp)
-                            )
+                                Text(
+                                    text = option,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(start = 16.dp)
+                                )
+                            }
                         }
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(onClick = { showIconDialog = false }, modifier = Modifier.align(Alignment.End)) {
+                        Text("Cancel", fontWeight = FontWeight.Bold)
+                    }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showIconDialog = false }) { Text("Cancel") }
             }
-        )
+        }
     }
 
     if (showSortDialog) {
         val options = listOf("Name", "Added Date", "Category", "Last Watched")
-        AlertDialog(
-            onDismissRequest = { showSortDialog = false },
-            title = { Text("Sort Order") },
-            text = {
-                Column {
-                    options.forEach { option ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = (option == settingsState.playlistSortOrder),
-                                    onClick = {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showSortDialog = false }) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                border = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .glassmorphic(cornerRadius = 24.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
+                        .padding(24.dp)
+                ) {
+                    Text("Sort Order", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Column {
+                        options.forEach { option ->
+                            val isSelected = option == settingsState.playlistSortOrder
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
                                         viewModel.setPlaylistSortOrder(option)
                                         showSortDialog = false
                                     }
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                        else Color.Transparent
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = null,
+                                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
                                 )
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = (option == settingsState.playlistSortOrder),
-                                onClick = null
-                            )
-                            Text(
-                                text = option,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 16.dp)
-                            )
+                                Text(
+                                    text = option,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(start = 16.dp)
+                                )
+                            }
                         }
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(onClick = { showSortDialog = false }, modifier = Modifier.align(Alignment.End)) {
+                        Text("Cancel", fontWeight = FontWeight.Bold)
+                    }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showSortDialog = false }) { Text("Cancel") }
             }
-        )
+        }
     }
 }
 
@@ -584,14 +705,14 @@ fun GeneralSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
-                    title = { Text("General", fontWeight = FontWeight.Bold) },
+                    title = { Text("General Settings", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                        containerColor = Color.Transparent,
                         titleContentColor = MaterialTheme.colorScheme.onSurface,
                         navigationIconContentColor = MaterialTheme.colorScheme.primary,
                         scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
@@ -614,6 +735,7 @@ fun GeneralSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                             else -> "System Default (Hardware)"
                         },
                         icon = Icons.Default.Memory,
+                        iconColor = BlueSky,
                         onClick = { showDecoderDialog = true },
                         showDivider = true
                     )
@@ -622,14 +744,17 @@ fun GeneralSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         title = "Tunneled Playback",
                         subtitle = "Enable audio tunneling for supported 4K/HDR content",
                         icon = Icons.Default.VerticalAlignCenter,
+                        iconColor = PurpleVibe,
                         checked = settingsState.enableTunneling,
-                        onCheckedChange = { viewModel.setEnableTunneling(it) }
+                        onCheckedChange = { viewModel.setEnableTunneling(it) },
+                        showDivider = true
                     )
                     
                     SettingsSwitchItem(
                         title = "Dolby Vision Support",
                         subtitle = "Enable support for Dolby Vision Profile 7",
                         icon = Icons.Default.CastConnected,
+                        iconColor = OrangeWarm,
                         checked = settingsState.dolbyVision,
                         onCheckedChange = { viewModel.setDolbyVision(it) },
                         showDivider = false
@@ -647,42 +772,63 @@ fun GeneralSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             1 to "Application (Software)",
             2 to "Hardware Only (Strict)"
         )
-        AlertDialog(
-            onDismissRequest = { showDecoderDialog = false },
-            title = { Text("Decoder Backend") },
-            text = {
-                Column {
-                    options.forEach { (value, label) ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = (value == settingsState.decoderPriority),
-                                    onClick = {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showDecoderDialog = false }) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                border = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .glassmorphic(cornerRadius = 24.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
+                        .padding(24.dp)
+                ) {
+                    Text("Decoder Backend", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Column {
+                        options.forEach { (value, label) ->
+                            val isSelected = value == settingsState.decoderPriority
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
                                         viewModel.setDecoderPriority(value)
                                         showDecoderDialog = false
                                     }
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                        else Color.Transparent
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = null,
+                                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
                                 )
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = (value == settingsState.decoderPriority),
-                                onClick = null
-                            )
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 16.dp)
-                            )
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(start = 16.dp)
+                                )
+                            }
                         }
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(onClick = { showDecoderDialog = false }, modifier = Modifier.align(Alignment.End)) {
+                        Text("Cancel", fontWeight = FontWeight.Bold)
+                    }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showDecoderDialog = false }) { Text("Cancel") }
             }
-        )
+        }
     }
 }
 
@@ -701,14 +847,16 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
-                    title = { Text("Video", fontWeight = FontWeight.Bold) },
+                    title = { Text("Video Settings", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                        containerColor = Color.Transparent,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.primary,
                         scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
                     ),
                     windowInsets = WindowInsets(0.dp)
@@ -725,6 +873,7 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         title = "Video Quality",
                         subtitle = settingsState.videoQuality,
                         icon = Icons.Default.HighQuality,
+                        iconColor = BlueSky,
                         onClick = { showQualityDialog = true },
                         showDivider = true
                     )
@@ -733,6 +882,7 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         title = "Default Audio Track",
                         subtitle = settingsState.defaultAudioLanguage,
                         icon = Icons.Default.Audiotrack,
+                        iconColor = TealSea,
                         onClick = { showAudioDialog = true },
                         showDivider = true
                     )
@@ -741,6 +891,7 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         title = "Network Buffer",
                         subtitle = "${settingsState.networkBufferSize} seconds",
                         icon = Icons.Default.Waves,
+                        iconColor = PurpleVibe,
                         onClick = { showBufferDialog = true },
                         showDivider = true
                     )
@@ -750,47 +901,56 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         title = "Default Aspect Ratio",
                         subtitle = aspectOptions.getOrElse(settingsState.defaultAspectRatio) { "Fit" },
                         icon = Icons.Default.AspectRatio,
+                        iconColor = OrangeWarm,
                         onClick = { showAspectRatioDialog = true },
                         showDivider = true
                     )
                     
                     SettingsSwitchItem(
-                        title = "Auto Frame Rate Matching",
+                        title = "Auto Refresh Rate",
                         subtitle = "Switch display refresh rate to match video frame rate",
                         icon = Icons.Default.Speed,
+                        iconColor = GreenApple,
                         checked = settingsState.autoFrameRate,
-                        onCheckedChange = { viewModel.setAutoFrameRate(it) }
+                        onCheckedChange = { viewModel.setAutoFrameRate(it) },
+                        showDivider = true
                     )
                     
                     SettingsSwitchItem(
                         title = "Auto Picture-in-Picture",
-                        subtitle = "Switch to PiP when leaving the app",
+                        subtitle = "Switch to PiP mode when leaving the app",
                         icon = Icons.Default.PictureInPicture,
+                        iconColor = BlueSky,
                         checked = settingsState.autoPip,
-                        onCheckedChange = { viewModel.setAutoPip(it) }
+                        onCheckedChange = { viewModel.setAutoPip(it) },
+                        showDivider = true
                     )
                     
                     SettingsSwitchItem(
                         title = "Skip Silence",
-                        subtitle = "Skip parts with silence on the audio stream",
+                        subtitle = "Skip silent parts in the audio stream",
                         icon = Icons.Default.SkipNext,
+                        iconColor = RedAlpha,
                         checked = settingsState.skipSilence,
-                        onCheckedChange = { viewModel.setSkipSilence(it) }
+                        onCheckedChange = { viewModel.setSkipSilence(it) },
+                        showDivider = true
                     )
                     
                     SettingsSwitchItem(
                         title = "Repeat Toggle",
-                        subtitle = "Extra control to allow indefinitely loop video",
+                        subtitle = "Enable controls to loop play single media",
                         icon = Icons.Default.Repeat,
+                        iconColor = TealSea,
                         checked = settingsState.repeatMode,
                         onCheckedChange = { viewModel.setRepeatMode(it) },
                         showDivider = true
                     )
 
                     SettingsClickableItem(
-                        title = "Default Player Orientation",
+                        title = "Player Orientation",
                         subtitle = settingsState.playerOrientation.name.lowercase().replaceFirstChar { it.uppercase() },
                         icon = Icons.Default.CropRotate,
+                        iconColor = OrangeWarm,
                         onClick = { showOrientationDialog = true },
                         showDivider = true
                     )
@@ -799,6 +959,7 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         title = "Force Widevine L3",
                         subtitle = "Useful for devices with broken L1 certification (fixes black screen)",
                         icon = Icons.Default.Security,
+                        iconColor = GreenApple,
                         checked = settingsState.forceWidevineL3,
                         onCheckedChange = { viewModel.setForceWidevineL3(it) },
                         showDivider = false
@@ -812,201 +973,306 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
 
     if (showQualityDialog) {
         val options = listOf("Auto (Recommended)", "High", "Medium", "Low", "Data Saver")
-        AlertDialog(
-            onDismissRequest = { showQualityDialog = false },
-            title = { Text("Video Quality") },
-            text = {
-                Column {
-                    options.forEach { option ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = (option == settingsState.videoQuality),
-                                    onClick = {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showQualityDialog = false }) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                border = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .glassmorphic(cornerRadius = 24.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
+                        .padding(24.dp)
+                ) {
+                    Text("Video Quality", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Column {
+                        options.forEach { option ->
+                            val isSelected = option == settingsState.videoQuality
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
                                         viewModel.setVideoQuality(option)
                                         showQualityDialog = false
                                     }
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                        else Color.Transparent
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = null,
+                                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
                                 )
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = (option == settingsState.videoQuality),
-                                onClick = null
-                            )
-                            Text(
-                                text = option,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 16.dp)
-                            )
+                                Text(
+                                    text = option,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(start = 16.dp)
+                                )
+                            }
                         }
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(onClick = { showQualityDialog = false }, modifier = Modifier.align(Alignment.End)) {
+                        Text("Cancel", fontWeight = FontWeight.Bold)
+                    }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showQualityDialog = false }) { Text("Cancel") }
             }
-        )
+        }
     }
 
     if (showAudioDialog) {
         val options = listOf("Auto", "English", "Hindi", "Spanish", "French", "German", "Russian", "Arabic", "Chinese", "Japanese", "Portuguese")
-        AlertDialog(
-            onDismissRequest = { showAudioDialog = false },
-            title = { Text("Default Audio Track") },
-            text = {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    options.forEach { option ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = (option == settingsState.defaultAudioLanguage),
-                                    onClick = {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showAudioDialog = false }) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                border = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .glassmorphic(cornerRadius = 24.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
+                        .padding(24.dp)
+                ) {
+                    Text("Audio Track Language", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                        options.forEach { option ->
+                            val isSelected = option == settingsState.defaultAudioLanguage
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
                                         viewModel.setDefaultAudioLanguage(option)
                                         showAudioDialog = false
                                     }
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                        else Color.Transparent
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = null,
+                                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
                                 )
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = (option == settingsState.defaultAudioLanguage),
-                                onClick = null
-                            )
-                            Text(
-                                text = option,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 16.dp)
-                            )
+                                Text(
+                                    text = option,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(start = 16.dp)
+                                )
+                            }
                         }
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(onClick = { showAudioDialog = false }, modifier = Modifier.align(Alignment.End)) {
+                        Text("Cancel", fontWeight = FontWeight.Bold)
+                    }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showAudioDialog = false }) { Text("Cancel") }
             }
-        )
+        }
     }
 
     if (showBufferDialog) {
         val options = listOf(10, 20, 30, 45, 60, 90, 120)
-        AlertDialog(
-            onDismissRequest = { showBufferDialog = false },
-            title = { Text("Network Buffer Size") },
-            text = {
-                Column {
-                    options.forEach { seconds ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = (seconds == settingsState.networkBufferSize),
-                                    onClick = {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showBufferDialog = false }) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                border = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .glassmorphic(cornerRadius = 24.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
+                        .padding(24.dp)
+                ) {
+                    Text("Network Buffer Size", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Column {
+                        options.forEach { seconds ->
+                            val isSelected = seconds == settingsState.networkBufferSize
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
                                         viewModel.setNetworkBufferSize(seconds)
                                         showBufferDialog = false
                                     }
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                        else Color.Transparent
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = null,
+                                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
                                 )
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = (seconds == settingsState.networkBufferSize),
-                                onClick = null
-                            )
-                            Text(
-                                text = "$seconds seconds",
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 16.dp)
-                            )
+                                Text(
+                                    text = "$seconds seconds",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(start = 16.dp)
+                                )
+                            }
                         }
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(onClick = { showBufferDialog = false }, modifier = Modifier.align(Alignment.End)) {
+                        Text("Cancel", fontWeight = FontWeight.Bold)
+                    }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showBufferDialog = false }) { Text("Cancel") }
             }
-        )
+        }
     }
 
     if (showAspectRatioDialog) {
         val aspectOptions = listOf("Fit", "Fill", "Zoom")
-        AlertDialog(
-            onDismissRequest = { showAspectRatioDialog = false },
-            title = { Text("Default Aspect Ratio") },
-            text = {
-                Column {
-                    aspectOptions.forEachIndexed { index, option ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = (index == settingsState.defaultAspectRatio),
-                                    onClick = {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showAspectRatioDialog = false }) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                border = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .glassmorphic(cornerRadius = 24.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
+                        .padding(24.dp)
+                ) {
+                    Text("Aspect Ratio", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Column {
+                        aspectOptions.forEachIndexed { index, option ->
+                            val isSelected = index == settingsState.defaultAspectRatio
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
                                         viewModel.setDefaultAspectRatio(index)
                                         showAspectRatioDialog = false
                                     }
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                        else Color.Transparent
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = null,
+                                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
                                 )
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = (index == settingsState.defaultAspectRatio),
-                                onClick = null
-                            )
-                            Text(
-                                text = option,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 16.dp)
-                            )
+                                Text(
+                                    text = option,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(start = 16.dp)
+                                )
+                            }
                         }
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(onClick = { showAspectRatioDialog = false }, modifier = Modifier.align(Alignment.End)) {
+                        Text("Cancel", fontWeight = FontWeight.Bold)
+                    }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showAspectRatioDialog = false }) { Text("Cancel") }
             }
-        )
+        }
     }
 
     if (showOrientationDialog) {
-        AlertDialog(
-            onDismissRequest = { showOrientationDialog = false },
-            title = { Text("Default Player Orientation", fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    PlayerOrientation.entries.forEach { orientation ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = (orientation == settingsState.playerOrientation),
-                                    onClick = {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showOrientationDialog = false }) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                border = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .glassmorphic(cornerRadius = 24.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
+                        .padding(24.dp)
+                ) {
+                    Text("Player Orientation", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Column {
+                        PlayerOrientation.entries.forEach { orientation ->
+                            val isSelected = orientation == settingsState.playerOrientation
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
                                         viewModel.setPlayerOrientation(orientation)
                                         showOrientationDialog = false
                                     }
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                        else Color.Transparent
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = null,
+                                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
                                 )
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = (orientation == settingsState.playerOrientation),
-                                onClick = null
-                            )
-                            Text(
-                                text = orientation.name.lowercase().replaceFirstChar { it.uppercase() },
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 16.dp)
-                            )
+                                Text(
+                                    text = orientation.name.lowercase().replaceFirstChar { it.uppercase() },
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(start = 16.dp)
+                                )
+                            }
                         }
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(onClick = { showOrientationDialog = false }, modifier = Modifier.align(Alignment.End)) {
+                        Text("Cancel", fontWeight = FontWeight.Bold)
+                    }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showOrientationDialog = false }) { Text("Cancel") }
             }
-        )
+        }
     }
 }
 
@@ -1021,14 +1287,16 @@ fun ShortcutsSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
-                    title = { Text("Shortcuts", fontWeight = FontWeight.Bold) },
+                    title = { Text("Shortcuts & Gestures", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                        containerColor = Color.Transparent,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.primary,
                         scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
                     ),
                     windowInsets = WindowInsets(0.dp)
@@ -1046,6 +1314,7 @@ fun ShortcutsSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         title = "Volume Gestures",
                         subtitle = "Swipe up/down on the right side to adjust volume",
                         icon = Icons.Default.VolumeUp,
+                        iconColor = BlueSky,
                         checked = settingsState.volumeGestures,
                         onCheckedChange = { viewModel.setVolumeGestures(it) },
                         showDivider = true
@@ -1054,18 +1323,20 @@ fun ShortcutsSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         title = "Brightness Gestures",
                         subtitle = "Swipe up/down on the left side to adjust brightness",
                         icon = Icons.Default.BrightnessMedium,
+                        iconColor = PurpleVibe,
                         checked = settingsState.brightnessGestures,
                         onCheckedChange = { viewModel.setBrightnessGestures(it) },
                         showDivider = false
                     )
                 }
 
-                SettingsSectionHeader("System")
+                SettingsSectionHeader("System Shortcuts")
                 SettingsCard {
                     SettingsClickableItem(
                         title = "Captioning Preferences",
-                        subtitle = "System subtitle settings",
+                        subtitle = "Configure caption formats and typography in Android settings",
                         icon = Icons.Default.ClosedCaption,
+                        iconColor = TealSea,
                         onClick = {
                             try {
                                 val intent = Intent(Settings.ACTION_CAPTIONING_SETTINGS)
@@ -1083,4 +1354,3 @@ fun ShortcutsSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
         }
     }
 }
-

@@ -22,13 +22,17 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.launch
 import com.codesrahul.streamplus.ui.components.PremiumBackground
+import com.codesrahul.streamplus.ui.util.glassmorphic
+import com.codesrahul.streamplus.ui.util.tvFocusable
 
 // Specific named color shades for icon containers (iOS-inspired)
 private val GreenApple  = Color(0xFF34C759)
@@ -82,18 +86,15 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
     
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
-
     com.codesrahul.streamplus.ui.components.PremiumBackground {
         Scaffold(
-            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             containerColor = Color.Transparent,
             topBar = {
-                LargeTopAppBar(
+                TopAppBar(
                     title = {
                         Text(
                             "Settings", 
-                            style = MaterialTheme.typography.headlineLarge, 
+                            style = MaterialTheme.typography.titleLarge, 
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -103,14 +104,13 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
                         }
                     },
-                    colors = TopAppBarDefaults.largeTopAppBarColors(
+                    colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent,
                         titleContentColor = MaterialTheme.colorScheme.onSurface,
                         navigationIconContentColor = MaterialTheme.colorScheme.primary,
                         scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
                     ),
-                    windowInsets = WindowInsets(0.dp),
-                    scrollBehavior = scrollBehavior
+                    windowInsets = WindowInsets(0.dp)
                 )
             }
         ) { padding ->
@@ -119,6 +119,9 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
             ) {
+                // Editorial Header Banner
+                SettingsHeaderBanner()
+
                 // ── Aesthetics ───────────────────────────────────────────
                 SettingsSectionHeader("Aesthetics")
                 SettingsCard {
@@ -283,7 +286,155 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
     if (showHelpDialog) {
         HelpFaqDialog(onDismiss = { showHelpDialog = false })
     }
+}
 
+@Composable
+fun SettingsHeaderBanner() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val version = remember {
+        try {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.0"
+        } catch (e: Exception) { "1.0.0" }
+    }
+    
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .glassmorphic(cornerRadius = 24.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        border = null
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                            Color.Transparent
+                        ),
+                        radius = 400f
+                    )
+                )
+                .padding(24.dp)
+        ) {
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(60.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.primary,
+                                        MaterialTheme.colorScheme.tertiary
+                                    )
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayCircle,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(18.dp))
+                    Column {
+                        Text(
+                            text = "StreamPlus",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "v$version · Stable Release",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(20.dp))
+                
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    StatusBadge(
+                        label = "Decoder",
+                        value = "System Default",
+                        icon = Icons.Default.Memory,
+                        color = BlueSky
+                    )
+                    StatusBadge(
+                        label = "Engine",
+                        value = "Media3 / Exo",
+                        icon = Icons.Default.Bolt,
+                        color = GreenApple
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RowScope.StatusBadge(
+    label: String,
+    value: String,
+    icon: ImageVector,
+    color: Color
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
+        modifier = Modifier.weight(1f)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(color.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Column {
+                Text(
+                    text = label.uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -313,7 +464,6 @@ fun AppInfoFooter() {
             .padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // App icon + name badge
         Box(
             modifier = Modifier
                 .size(56.dp)
@@ -462,27 +612,28 @@ fun AboutDialog(onDismiss: () -> Unit) {
     }
 
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
-        Surface(
+        Card(
             shape = RoundedCornerShape(28.dp),
-            color = Color(0xFF1A1C1E), // Deep dark surface
-            tonalElevation = 8.dp,
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+            border = null,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
+                .glassmorphic(cornerRadius = 28.dp)
         ) {
             Column(
                 modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
                     .padding(24.dp)
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.Start
             ) {
-                // Header with App Icon and Name
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(64.dp)
+                            .size(60.dp)
                             .clip(RoundedCornerShape(16.dp))
                             .background(
                                 Brush.linearGradient(
@@ -495,108 +646,84 @@ fun AboutDialog(onDismiss: () -> Unit) {
                             imageVector = Icons.Default.PlayCircle,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(40.dp)
+                            modifier = Modifier.size(36.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        "StreamPlus",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Version Chip
-                Surface(
-                    color = Color.White.copy(alpha = 0.05f),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.Info,
-                            contentDescription = null,
-                            tint = Color(0xFF00E5FF),
-                            modifier = Modifier.size(18.dp)
+                    Column {
+                        Text(
+                            "StreamPlus",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             "Version $version",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.White.copy(alpha = 0.9f)
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                // Description
                 Text(
-                    "StreamPlus is a modern video player app with playlist management and beautiful UI.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.White.copy(alpha = 0.7f),
-                    lineHeight = androidx.compose.ui.unit.TextUnit(24f, androidx.compose.ui.unit.TextUnitType.Sp)
+                    "StreamPlus is a premium video player application with advanced playlist management, network stream support, and modern design semantics.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                    lineHeight = 22.sp
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                // Features Header
                 Text(
-                    "Features:",
-                    style = MaterialTheme.typography.titleLarge,
+                    "Core Capabilities",
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF00E5FF)
+                    color = MaterialTheme.colorScheme.primary
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                // Feature List
                 val features = listOf(
-                    "Playlist Management",
-                    "Network Streaming",
-                    "Import/Export",
-                    "Customizable UI"
+                    "Fluid Shared Element Transitions",
+                    "Advanced Playlist Management & Security",
+                    "Real-time Hardware / Software Decoding",
+                    "Modern, Glassmorphic Design Aesthetics"
                 )
 
                 features.forEach { feature ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 6.dp)
+                        modifier = Modifier.padding(vertical = 4.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = Color(0xFF00E5FF),
-                            modifier = Modifier.size(20.dp)
+                            tint = GreenApple,
+                            modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             feature,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = Color.White.copy(alpha = 0.9f)
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-                // Close Button
                 TextButton(
                     onClick = onDismiss,
                     modifier = Modifier.align(Alignment.End)
                 ) {
                     Text(
-                        "Close",
-                        style = MaterialTheme.typography.titleLarge,
+                        "Dismiss",
+                        style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF00E5FF)
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -607,17 +734,27 @@ fun AboutDialog(onDismiss: () -> Unit) {
 @Composable
 fun HelpFaqDialog(onDismiss: () -> Unit) {
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 6.dp
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+            border = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .glassmorphic(cornerRadius = 24.dp)
         ) {
             Column(
                 modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
                     .padding(24.dp)
                     .fillMaxWidth()
             ) {
-                Text("Help & FAQ", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(
+                    "Help & FAQ", 
+                    style = MaterialTheme.typography.titleLarge, 
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Column(
@@ -634,8 +771,12 @@ fun HelpFaqDialog(onDismiss: () -> Unit) {
                 }
                 
                 Spacer(modifier = Modifier.height(24.dp))
-                Button(onClick = onDismiss, modifier = Modifier.align(Alignment.End), shape = RoundedCornerShape(12.dp)) {
-                    Text("Got it")
+                Button(
+                    onClick = onDismiss, 
+                    modifier = Modifier.align(Alignment.End), 
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Got it", fontWeight = FontWeight.Bold)
                 }
             }
         }
