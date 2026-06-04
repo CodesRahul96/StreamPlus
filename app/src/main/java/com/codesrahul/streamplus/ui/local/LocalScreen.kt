@@ -185,6 +185,7 @@ fun LocalMediaGrid(
                 containerColor = Color.Transparent,
                 topBar = {
                     TopAppBar(
+                        windowInsets = WindowInsets(0.dp),
                         title = {
                             Column {
                                     Text(
@@ -416,6 +417,7 @@ fun LocalMediaList(
             topBar = {
                 if (isSearchActive) {
                     TopAppBar(
+                        windowInsets = WindowInsets(0.dp),
                         title = {
                             OutlinedTextField(
                                 value = searchQuery,
@@ -448,6 +450,7 @@ fun LocalMediaList(
                     )
                 } else {
                     TopAppBar(
+                        windowInsets = WindowInsets(0.dp),
                         title = { 
                             Column {
                                 Text(folderName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)

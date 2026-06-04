@@ -44,6 +44,7 @@ fun HistoryScreen(
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
+                    windowInsets = WindowInsets(0.dp),
                     title = {
                         Column {
                             Text("Watch History", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)

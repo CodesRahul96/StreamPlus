@@ -190,6 +190,19 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            overrideActivityTransition(
+                android.app.Activity.OVERRIDE_TRANSITION_OPEN,
+                com.codesrahul.streamplus.R.anim.player_enter,
+                com.codesrahul.streamplus.R.anim.player_exit
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            overridePendingTransition(
+                com.codesrahul.streamplus.R.anim.player_enter,
+                com.codesrahul.streamplus.R.anim.player_exit
+            )
+        }
         super.onCreate(savedInstanceState)
         
         try {
@@ -332,6 +345,23 @@ class PlayerActivity : AppCompatActivity() {
     override fun onDestroy() {
         castPlayer?.release()
         super.onDestroy()
+    }
+
+    override fun finish() {
+        super.finish()
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            overrideActivityTransition(
+                android.app.Activity.OVERRIDE_TRANSITION_CLOSE,
+                com.codesrahul.streamplus.R.anim.player_pop_enter,
+                com.codesrahul.streamplus.R.anim.player_pop_exit
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            overridePendingTransition(
+                com.codesrahul.streamplus.R.anim.player_pop_enter,
+                com.codesrahul.streamplus.R.anim.player_pop_exit
+            )
+        }
     }
 }
 

@@ -68,130 +68,140 @@ fun PlaylistDetailScreen(
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
 
     PremiumBackground {
-        Scaffold(
-            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-            containerColor = Color.Transparent,
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            topBar = {
-                Column(
-                    modifier = Modifier
-                        .background(Color.Transparent)
-                        .statusBarsPadding()
+        Column(modifier = Modifier.fillMaxSize()) {
+            if (isXtreamPlaylist) {
+                TabRow(
+                    selectedTabIndex = when (selectedStreamType) {
+                        "live" -> 0
+                        "vod" -> 1
+                        "series" -> 2
+                        else -> 0
+                    },
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    divider = {}
                 ) {
-                    TopAppBar(
-                        title = {
-                            Column {
-                                Text(
-                                    playlist?.name ?: "Playlist",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                if (!isLoading && viewModel.channels.value.isNotEmpty()) {
-                                    Text("${filteredChannels.size} channels", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = Color.Transparent,
-                            scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
-                        ),
-                        scrollBehavior = scrollBehavior,
-                        navigationIcon = {
-                            IconButton(onClick = onBack) {
-                                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                            }
-                        },
-                        actions = {
-                            IconButton(onClick = { viewModel.refresh() }) {
-                                Icon(Icons.Default.Refresh, contentDescription = "Refresh")
-                            }
-                        }
+                    Tab(
+                        selected = selectedStreamType == "live",
+                        onClick = { viewModel.setSelectedStreamType("live") },
+                        text = { Text("TV", fontWeight = if (selectedStreamType == "live") FontWeight.Bold else FontWeight.Medium) }
                     )
+                    Tab(
+                        selected = selectedStreamType == "vod",
+                        onClick = { viewModel.setSelectedStreamType("vod") },
+                        text = { Text("Movies", fontWeight = if (selectedStreamType == "vod") FontWeight.Bold else FontWeight.Medium) }
+                    )
+                    Tab(
+                        selected = selectedStreamType == "series",
+                        onClick = { viewModel.setSelectedStreamType("series") },
+                        text = { Text("Series", fontWeight = if (selectedStreamType == "series") FontWeight.Bold else FontWeight.Medium) }
+                    )
+                }
+            } else if (groups.size > 1) {
+                val selectedTabIndex = groups.indexOf(selectedGroup).coerceAtLeast(0)
+                ScrollableTabRow(
+                    selectedTabIndex = selectedTabIndex,
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    edgePadding = 16.dp,
+                    divider = {}
+                ) {
+                    groups.forEachIndexed { index, group ->
+                        Tab(
+                            selected = selectedGroup == group,
+                            onClick = { viewModel.setSelectedGroup(group) },
+                            text = { Text(group, fontWeight = if (selectedGroup == group) FontWeight.Bold else FontWeight.Medium) }
+                        )
+                    }
+                }
+            }
 
-                    // Unified search bar
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { viewModel.setSearchQuery(it) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .padding(bottom = 6.dp),
-                        placeholder = { Text("Search channels...", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f)) },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { viewModel.setSearchQuery("") }, modifier = Modifier.size(20.dp)) {
-                                    Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(16.dp))
+            Scaffold(
+                modifier = Modifier.weight(1f).nestedScroll(scrollBehavior.nestedScrollConnection),
+                containerColor = Color.Transparent,
+                snackbarHost = { SnackbarHost(snackbarHostState) },
+                topBar = {
+                    Column(
+                        modifier = Modifier.background(Color.Transparent)
+                    ) {
+                        TopAppBar(
+                            title = {
+                                Column {
+                                    Text(
+                                        playlist?.name ?: "Playlist",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    if (!isLoading && viewModel.channels.value.isNotEmpty()) {
+                                        Text("${filteredChannels.size} channels", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = Color.Transparent,
+                                scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+                            ),
+                            scrollBehavior = scrollBehavior,
+                            windowInsets = WindowInsets(0.dp),
+                            navigationIcon = {
+                                IconButton(onClick = onBack) {
+                                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                                }
+                            },
+                            actions = {
+                                IconButton(onClick = { viewModel.refresh() }) {
+                                    Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                                 }
                             }
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor   = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                            unfocusedBorderColor    = Color.Transparent,
-                            focusedBorderColor      = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                         )
-                    )
-                    // Xtream: TV / VOD / Series top-level tabs
-                    if (isXtreamPlaylist) {
-                        val streamTabs = listOf(
-                            Triple("live", "TV", Icons.Default.Tv),
-                            Triple("vod", "Movies", Icons.Default.Movie),
-                            Triple("series", "Series", Icons.Default.PlayCircle)
-                        )
-                        Row(
+
+                        // Unified search bar
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { viewModel.setSearchQuery(it) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp)
-                                .padding(bottom = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            streamTabs.forEach { (type, label, icon) ->
-                                val selected = selectedStreamType == type
-                                FilterChip(
-                                    selected = selected,
-                                    onClick = { viewModel.setSelectedStreamType(type) },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = icon,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    },
-                                    label = { Text(label, style = MaterialTheme.typography.labelMedium) },
-                                    shape = RoundedCornerShape(8.dp),
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
-                                    )
-                                )
-                            }
-                        }
-                    }
+                                .padding(bottom = 6.dp),
+                            placeholder = { Text("Search channels...", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f)) },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { viewModel.setSearchQuery("") }, modifier = Modifier.size(20.dp)) {
+                                        Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(16.dp))
+                                    }
+                                }
+                            },
+                            shape = RoundedCornerShape(16.dp),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor   = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                unfocusedBorderColor    = Color.Transparent,
+                                focusedBorderColor      = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            )
+                        )
 
-                    // Category chips (group-level filter, shown for both Xtream and regular)
-                    if (groups.size > 1) {
-                        androidx.compose.foundation.lazy.LazyRow(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(groups) { group ->
-                                FilterChip(
-                                    selected = selectedGroup == group,
-                                    onClick = { viewModel.setSelectedGroup(group) },
-                                    label = { Text(group, style = MaterialTheme.typography.labelMedium) },
-                                    shape = CircleShape
-                                )
+                        // For Xtream playlists, display sub-categories below the search bar
+                        if (isXtreamPlaylist && groups.size > 1) {
+                            androidx.compose.foundation.lazy.LazyRow(
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(groups) { group ->
+                                    FilterChip(
+                                        selected = selectedGroup == group,
+                                        onClick = { viewModel.setSelectedGroup(group) },
+                                        label = { Text(group, style = MaterialTheme.typography.labelMedium) },
+                                        shape = CircleShape
+                                    )
+                                }
                             }
                         }
                     }
                 }
-            }
-        ) { padding ->
+            ) { padding ->
             Box(modifier = Modifier.padding(padding).fillMaxSize()) {
                 when {
                     isLoading -> {
@@ -335,6 +345,7 @@ fun PlaylistDetailScreen(
             }
         }
     }
+}
 }
 
 @Composable

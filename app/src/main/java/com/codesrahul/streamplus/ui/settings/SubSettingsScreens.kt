@@ -65,7 +65,8 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         titleContentColor = MaterialTheme.colorScheme.onSurface,
                         navigationIconContentColor = MaterialTheme.colorScheme.primary,
                         scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
-                    )
+                    ),
+                    windowInsets = WindowInsets(0.dp)
                 )
             }
         ) { padding ->
@@ -306,7 +307,8 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         titleContentColor = MaterialTheme.colorScheme.onSurface,
                         navigationIconContentColor = MaterialTheme.colorScheme.primary,
                         scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
-                    )
+                    ),
+                    windowInsets = WindowInsets(0.dp)
                 )
             }
         ) { padding ->
@@ -593,7 +595,8 @@ fun GeneralSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         titleContentColor = MaterialTheme.colorScheme.onSurface,
                         navigationIconContentColor = MaterialTheme.colorScheme.primary,
                         scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
-                    )
+                    ),
+                    windowInsets = WindowInsets(0.dp)
                 )
             }
         ) { padding ->
@@ -707,7 +710,8 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
                         scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
-                    )
+                    ),
+                    windowInsets = WindowInsets(0.dp)
                 )
             }
         ) { padding ->
@@ -1026,7 +1030,8 @@ fun ShortcutsSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
                         scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
-                    )
+                    ),
+                    windowInsets = WindowInsets(0.dp)
                 )
             }
         ) { padding ->

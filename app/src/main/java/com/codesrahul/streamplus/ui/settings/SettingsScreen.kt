@@ -109,6 +109,7 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                         navigationIconContentColor = MaterialTheme.colorScheme.primary,
                         scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
                     ),
+                    windowInsets = WindowInsets(0.dp),
                     scrollBehavior = scrollBehavior
                 )
             }
@@ -395,7 +396,8 @@ fun AccessibilitySettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent,
                         scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
-                    )
+                    ),
+                    windowInsets = WindowInsets(0.dp)
                 )
             }
         ) { padding ->

@@ -156,6 +156,7 @@ fun DirectPlayScreen(
                         containerColor = Color.Transparent,
                         scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
                     ),
+                    windowInsets = WindowInsets(0.dp),
                     actions = {
                         IconButton(onClick = { onNavigateToHistory?.invoke() }) {
                             Icon(Icons.Default.History, contentDescription = "History")

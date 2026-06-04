@@ -46,6 +46,19 @@ class MusicPlayerActivity : AppCompatActivity() {
     private var exoPlayer: ExoPlayer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            overrideActivityTransition(
+                android.app.Activity.OVERRIDE_TRANSITION_OPEN,
+                com.codesrahul.streamplus.R.anim.player_enter,
+                com.codesrahul.streamplus.R.anim.player_exit
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            overridePendingTransition(
+                com.codesrahul.streamplus.R.anim.player_enter,
+                com.codesrahul.streamplus.R.anim.player_exit
+            )
+        }
         super.onCreate(savedInstanceState)
 
         // Read intent extras
@@ -94,6 +107,23 @@ class MusicPlayerActivity : AppCompatActivity() {
         super.onDestroy()
         exoPlayer?.release()
         exoPlayer = null
+    }
+
+    override fun finish() {
+        super.finish()
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            overrideActivityTransition(
+                android.app.Activity.OVERRIDE_TRANSITION_CLOSE,
+                com.codesrahul.streamplus.R.anim.player_pop_enter,
+                com.codesrahul.streamplus.R.anim.player_pop_exit
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            overridePendingTransition(
+                com.codesrahul.streamplus.R.anim.player_pop_enter,
+                com.codesrahul.streamplus.R.anim.player_pop_exit
+            )
+        }
     }
 }
 

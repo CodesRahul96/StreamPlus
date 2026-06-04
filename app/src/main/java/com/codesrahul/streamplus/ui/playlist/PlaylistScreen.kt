@@ -10,6 +10,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -74,352 +78,399 @@ fun PlaylistScreen(
     ) { uri: android.net.Uri? ->
         uri?.let { viewModel.importLocalPlaylist(context, it) }
     }
-
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
+    var selectedTab by remember { mutableIntStateOf(0) }
 
     PremiumBackground {
-        Scaffold(
-            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-            containerColor = Color.Transparent,
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Column {
-                            Text("Playlists", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
-                            if (playlists.isNotEmpty()) {
-                                Text("${playlists.size} sources", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                        actionIconContentColor = MaterialTheme.colorScheme.onSurface,
-                        scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
-                    ),
-                    scrollBehavior = scrollBehavior,
-                    actions = {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "Menu")
-                        }
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Add Playlist URL") },
-                                onClick = {
-                                    showMenu = false
-                                    showAddDialog = true
-                                },
-                                leadingIcon = { Icon(Icons.Default.AddLink, null, modifier = Modifier.size(20.dp)) }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Login with Xtream Codes") },
-                                onClick = {
-                                    showMenu = false
-                                    showXtreamDialog = true
-                                },
-                                leadingIcon = { Icon(Icons.Default.AccountCircle, null, modifier = Modifier.size(20.dp)) }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Add Local Playlist") },
-                                onClick = {
-                                    showMenu = false
-                                    filePickerLauncher.launch("*/*")
-                                },
-                                leadingIcon = { Icon(Icons.Default.UploadFile, null, modifier = Modifier.size(20.dp)) }
-                            )
-                        }
-                    }
+        Column(modifier = Modifier.fillMaxSize()) {
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = Color.Transparent,
+                contentColor = MaterialTheme.colorScheme.primary,
+                divider = {}
+            ) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = { Text("Playlists", fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium) }
                 )
-            },
-            floatingActionButton = {
-                if (playlists.isNotEmpty()) {
-                    Column(horizontalAlignment = Alignment.End) {
-                        AnimatedVisibility(
-                            visible = showFabMenu,
-                            enter = expandVertically() + fadeIn(),
-                            exit = shrinkVertically() + fadeOut()
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.End,
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
-                                modifier = Modifier.padding(bottom = 12.dp)
-                            ) {
-                                // Import Local File Button
-                                SmallFloatingActionButton(
-                                    onClick = { 
-                                        showFabMenu = false
-                                        filePickerLauncher.launch("*/*") 
-                                    },
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                    contentColor = MaterialTheme.colorScheme.primary,
-                                    shape = CircleShape
-                                ) {
-                                    Icon(Icons.Default.UploadFile, contentDescription = "Import File")
-                                }
-                                
-                                // Add Xtream API Button
-                                SmallFloatingActionButton(
-                                    onClick = { 
-                                        showFabMenu = false
-                                        showXtreamDialog = true 
-                                    },
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                    contentColor = MaterialTheme.colorScheme.primary,
-                                    shape = CircleShape
-                                ) {
-                                    Icon(Icons.Default.AccountCircle, contentDescription = "Login with Xtream Codes")
-                                }
-                                
-                                // Add URL Button
-                                SmallFloatingActionButton(
-                                    onClick = { 
-                                        showFabMenu = false
-                                        showAddDialog = true 
-                                    },
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                    contentColor = MaterialTheme.colorScheme.primary,
-                                    shape = CircleShape
-                                ) {
-                                    Icon(Icons.Default.AddLink, contentDescription = "Add Playlist URL")
-                                }
-                            }
-                        }
-                        
-                        FloatingActionButton(
-                            onClick = { showFabMenu = !showFabMenu },
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                            shape = RoundedCornerShape(16.dp)
-                        ) {
-                            Icon(
-                                if (showFabMenu) Icons.Default.Close else Icons.Default.Add,
-                                contentDescription = null,
-                                modifier = Modifier.animateContentSize()
-                            )
-                        }
-                    }
-                }
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = { Text("Favorites", fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium) }
+                )
+                Tab(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    text = { Text("Recent", fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Medium) }
+                )
             }
-        ) { padding ->
-            if (isLoading) {
-                LazyColumn(
-                    modifier = Modifier.padding(padding).fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    userScrollEnabled = false
-                ) {
-                    items(6) {
-                        com.codesrahul.streamplus.ui.components.ShimmerPlaylistItem()
-                    }
-                }
-            } else if (playlists.isEmpty()) {
-                Box(
-                    modifier = Modifier.padding(padding).fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                            modifier = Modifier.size(100.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.PlaylistAdd,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(48.dp),
-                                    tint = MaterialTheme.colorScheme.primary
+
+            Scaffold(
+                modifier = Modifier.weight(1f).nestedScroll(scrollBehavior.nestedScrollConnection),
+                containerColor = Color.Transparent,
+                topBar = {
+                    TopAppBar(
+                        title = {
+                            Column {
+                                Text(
+                                    text = when (selectedTab) {
+                                        0 -> "Playlists"
+                                        1 -> "Favorites"
+                                        else -> "Recently Watched"
+                                    },
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
                                 )
+                                val countText = when (selectedTab) {
+                                    0 -> if (playlists.isNotEmpty()) "${playlists.size} sources" else ""
+                                    1 -> "${favorites.size} channels"
+                                    else -> "${recentlyWatched.size} channels"
+                                }
+                                if (countText.isNotEmpty()) {
+                                    Text(
+                                        text = countText,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent,
+                            titleContentColor = MaterialTheme.colorScheme.onSurface,
+                            actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+                            scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
+                        ),
+                        scrollBehavior = scrollBehavior,
+                        windowInsets = WindowInsets(0.dp),
+                        actions = {
+                            if (selectedTab == 0) {
+                                IconButton(onClick = { showMenu = true }) {
+                                    Icon(Icons.Default.MoreVert, contentDescription = "Menu")
+                                }
+                                DropdownMenu(
+                                    expanded = showMenu,
+                                    onDismissRequest = { showMenu = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Add Playlist URL") },
+                                        onClick = {
+                                            showMenu = false
+                                            showAddDialog = true
+                                        },
+                                        leadingIcon = { Icon(Icons.Default.AddLink, null, modifier = Modifier.size(20.dp)) }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Login with Xtream Codes") },
+                                        onClick = {
+                                            showMenu = false
+                                            showXtreamDialog = true
+                                        },
+                                        leadingIcon = { Icon(Icons.Default.AccountCircle, null, modifier = Modifier.size(20.dp)) }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Add Local Playlist") },
+                                        onClick = {
+                                            showMenu = false
+                                            filePickerLauncher.launch("*/*")
+                                        },
+                                        leadingIcon = { Icon(Icons.Default.UploadFile, null, modifier = Modifier.size(20.dp)) }
+                                    )
+                                }
                             }
                         }
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Text(
-                            text = "No Playlists Found",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Enter a M3U link or import a local file to start streaming your favourite channels.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(32.dp))
-                        Button(
-                            onClick = { showAddDialog = true },
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.height(50.dp).fillMaxWidth(0.7f)
-                        ) {
-                            Icon(Icons.Default.Add, null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Add Playlist", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            } else {
-                val sortedPlaylists = remember(playlists, settingsState.playlistSortOrder) {
-                    val baseSorted = when (settingsState.playlistSortOrder) {
-                        "Name"       -> playlists.sortedBy { it.name.lowercase() }
-                        "Category"   -> playlists.sortedBy { it.icon.lowercase() }
-                        "Added Date" -> playlists.sortedByDescending { it.id }
-                        else         -> playlists
-                    }
-                    baseSorted.sortedByDescending { it.isPinned }
-                }
-                LazyColumn(
-                    modifier = Modifier.padding(padding),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 80.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // --- Global Search Bar ---
-                    item {
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = viewModel::onSearchQueryChange,
-                            modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text("Search all playlists…") },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                            trailingIcon = {
-                                if (searchQuery.isNotEmpty()) {
-                                    IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
-                                        Icon(Icons.Default.Close, contentDescription = "Clear")
+                    )
+                },
+                floatingActionButton = {
+                    if (selectedTab == 0 && playlists.isNotEmpty()) {
+                        Column(horizontalAlignment = Alignment.End) {
+                            AnimatedVisibility(
+                                visible = showFabMenu,
+                                enter = expandVertically() + fadeIn(),
+                                exit = shrinkVertically() + fadeOut()
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.End,
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.padding(bottom = 12.dp)
+                                ) {
+                                    SmallFloatingActionButton(
+                                        onClick = { 
+                                            showFabMenu = false
+                                            filePickerLauncher.launch("*/*") 
+                                        },
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                        contentColor = MaterialTheme.colorScheme.primary,
+                                        shape = CircleShape
+                                    ) {
+                                        Icon(Icons.Default.UploadFile, contentDescription = "Import File")
+                                    }
+                                    
+                                    SmallFloatingActionButton(
+                                        onClick = { 
+                                            showFabMenu = false
+                                            showXtreamDialog = true 
+                                        },
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                        contentColor = MaterialTheme.colorScheme.primary,
+                                        shape = CircleShape
+                                    ) {
+                                        Icon(Icons.Default.AccountCircle, contentDescription = "Login with Xtream Codes")
+                                    }
+                                    
+                                    SmallFloatingActionButton(
+                                        onClick = { 
+                                            showFabMenu = false
+                                            showAddDialog = true 
+                                        },
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                        contentColor = MaterialTheme.colorScheme.primary,
+                                        shape = CircleShape
+                                    ) {
+                                        Icon(Icons.Default.AddLink, contentDescription = "Add Playlist URL")
                                     }
                                 }
-                            },
-                            singleLine = true,
-                            shape = RoundedCornerShape(16.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                            )
-                        )
+                            }
+                            
+                            FloatingActionButton(
+                                onClick = { showFabMenu = !showFabMenu },
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Icon(
+                                    if (showFabMenu) Icons.Default.Close else Icons.Default.Add,
+                                    contentDescription = null,
+                                    modifier = Modifier.animateContentSize()
+                                )
+                            }
+                        }
                     }
-
-                    // --- Search Results ---
-                    if (searchQuery.isNotEmpty()) {
-                        if (isSearching) {
-                            item {
-                                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                                    CircularProgressIndicator()
+                }
+            ) { padding ->
+                Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+                    when (selectedTab) {
+                        0 -> {
+                            if (isLoading) {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    userScrollEnabled = false
+                                ) {
+                                    items(6) {
+                                        com.codesrahul.streamplus.ui.components.ShimmerPlaylistItem()
+                                    }
                                 }
-                            }
-                        } else if (searchResults.isEmpty()) {
-                            item {
-                                Text(
-                                    "No channels found for \"$searchQuery\"",
-                                    modifier = Modifier.fillMaxWidth().padding(32.dp),
-                                    textAlign = TextAlign.Center,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        } else {
-                            item {
-                                Text(
-                                    "${searchResults.size} results",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(vertical = 4.dp)
-                                )
-                            }
-                            itemsIndexed(searchResults, key = { index, it -> "${it.name}|${it.group}|${it.playlistId}|${it.url}|$index" }, contentType = { _, _ -> "channel_search" }) { index, channel ->
-                                SearchResultItem(channel = channel, onClick = {
-                                    val intent = android.content.Intent(context, PlayerActivity::class.java).apply {
-                                        putExtra(PlayerActivity.EXTRA_STREAM_URL, channel.url)
-                                        putExtra(PlayerActivity.EXTRA_STREAM_TITLE, channel.name)
-                                        putExtra(PlayerActivity.EXTRA_CHANNEL_LOGO, channel.logoUrl)
-                                        putExtra(PlayerActivity.EXTRA_USER_AGENT, channel.userAgent)
-                                        putExtra(PlayerActivity.EXTRA_PLAYLIST_ID, channel.playlistId)
-                                        putExtra(PlayerActivity.EXTRA_STREAM_GROUP, channel.group)
-                                        
-                                        // Explicitly pass special headers if present
-                                        channel.headers["Referer"]?.let { putExtra(PlayerActivity.EXTRA_REFERER, it) }
-                                        channel.headers["Cookie"]?.let  { putExtra(PlayerActivity.EXTRA_COOKIE, it) }
-                                        channel.headers["Origin"]?.let  { putExtra(PlayerActivity.EXTRA_ORIGIN, it) }
-                                        
-                                        putExtra(PlayerActivity.EXTRA_HEADERS, java.util.HashMap(channel.headers))
-                                        channel.licenseUrl?.let { putExtra(PlayerActivity.EXTRA_DRM_LICENSE_URL, it) }
-                                        channel.drmScheme?.let { putExtra(PlayerActivity.EXTRA_DRM_SCHEME, it) }
-                                        if (channel.drmHeaders.isNotEmpty()) {
-                                            putExtra(PlayerActivity.EXTRA_DRM_HEADERS, java.util.HashMap(channel.drmHeaders))
+                            } else if (playlists.isEmpty()) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                                            modifier = Modifier.size(100.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Default.PlaylistAdd,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(48.dp),
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.height(24.dp))
+                                        Text(
+                                            text = "No Playlists Found",
+                                            style = MaterialTheme.typography.headlineSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = "Enter a M3U link or import a local file to start streaming your favourite channels.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                            textAlign = TextAlign.Center
+                                        )
+                                        Spacer(modifier = Modifier.height(32.dp))
+                                        Button(
+                                            onClick = { showAddDialog = true },
+                                            shape = RoundedCornerShape(12.dp),
+                                            modifier = Modifier.height(50.dp).fillMaxWidth(0.7f)
+                                        ) {
+                                            Icon(Icons.Default.Add, null)
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text("Add Playlist", fontWeight = FontWeight.Bold)
                                         }
                                     }
-                                    context.startActivity(intent)
-                                })
-                            }
-                        }
-                        return@LazyColumn
-                    }
-
-                    // --- Recently Watched Carousel ---
-                    if (recentlyWatched.isNotEmpty()) {
-                        item {
-                            Column {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(vertical = 4.dp)
-                                ) {
-                                    Icon(Icons.Default.History, contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Recently Watched", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                                 }
-                                Spacer(Modifier.height(8.dp))
-                                LazyRow(
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    contentPadding = PaddingValues(end = 16.dp)
+                            } else {
+                                val sortedPlaylists = remember(playlists, settingsState.playlistSortOrder) {
+                                    val baseSorted = when (settingsState.playlistSortOrder) {
+                                        "Name"       -> playlists.sortedBy { it.name.lowercase() }
+                                        "Category"   -> playlists.sortedBy { it.icon.lowercase() }
+                                        "Added Date" -> playlists.sortedByDescending { it.id }
+                                        else         -> playlists
+                                    }
+                                    baseSorted.sortedByDescending { it.isPinned }
+                                }
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 80.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    itemsIndexed(recentlyWatched, key = { index, it -> "${it.url}_${it.name}_$index" }, contentType = { _, _ -> "channel_recent" }) { index, item ->
-                                            RecentlyWatchedCard(
-                                                entry = item,
-                                                onClick = { onChannelClick(item) }
+                                    item {
+                                        OutlinedTextField(
+                                            value = searchQuery,
+                                            onValueChange = viewModel::onSearchQueryChange,
+                                            modifier = Modifier.fillMaxWidth(),
+                                            placeholder = { Text("Search all playlists…") },
+                                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                                            trailingIcon = {
+                                                if (searchQuery.isNotEmpty()) {
+                                                    IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
+                                                        Icon(Icons.Default.Close, contentDescription = "Clear")
+                                                    }
+                                                }
+                                            },
+                                            singleLine = true,
+                                            shape = RoundedCornerShape(16.dp),
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                                             )
+                                        )
+                                    }
+
+                                    if (searchQuery.isNotEmpty()) {
+                                        if (isSearching) {
+                                            item {
+                                                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                                    CircularProgressIndicator()
+                                                }
+                                            }
+                                        } else if (searchResults.isEmpty()) {
+                                            item {
+                                                Text(
+                                                    "No channels found for \"$searchQuery\"",
+                                                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                                    textAlign = TextAlign.Center,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        } else {
+                                            item {
+                                                Text(
+                                                    "${searchResults.size} results",
+                                                    style = MaterialTheme.typography.labelLarge,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.padding(vertical = 4.dp)
+                                                )
+                                            }
+                                            items(searchResults, key = { "${it.name}|${it.group}|${it.playlistId}|${it.url}" }, contentType = { "channel_search" }) { channel ->
+                                                SearchResultItem(channel = channel, onClick = {
+                                                    val intent = android.content.Intent(context, PlayerActivity::class.java).apply {
+                                                        putExtra(PlayerActivity.EXTRA_STREAM_URL, channel.url)
+                                                        putExtra(PlayerActivity.EXTRA_STREAM_TITLE, channel.name)
+                                                        putExtra(PlayerActivity.EXTRA_CHANNEL_LOGO, channel.logoUrl)
+                                                        putExtra(PlayerActivity.EXTRA_USER_AGENT, channel.userAgent)
+                                                        putExtra(PlayerActivity.EXTRA_PLAYLIST_ID, channel.playlistId)
+                                                        putExtra(PlayerActivity.EXTRA_STREAM_GROUP, channel.group)
+                                                        
+                                                        channel.headers["Referer"]?.let { putExtra(PlayerActivity.EXTRA_REFERER, it) }
+                                                        channel.headers["Cookie"]?.let  { putExtra(PlayerActivity.EXTRA_COOKIE, it) }
+                                                        channel.headers["Origin"]?.let  { putExtra(PlayerActivity.EXTRA_ORIGIN, it) }
+                                                        
+                                                        putExtra(PlayerActivity.EXTRA_HEADERS, java.util.HashMap(channel.headers))
+                                                        channel.licenseUrl?.let { putExtra(PlayerActivity.EXTRA_DRM_LICENSE_URL, it) }
+                                                        channel.drmScheme?.let { putExtra(PlayerActivity.EXTRA_DRM_SCHEME, it) }
+                                                        if (channel.drmHeaders.isNotEmpty()) {
+                                                            putExtra(PlayerActivity.EXTRA_DRM_HEADERS, java.util.HashMap(channel.drmHeaders))
+                                                        }
+                                                    }
+                                                    context.startActivity(intent)
+                                                })
+                                            }
+                                        }
+                                    } else {
+                                        items(sortedPlaylists, key = { it.id }, contentType = { "playlist" }) { playlist ->
+                                            val onPlaylistClickLambda = remember(playlist.id) { { onPlaylistClick(playlist.id) } }
+                                            val onEditLambda = remember(playlist) { { showEditDialog = playlist } }
+                                            val onPinToggleLambda = remember(playlist) { { viewModel.togglePin(playlist) } }
+
+                                            PlaylistItem(
+                                                playlist = playlist,
+                                                settingsState = settingsState,
+                                                onClick = onPlaylistClickLambda,
+                                                onEdit = onEditLambda,
+                                                onPinToggle = onPinToggleLambda
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-
-                    // --- Favourites Carousel ---
-                    if (favorites.isNotEmpty()) {
-                        item {
-                            Column {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(vertical = 4.dp)
+                        1 -> {
+                            if (favorites.isEmpty()) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(
-                                        Icons.Default.Favorite,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        "Favourites",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Spacer(Modifier.weight(1f))
-                                    Text(
-                                        "${favorites.size} channels",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                    )
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                                            modifier = Modifier.size(100.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Default.FavoriteBorder,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(48.dp),
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.height(24.dp))
+                                        Text(
+                                            text = "No Favorites Yet",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = "Mark channels as favorite to quickly access them here.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
                                 }
-                                Spacer(Modifier.height(8.dp))
-                                LazyRow(
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    contentPadding = PaddingValues(end = 16.dp)
+                            } else {
+                                val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+                                val screenWidth = configuration.screenWidthDp
+                                val columns = when {
+                                    screenWidth >= 900  -> 5
+                                    screenWidth >= 600  -> 4
+                                    else -> 3
+                                }
+                                LazyVerticalGrid(
+                                    columns = GridCells.Fixed(columns),
+                                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                                    contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp),
+                                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                                 ) {
-                                    itemsIndexed(favorites, key = { index, it -> "${it.name}|${it.group}|${it.playlistId}_$index" }, contentType = { _, _ -> "channel_fav" }) { index, fav ->
+                                    items(favorites, key = { "${it.name}|${it.group}|${it.playlistId}" }, contentType = { "channel_fav" }) { fav ->
                                         FavouriteChannelCard(
                                             favorite = fav,
+                                            modifier = Modifier.fillMaxWidth(),
                                             onClick = { onChannelClick(fav) },
                                             onRemove = { viewModel.toggleFavorite(fav, fav.playlistId) }
                                         )
@@ -427,21 +478,68 @@ fun PlaylistScreen(
                                 }
                             }
                         }
-                    }
-
-                    // --- Playlist list ---
-                    items(sortedPlaylists, key = { it.id }, contentType = { "playlist" }) { playlist ->
-                        val onPlaylistClickLambda = remember(playlist.id) { { onPlaylistClick(playlist.id) } }
-                        val onEditLambda = remember(playlist) { { showEditDialog = playlist } }
-                        val onPinToggleLambda = remember(playlist) { { viewModel.togglePin(playlist) } }
-
-                        PlaylistItem(
-                            playlist = playlist,
-                            settingsState = settingsState,
-                            onClick = onPlaylistClickLambda,
-                            onEdit = onEditLambda,
-                            onPinToggle = onPinToggleLambda
-                        )
+                        2 -> {
+                            if (recentlyWatched.isEmpty()) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                                            modifier = Modifier.size(100.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Default.History,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(48.dp),
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.height(24.dp))
+                                        Text(
+                                            text = "No Recent Playbacks",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = "Channels you play will appear here for quick access.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            } else {
+                                val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+                                val screenWidth = configuration.screenWidthDp
+                                val columns = when {
+                                    screenWidth >= 900  -> 5
+                                    screenWidth >= 600  -> 4
+                                    else -> 3
+                                }
+                                LazyVerticalGrid(
+                                    columns = GridCells.Fixed(columns),
+                                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                                    contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp),
+                                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    items(recentlyWatched, key = { it.url + it.name }, contentType = { "channel_recent" }) { item ->
+                                        RecentlyWatchedCard(
+                                            entry = item,
+                                            modifier = Modifier.fillMaxWidth(),
+                                            onClick = { onChannelClick(item) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -992,9 +1090,9 @@ fun SearchResultItem(channel: M3UItem, onClick: () -> Unit) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun RecentlyWatchedCard(entry: M3UItem, onClick: () -> Unit) {
+fun RecentlyWatchedCard(entry: M3UItem, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
-        modifier = Modifier.width(140.dp).tvFocusable(cornerRadius = 14.dp).clickable(onClick = onClick),
+        modifier = modifier.tvFocusable(cornerRadius = 14.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
         border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
@@ -1036,7 +1134,7 @@ fun FavouriteChannelCard(
     onRemove: () -> Unit
 ) {
     Surface(
-        modifier = modifier.width(130.dp).tvFocusable(cornerRadius = 14.dp).clickable(onClick = onClick),
+        modifier = modifier.tvFocusable(cornerRadius = 14.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
         border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
