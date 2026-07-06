@@ -937,6 +937,32 @@ fun LiveChannelItem(
                             )
                         }
                     }
+
+                    // Status Badge if not UNKNOWN
+                    if (channel.status != com.codesrahul.streamplus.domain.model.StreamStatus.UNKNOWN) {
+                        val statusColor = when (channel.status) {
+                            com.codesrahul.streamplus.domain.model.StreamStatus.ACTIVE -> Color(0xFF00E676)
+                            com.codesrahul.streamplus.domain.model.StreamStatus.DEAD -> Color(0xFFFF5252)
+                            else -> Color(0xFFFFD740)
+                        }
+                        val statusText = when (channel.status) {
+                            com.codesrahul.streamplus.domain.model.StreamStatus.ACTIVE -> "ONLINE"
+                            com.codesrahul.streamplus.domain.model.StreamStatus.DEAD -> "OFFLINE"
+                            else -> "TIMEOUT"
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = statusColor.copy(alpha = 0.9f)
+                        ) {
+                            Text(
+                                statusText,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (channel.status == com.codesrahul.streamplus.domain.model.StreamStatus.ACTIVE || channel.status == com.codesrahul.streamplus.domain.model.StreamStatus.DEAD) Color.White else Color.Black,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
                 }
             }
 

@@ -30,4 +30,7 @@ interface ChannelDao {
 
     @Query("DELETE FROM channels")
     suspend fun clearAll()
+
+    @Query("UPDATE channels SET status = :status WHERE id = :id")
+    suspend fun updateChannelStatus(id: Int, status: String)
 }

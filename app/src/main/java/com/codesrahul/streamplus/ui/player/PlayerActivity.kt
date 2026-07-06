@@ -36,6 +36,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.type
 import com.codesrahul.streamplus.ui.util.tvFocusable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -607,7 +616,8 @@ fun PlayerScreen(
             setDefaultRequestProperties(finalHeaders)
         }
         
-        val dataSourceFactory = DefaultDataSource.Factory(context, okHttpDataSourceFactory)
+        val baseDataSourceFactory = DefaultDataSource.Factory(context, okHttpDataSourceFactory)
+        val dataSourceFactory = com.codesrahul.streamplus.data.cache.CacheManager.createCacheDataSourceFactory(context, baseDataSourceFactory)
 
         val drmSessionManagerProvider = object : DrmSessionManagerProvider {
             override fun get(mediaItem: MediaItem): DrmSessionManager {
@@ -1263,7 +1273,43 @@ fun PlayerScreen(
 
 
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        try {
+            focusRequester.requestFocus()
+        } catch (e: Exception) {
+            Log.e("PlayerScreen", "Failed to request focus", e)
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .focusRequester(focusRequester)
+            .focusable()
+            .onPreviewKeyEvent { event: KeyEvent ->
+                if (event.type == KeyEventType.KeyDown) {
+                    when (event.key) {
+                        Key.DirectionUp -> {
+                            if (activePlayer.hasPreviousMediaItem()) {
+                                activePlayer.seekToPreviousMediaItem()
+                                activePlayer.play()
+                                true
+                            } else false
+                        }
+                        Key.DirectionDown -> {
+                            if (activePlayer.hasNextMediaItem()) {
+                                activePlayer.seekToNextMediaItem()
+                                activePlayer.play()
+                                true
+                            } else false
+                        }
+                        else -> false
+                    }
+                } else false
+            }
+    ) {
         AndroidView(
             factory = { _ -> // Ignore the view creation context, use the captured activity context
                 // Explicitly wrap the context with the theme to ensure MediaRouteButton works

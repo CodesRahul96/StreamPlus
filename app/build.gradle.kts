@@ -125,6 +125,7 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-smoothstreaming:$media3Version")
     implementation("androidx.media3:media3-datasource-rtmp:$media3Version")
     implementation("androidx.media3:media3-cast:$media3Version")
+    implementation("androidx.media3:media3-session:$media3Version")
     implementation("com.google.android.gms:play-services-cast-framework:21.5.0")
     implementation("androidx.mediarouter:mediarouter:1.7.0")
 

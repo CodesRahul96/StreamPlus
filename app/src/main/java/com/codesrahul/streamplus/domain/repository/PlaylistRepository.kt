@@ -31,4 +31,7 @@ interface PlaylistRepository {
 
     // Xtream Specific
     suspend fun getSeriesInfo(playlistId: Int, seriesId: Int): com.codesrahul.streamplus.data.remote.model.XtreamSeriesInfo?
+
+    // Diagnostics
+    fun startBackgroundDiagnostics(playlistId: Int, channels: List<M3UItem>)
 }

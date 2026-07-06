@@ -189,6 +189,9 @@ class PlaylistDetailViewModel @Inject constructor(
                 
                 val freshChannels = repository.loadPlaylist(url, userAgent, forceRefresh, playlistId)
                 _channels.value = freshChannels
+                if (playlistId != -1) {
+                    repository.startBackgroundDiagnostics(playlistId, freshChannels)
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
                 _error.emit(e.message ?: "Failed to refresh playlist: Network error")

@@ -47,7 +47,8 @@ import androidx.compose.foundation.lazy.items
 @AndroidEntryPoint
 class MusicPlayerActivity : AppCompatActivity() {
 
-    private var exoPlayer: ExoPlayer? = null
+    private var mediaController: androidx.media3.session.MediaController? = null
+    private var controllerFuture: com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.MediaController>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         com.codesrahul.streamplus.util.RefreshRateHelper.enableHighRefreshRate(this)
@@ -75,49 +76,89 @@ class MusicPlayerActivity : AppCompatActivity() {
 
         Log.d("MusicPlayerActivity", "Initializing music player: size=${playlistUris.size}, index=$playlistIndex")
 
-        // Initialize ExoPlayer
-        val player = ExoPlayer.Builder(this).build()
-        exoPlayer = player
+        val sessionToken = androidx.media3.session.SessionToken(
+            this,
+            android.content.ComponentName(this, MusicPlaybackService::class.java)
+        )
+        val future = androidx.media3.session.MediaController.Builder(this, sessionToken).buildAsync()
+        controllerFuture = future
 
-        // Build media items
-        val mediaItems = playlistUris.mapIndexed { idx, url ->
-            val title = playlistTitles.getOrNull(idx) ?: "Track ${idx + 1}"
-            val artist = playlistArtists.getOrNull(idx) ?: "Unknown Artist"
-            val album = playlistAlbums.getOrNull(idx) ?: "Unknown Album"
-            MediaItem.Builder()
-                .setUri(Uri.parse(url))
-                .setMediaId(url)
-                .setMediaMetadata(
-                    androidx.media3.common.MediaMetadata.Builder()
-                        .setTitle(title)
-                        .setArtist(artist)
-                        .setAlbumTitle(album)
-                        .build()
-                )
-                .build()
-        }
+        val isControllerReady = mutableStateOf(false)
 
-        player.setMediaItems(mediaItems)
-        if (playlistIndex >= 0 && playlistIndex < mediaItems.size) {
-            player.seekTo(playlistIndex, 0L)
-        }
-        player.prepare()
-        player.playWhenReady = true
+        future.addListener({
+            try {
+                val controller = future.get()
+                mediaController = controller
+
+                if (controller.mediaItemCount == 0 && playlistUris.isNotEmpty()) {
+                    val mediaItems = playlistUris.mapIndexed { idx, url ->
+                        val title = playlistTitles.getOrNull(idx) ?: "Track ${idx + 1}"
+                        val artist = playlistArtists.getOrNull(idx) ?: "Unknown Artist"
+                        val album = playlistAlbums.getOrNull(idx) ?: "Unknown Album"
+                        MediaItem.Builder()
+                            .setUri(Uri.parse(url))
+                            .setMediaId(url)
+                            .setMediaMetadata(
+                                androidx.media3.common.MediaMetadata.Builder()
+                                    .setTitle(title)
+                                    .setArtist(artist)
+                                    .setAlbumTitle(album)
+                                    .build()
+                            )
+                            .build()
+                    }
+                    controller.setMediaItems(mediaItems)
+                    if (playlistIndex >= 0 && playlistIndex < mediaItems.size) {
+                        controller.seekTo(playlistIndex, 0L)
+                    }
+                    controller.prepare()
+                    controller.playWhenReady = true
+                } else if (playlistIndex >= 0 && playlistIndex < controller.mediaItemCount) {
+                    // If already loaded but user selected a different track from local list
+                    controller.seekTo(playlistIndex, 0L)
+                    controller.playWhenReady = true
+                }
+                isControllerReady.value = true
+            } catch (e: Exception) {
+                Log.e("MusicPlayerActivity", "Failed to get MediaController", e)
+            }
+        }, androidx.core.content.ContextCompat.getMainExecutor(this))
 
         setContent {
             StreamPlusTheme {
-                MusicPlayerScreen(
-                    player = player,
-                    onClose = { finish() }
-                )
+                if (isControllerReady.value) {
+                    mediaController?.let { controller ->
+                        MusicPlayerScreen(
+                            player = controller,
+                            onClose = { finish() }
+                        )
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFF14131B)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = Color(0xFF00E5FF))
+                    }
+                }
             }
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        exoPlayer?.release()
-        exoPlayer = null
+        mediaController?.let { controller ->
+            if (!controller.isPlaying) {
+                val serviceIntent = android.content.Intent(this, MusicPlaybackService::class.java)
+                stopService(serviceIntent)
+            }
+        }
+        controllerFuture?.let { future ->
+            androidx.media3.session.MediaController.releaseFuture(future)
+        }
+        mediaController = null
     }
 
     override fun finish() {
@@ -141,7 +182,7 @@ class MusicPlayerActivity : AppCompatActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MusicPlayerScreen(
-    player: ExoPlayer,
+    player: Player,
     onClose: () -> Unit
 ) {
     var playingTitle by remember { mutableStateOf("Unknown Track") }

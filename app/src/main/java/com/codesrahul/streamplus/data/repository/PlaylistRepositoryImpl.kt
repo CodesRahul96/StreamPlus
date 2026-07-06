@@ -597,4 +597,25 @@ class PlaylistRepositoryImpl @Inject constructor(
         
         xtreamRepository.getSeriesInfo(serverBaseUrl, username, password, seriesId).getOrNull()
     }
+
+    private var diagnosticsJob: kotlinx.coroutines.Job? = null
+
+    override fun startBackgroundDiagnostics(playlistId: Int, channels: List<M3UItem>) {
+        diagnosticsJob?.cancel()
+        diagnosticsJob = repositoryScope.launch {
+            val itemsToCheck = channels.take(100)
+            for (item in itemsToCheck) {
+                if (item.isVod) continue
+                try {
+                    val status = streamChecker.checkStream(item.url, item.headers)
+                    if (status != item.status && item.id != 0) {
+                        channelDao.updateChannelStatus(item.id, status.name)
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("PlaylistRepo", "Failed to check status for channel ${item.name}", e)
+                }
+                kotlinx.coroutines.delay(2500)
+            }
+        }
+    }
 }
