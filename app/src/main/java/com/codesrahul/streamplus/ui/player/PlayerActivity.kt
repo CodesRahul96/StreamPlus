@@ -1143,13 +1143,18 @@ fun PlayerScreen(
                     effectiveScheme.contains("widevine") -> C.WIDEVINE_UUID
                     effectiveScheme.contains("playready") -> C.PLAYREADY_UUID
                     effectiveScheme.contains("clearkey") -> C.CLEARKEY_UUID
+                    resolvedItem.drmHeaders.keys.any { it.equals("X-ClearKey-Data", ignoreCase = true) } -> C.CLEARKEY_UUID
                     else -> {
-                        // Only use Widevine if a license URL is actually present
-                        // Do NOT auto-assign Widevine for .mpd URLs without a license server
+                        val licenseUrlLower = effectiveLicenseUrl?.lowercase() ?: ""
                         when {
-                            !effectiveLicenseUrl.isNullOrBlank() && (effectiveLicenseUrl.contains("proxy/lic/widevine") || effectiveLicenseUrl.contains("lic/wv")) -> C.WIDEVINE_UUID
-                            !effectiveLicenseUrl.isNullOrBlank() -> C.WIDEVINE_UUID // Has a license URL, assume Widevine
-                            else -> null // No license URL → no DRM, play as-is
+                            // ClearKey Header format (KID:KEY) or URL containing "clearkey"
+                            !effectiveLicenseUrl.isNullOrBlank() && (effectiveLicenseUrl.contains(":") && !effectiveLicenseUrl.startsWith("http")) -> C.CLEARKEY_UUID
+                            licenseUrlLower.contains("clearkey") -> C.CLEARKEY_UUID
+                            
+                            // Widevine
+                            licenseUrlLower.contains("widevine") || licenseUrlLower.contains("proxy/lic/widevine") || licenseUrlLower.contains("lic/wv") || licenseUrlLower.contains("proxy/lic") -> C.WIDEVINE_UUID
+                            !effectiveLicenseUrl.isNullOrBlank() -> C.WIDEVINE_UUID // Has a license URL, default to Widevine
+                            else -> null
                         }
                     }
                 }
