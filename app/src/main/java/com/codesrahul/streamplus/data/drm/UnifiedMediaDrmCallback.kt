@@ -104,39 +104,50 @@ class UnifiedMediaDrmCallback(
     }
 
     private fun fetchClearKeyFromUrl(url: String, requestData: ByteArray): ByteArray? {
-        // First try: POST the ExoPlayer key request body (standard W3C ClearKey protocol)
+        // 1. Try GET first (most common for static keys and simple proxies, avoids POST timeouts)
+        try {
+            val reqBuilder = Request.Builder().url(url)
+            allHeaders?.forEach { (k, v) -> reqBuilder.header(k.trim(), v.trim()) }
+            Log.d("UnifiedMediaDrm", "Fetching ClearKey JSON via GET from: $url")
+            okHttpClient.newCall(reqBuilder.get().build()).execute().use { response ->
+                if (response.isSuccessful) {
+                    val responseBody = response.body?.string() ?: ""
+                    Log.d("UnifiedMediaDrm", "ClearKey GET response: $responseBody")
+                    if (isValidClearKeyResponse(responseBody)) {
+                        return responseBody.toByteArray()
+                    }
+                } else {
+                    Log.w("UnifiedMediaDrm", "ClearKey GET failed with code: ${response.code}")
+                }
+                Unit
+            }
+        } catch (e: Exception) {
+            Log.w("UnifiedMediaDrm", "ClearKey GET failed: ${e.message}")
+        }
+
+        // 2. Try POST with request data (standard W3C ClearKey protocol)
         try {
             val reqBuilder = Request.Builder().url(url)
             allHeaders?.forEach { (k, v) -> reqBuilder.header(k.trim(), v.trim()) }
             val body = requestData.toRequestBody("application/json".toMediaType())
             Log.d("UnifiedMediaDrm", "POSTing ClearKey request to: $url (body size: ${requestData.size})")
-            val response = okHttpClient.newCall(reqBuilder.post(body).build()).execute()
-            if (response.isSuccessful) {
-                val responseBody = response.body?.string() ?: ""
-                Log.d("UnifiedMediaDrm", "ClearKey POST response: $responseBody")
-                if (isValidClearKeyResponse(responseBody)) return responseBody.toByteArray()
-            } else {
-                Log.w("UnifiedMediaDrm", "ClearKey POST failed with code: ${response.code}")
+            okHttpClient.newCall(reqBuilder.post(body).build()).execute().use { response ->
+                if (response.isSuccessful) {
+                    val responseBody = response.body?.string() ?: ""
+                    Log.d("UnifiedMediaDrm", "ClearKey POST response: $responseBody")
+                    if (isValidClearKeyResponse(responseBody)) {
+                        return responseBody.toByteArray()
+                    }
+                } else {
+                    Log.w("UnifiedMediaDrm", "ClearKey POST failed with code: ${response.code}")
+                }
+                Unit
             }
         } catch (e: Exception) {
-            Log.w("UnifiedMediaDrm", "ClearKey POST failed, will try GET: ${e.message}")
+            Log.w("UnifiedMediaDrm", "ClearKey POST failed: ${e.message}")
         }
 
-        // Fallback: GET (some servers just serve the JSON directly at the URL)
-        return try {
-            val reqBuilder = Request.Builder().url(url)
-            allHeaders?.forEach { (k, v) -> reqBuilder.header(k.trim(), v.trim()) }
-            Log.d("UnifiedMediaDrm", "Fetching ClearKey JSON via GET from: $url")
-            val response = okHttpClient.newCall(reqBuilder.get().build()).execute()
-            if (response.isSuccessful) {
-                val responseBody = response.body?.string() ?: ""
-                Log.d("UnifiedMediaDrm", "ClearKey GET response: $responseBody")
-                if (isValidClearKeyResponse(responseBody)) responseBody.toByteArray() else null
-            } else null
-        } catch (e: Exception) {
-            Log.w("UnifiedMediaDrm", "Failed to fetch ClearKey JSON via GET: ${e.message}")
-            null
-        }
+        return null
     }
 
     private fun isValidClearKeyResponse(body: String): Boolean {

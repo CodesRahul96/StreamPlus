@@ -617,6 +617,20 @@ fun PlayerScreen(
                 val allHeaders = mutableMapOf<String, String>()
                 allHeaders.putAll(resolvedItem.headers)
                 allHeaders.putAll(resolvedItem.drmHeaders)
+                if (!referer.isNullOrBlank()) {
+                    allHeaders["Referer"] = referer
+                }
+                if (!cookie.isNullOrBlank()) {
+                    allHeaders["Cookie"] = cookie
+                }
+                if (!origin.isNullOrBlank()) {
+                    allHeaders["Origin"] = origin
+                }
+                if (resolvedItem.userAgent.isNotBlank()) {
+                    allHeaders["User-Agent"] = resolvedItem.userAgent
+                } else if (!userAgent.isNullOrBlank()) {
+                    allHeaders["User-Agent"] = userAgent
+                }
                 // Add license request headers from DRM configuration (includes X-ClearKey-Data)
                 allHeaders.putAll(dConf.licenseRequestHeaders)
                 
@@ -1119,10 +1133,10 @@ fun PlayerScreen(
             val hasDrmHeaders = resolvedItem.drmHeaders.isNotEmpty()
 
             // Only enter DRM mode when we have something actionable:
+            //  - an explicit DRM scheme, OR
             //  - an explicit license URL, OR
-            //  - non-empty DRM headers (e.g. X-ClearKey-Data), OR
-            //  - a scheme WITH a license URL (scheme alone without a URL is always an error)
-            val shouldConfigureDrm = !effectiveLicenseUrl.isNullOrBlank() || hasDrmHeaders
+            //  - non-empty DRM headers (e.g. X-ClearKey-Data)
+            val shouldConfigureDrm = effectiveScheme.isNotEmpty() || !effectiveLicenseUrl.isNullOrBlank() || hasDrmHeaders
             
             if (shouldConfigureDrm) {
                 val uuid = when {
