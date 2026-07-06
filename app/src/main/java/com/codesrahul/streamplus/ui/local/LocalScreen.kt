@@ -49,6 +49,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.codesrahul.streamplus.ui.components.PermissionBox
 import com.codesrahul.streamplus.ui.components.PremiumBackground
+import com.codesrahul.streamplus.ui.util.glassmorphic
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -102,6 +103,19 @@ fun LocalScreen() {
     val selectedFolder by viewModel.selectedFolder.collectAsState()
 
     var showSettings by remember { mutableStateOf(false) }
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshAll()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     PermissionBox(
         permissionState = permissionState,
@@ -173,7 +187,7 @@ fun LocalMediaGrid(
         contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            viewModel.refreshFolders()
+            viewModel.refreshAll()
         }
     }
 
@@ -353,7 +367,7 @@ fun LocalMediaList(
         contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            viewModel.selectFolder(folderName)
+            viewModel.refreshAll()
         }
     }
 
@@ -373,7 +387,7 @@ fun LocalMediaList(
                         }
                     }
                     videoToDelete = null
-                    viewModel.selectFolder(folderName)
+                    viewModel.refreshAll()
                 }) { Text(stringResource(R.string.delete_menu_item), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
@@ -405,7 +419,7 @@ fun LocalMediaList(
                         }
                     }
                     videoToRename = null
-                    viewModel.selectFolder(folderName)
+                    viewModel.refreshAll()
                 }) { Text(stringResource(R.string.rename_menu_item)) }
             },
             dismissButton = {
@@ -581,10 +595,11 @@ fun VideoPosterItem(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(if (video.mediaType == MediaType.VIDEO) 0.72f else 1f), // Square for music
+                    .aspectRatio(if (video.mediaType == MediaType.VIDEO) 0.72f else 1f) // Square for music
+                    .glassmorphic(cornerRadius = 18.dp),
                 shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     if (settings.showVideoThumbnail) {
@@ -698,100 +713,110 @@ fun VideoPosterItem(
         }
     } else {
         // List Layout
-        Row(
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(vertical = 4.dp)
+                .glassmorphic(cornerRadius = 16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
-            Box(
+            Row(
                 modifier = Modifier
-                    .size(100.dp, 60.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .fillMaxWidth()
+                    .clickable(onClick = onClick)
+                    .padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (settings.showVideoThumbnail) {
-                    AsyncImage(
-                        model = video.uri,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    val placeholderIcon = if (video.mediaType == MediaType.VIDEO) Icons.Default.VideoFile else Icons.Default.MusicNote
-                    Icon(placeholderIcon, null, modifier = Modifier.align(Alignment.Center).size(24.dp), tint = MaterialTheme.colorScheme.primary.copy(0.4f))
+                Box(
+                    modifier = Modifier
+                        .size(100.dp, 60.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    if (settings.showVideoThumbnail) {
+                        AsyncImage(
+                            model = video.uri,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        val placeholderIcon = if (video.mediaType == MediaType.VIDEO) Icons.Default.VideoFile else Icons.Default.MusicNote
+                        Icon(placeholderIcon, null, modifier = Modifier.align(Alignment.Center).size(24.dp), tint = MaterialTheme.colorScheme.primary.copy(0.4f))
+                    }
+                    
+                    if (settings.showVideoDuration) {
+                        Surface(
+                            modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
+                            color = Color.Black.copy(alpha = 0.7f),
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                text = formatDuration(video.duration),
+                                color = Color.White,
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
                 }
                 
-                if (settings.showVideoDuration) {
-                    Surface(
-                        modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
-                        color = Color.Black.copy(alpha = 0.7f),
-                        shape = RoundedCornerShape(4.dp)
-                    ) {
-                        Text(
-                            text = formatDuration(video.duration),
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                        )
+                Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+                    Text(
+                        text = video.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (video.mediaType == MediaType.AUDIO) {
+                            Text(
+                                text = video.artist ?: stringResource(R.string.unknown_artist),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(" • ", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                        }
+                        
+                        if (settings.showVideoSize) {
+                            Text(
+                                text = formatSize(video.size),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        
+                        if (settings.showVideoSize && settings.showVideoResolution && video.mediaType == MediaType.VIDEO) {
+                            Text(" • ", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                        }
+                        
+                        if (settings.showVideoResolution && video.mediaType == MediaType.VIDEO) {
+                            Text(
+                                text = "HD", // Generic HD for now
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
-            }
-            
-            Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
-                Text(
-                    text = video.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (video.mediaType == MediaType.AUDIO) {
-                        Text(
-                            text = video.artist ?: stringResource(R.string.unknown_artist),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(" • ", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-                    }
-                    
-                    if (settings.showVideoSize) {
-                        Text(
-                            text = formatSize(video.size),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    
-                    if (settings.showVideoSize && settings.showVideoResolution && video.mediaType == MediaType.VIDEO) {
-                        Text(" • ", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-                    }
-                    
-                    if (settings.showVideoResolution && video.mediaType == MediaType.VIDEO) {
-                        Text(
-                            text = "HD", // Generic HD for now
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(Icons.Default.MoreVert, null)
                 }
-            }
-            
-            IconButton(onClick = { showMenu = true }) {
-                Icon(Icons.Default.MoreVert, null)
-            }
-            MaterialTheme(
-                colorScheme = MaterialTheme.colorScheme.copy(
-                    surface = MaterialTheme.colorScheme.surface.copy(alpha = 1.0f)
-                )
-            ) {
-                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                    DropdownMenuItem(text = { Text(stringResource(R.string.rename_menu_item)) }, onClick = { showMenu = false; onRename() })
-                    DropdownMenuItem(text = { Text(stringResource(R.string.delete_menu_item), color = MaterialTheme.colorScheme.error) }, onClick = { showMenu = false; onDelete() })
+                MaterialTheme(
+                    colorScheme = MaterialTheme.colorScheme.copy(
+                        surface = MaterialTheme.colorScheme.surface.copy(alpha = 1.0f)
+                    )
+                ) {
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(text = { Text(stringResource(R.string.rename_menu_item)) }, onClick = { showMenu = false; onRename() })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.delete_menu_item), color = MaterialTheme.colorScheme.error) }, onClick = { showMenu = false; onDelete() })
+                    }
                 }
             }
         }
@@ -817,13 +842,14 @@ fun LocalFolderItem(
                 .combinedClickable(
                     onClick = onClick,
                     onLongClick = onLongClick
-                ),
+                )
+                .glassmorphic(cornerRadius = 20.dp),
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(
-                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer 
-                                 else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
+                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) 
+                                 else Color.Transparent
             ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column {
                 Box(
@@ -911,46 +937,59 @@ fun LocalFolderItem(
         }
     } else {
         // List Layout
-        Row(
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-                .padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(vertical = 4.dp)
+                .glassmorphic(cornerRadius = 16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) 
+                                 else Color.Transparent
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
-            Box(
+            Row(
                 modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(0.1f)),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (folder.firstMediaUri != null) {
-                    AsyncImage(model = folder.firstMediaUri, contentDescription = null, contentScale = ContentScale.Crop)
-                } else {
-                    val folderIcon = if (folder.mediaType == MediaType.VIDEO) Icons.Default.Folder else Icons.Default.LibraryMusic
-                    Icon(folderIcon, null, tint = MaterialTheme.colorScheme.primary)
-                }
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(folder.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                if (settings.showFolderPath) {
-                    val pathLabel = if (folder.mediaType == MediaType.VIDEO) "Videos" else "Music"
-                    Text("/sdcard/$pathLabel/${folder.name}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            if (settings.showFolderCount) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = CircleShape
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(0.1f)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        folder.count.toString(), 
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    if (folder.firstMediaUri != null) {
+                        AsyncImage(model = folder.firstMediaUri, contentDescription = null, contentScale = ContentScale.Crop)
+                    } else {
+                        val folderIcon = if (folder.mediaType == MediaType.VIDEO) Icons.Default.Folder else Icons.Default.LibraryMusic
+                        Icon(folderIcon, null, tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(folder.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                    if (settings.showFolderPath) {
+                        val pathLabel = if (folder.mediaType == MediaType.VIDEO) "Videos" else "Music"
+                        Text("/sdcard/$pathLabel/${folder.name}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                if (settings.showFolderCount) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = CircleShape
+                    ) {
+                        Text(
+                            folder.count.toString(), 
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }

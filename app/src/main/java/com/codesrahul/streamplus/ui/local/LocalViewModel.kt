@@ -58,6 +58,18 @@ class LocalViewModel @Inject constructor(
         }
     }
 
+    fun refreshAll() {
+        viewModelScope.launch {
+            val s = settingsRepository.settings.first()
+            val type = _mediaType.value
+            refreshFolders(s, type)
+            val currentFolder = _selectedFolder.value
+            if (currentFolder != null) {
+                loadVideos(currentFolder, s, type)
+            }
+        }
+    }
+
     fun setMediaType(type: MediaType) {
         _selectedFolder.value = null
         _mediaType.value = type
