@@ -23,8 +23,8 @@ class PlaylistViewModel @Inject constructor(
     private val historyRepository: HistoryRepository
 ) : ViewModel() {
 
-    val playlists = repository.getAllPlaylists()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val playlists: StateFlow<List<PlaylistEntity>?> = repository.getAllPlaylists()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val favorites = repository.getAllFavorites()
         .map { list -> 
@@ -99,7 +99,7 @@ class PlaylistViewModel @Inject constructor(
                 }
         }
         viewModelScope.launch {
-            playlists.collect { _isLoading.value = false }
+            playlists.filterNotNull().collect { _isLoading.value = false }
         }
     }
 

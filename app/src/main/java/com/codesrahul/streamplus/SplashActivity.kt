@@ -49,7 +49,16 @@ import com.codesrahul.streamplus.ui.player.PlayerActivity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+import kotlinx.coroutines.flow.firstOrNull
+
+@AndroidEntryPoint
 class SplashActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var playlistRepository: com.codesrahul.streamplus.domain.repository.PlaylistRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Install Android 12+ Splash Screen before super.onCreate
         installSplashScreen()
@@ -62,6 +71,13 @@ class SplashActivity : ComponentActivity() {
                 val pulseScale = remember { Animatable(1f) }
 
                 LaunchedEffect(Unit) {
+                    val dbJob = launch {
+                        try {
+                            playlistRepository.getAllPlaylists().firstOrNull()
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
                     launch {
                         scale.animateTo(
                             targetValue = 1f,
@@ -87,6 +103,13 @@ class SplashActivity : ComponentActivity() {
 
                     // Reduced delay to keep app launch extremely snappy and responsive
                     delay(700L)
+                    
+                    // Wait for the background playlist preload to complete
+                    try {
+                        dbJob.join()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
 
                     val splashAction = intent?.action
                     if (splashAction == "com.codesrahul.streamplus.ACTION_PLAY_LAST") {

@@ -66,7 +66,8 @@ fun PlaylistScreen(
     var showXtreamDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf<PlaylistEntity?>(null) }
     var playlistToDelete by remember { mutableStateOf<PlaylistEntity?>(null) }
-    val playlists by viewModel.playlists.collectAsState()
+    val playlistsState by viewModel.playlists.collectAsState()
+    val playlists = playlistsState ?: emptyList()
     val favorites by viewModel.favorites.collectAsState()
     val recentlyWatched by viewModel.recentlyWatched.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -336,7 +337,7 @@ fun PlaylistScreen(
                 Box(modifier = Modifier.padding(padding).fillMaxSize()) {
                     when (selectedTab) {
                         0 -> {
-                            if (isLoading) {
+                            if (isLoading || playlistsState == null) {
                                 LazyColumn(
                                     modifier = Modifier.fillMaxSize(),
                                     contentPadding = PaddingValues(16.dp),
