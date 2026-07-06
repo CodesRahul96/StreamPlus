@@ -673,12 +673,14 @@ fun PlayerScreen(
         }
 
         val bufferMs = settingsState.networkBufferSize * 1000
+        val playbackStartMs = if (bufferMs < 1000) 500 else 1000
+        val rebufferMs = if (bufferMs < 2000) 1000 else 2000
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
             .setBufferDurationsMs(
                 bufferMs, // Min buffer
                 (bufferMs * 2.5).toInt(), // Max buffer
-                2_500, // Buffer for playback start
-                8_000  // Buffer for rebuffer (Increased for stability)
+                playbackStartMs, // Buffer for playback start
+                rebufferMs  // Buffer for rebuffer
             )
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()

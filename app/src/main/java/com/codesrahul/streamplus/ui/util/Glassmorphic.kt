@@ -12,15 +12,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
+import androidx.compose.runtime.Composable
+
 /**
  * A custom modifier to apply a premium glassmorphic frosted-glass appearance.
  * To keep child texts and icons crisp and readable, it uses a translucent 
  * background fill and vertical gradient border highlights, rather than blurring the content layer.
  */
+@Composable
 fun Modifier.glassmorphic(
     cornerRadius: Dp = 16.dp,
     borderWidth: Dp = 1.dp
-): Modifier = composed {
+): Modifier {
     val primaryColor = MaterialTheme.colorScheme.primary
     val surfaceColor = MaterialTheme.colorScheme.surface
     val isPitchBlack = surfaceColor == Color(0xFF000000)
@@ -50,7 +53,7 @@ fun Modifier.glassmorphic(
         Color.Black.copy(alpha = 0.08f)
     }
 
-    Modifier
+    return this
         .clip(RoundedCornerShape(cornerRadius))
         .background(backgroundColor, RoundedCornerShape(cornerRadius))
         .border(
