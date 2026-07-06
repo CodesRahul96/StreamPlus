@@ -117,7 +117,11 @@ class PlaylistDetailViewModel @Inject constructor(
                             if (shouldForce) sessionRefreshedPlaylists.add(entity.id)
                             
                             loadChannels(entity.url, entity.userAgent, forceRefresh = shouldForce, playlistId = entity.id)
-                            entity.epgUrl?.let { epgManager.loadEPG(it) }
+                            entity.epgUrl?.let { epgUrl ->
+                                viewModelScope.launch {
+                                    epgManager.loadEPG(epgUrl)
+                                }
+                            }
                         }
                     }
                 }

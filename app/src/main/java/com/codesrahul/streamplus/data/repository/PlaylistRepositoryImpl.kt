@@ -27,6 +27,8 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.firstOrNull
 import java.io.File
 import java.io.InputStream
 import javax.inject.Inject
@@ -45,6 +47,7 @@ class PlaylistRepositoryImpl @Inject constructor(
 ) : PlaylistRepository {
 
     private val playlistCache = java.util.concurrent.ConcurrentHashMap<String, List<M3UItem>>()
+    private val repositoryScope = kotlinx.coroutines.CoroutineScope(Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
 
     private val resolver = CompositeStreamResolver(listOf(HeaderResolver(), DrmResolver()))
 
@@ -416,11 +419,15 @@ class PlaylistRepositoryImpl @Inject constructor(
                 playlistDao.updateEpgUrl(actualPlaylistId, detectedEpgUrl)
             }
             // Always load EPG on playlist refresh to keep guide data fresh
-            epgManager.loadEPG(detectedEpgUrl)
+            repositoryScope.launch {
+                epgManager.loadEPG(detectedEpgUrl)
+            }
         } else {
             // Load previously saved EPG URL if a new one wasn't found in headers
             playlistEntity?.epgUrl?.let { savedUrl ->
-                epgManager.loadEPG(savedUrl)
+                repositoryScope.launch {
+                    epgManager.loadEPG(savedUrl)
+                }
             }
         }
 
@@ -496,7 +503,24 @@ class PlaylistRepositoryImpl @Inject constructor(
     override fun getPlaylist(id: Int) = playlistDao.getPlaylist(id)
 
     override suspend fun insertPlaylist(playlist: com.codesrahul.streamplus.data.local.PlaylistEntity) {
-        playlistDao.insertPlaylist(playlist)
+        withContext(Dispatchers.IO) {
+            if (playlist.id != 0) {
+                val oldPlaylist = playlistDao.getPlaylist(playlist.id).firstOrNull()
+                if (oldPlaylist != null) {
+                    val urlChanged = oldPlaylist.url != playlist.url ||
+                            oldPlaylist.serverUrl != playlist.serverUrl ||
+                            oldPlaylist.username != playlist.username ||
+                            oldPlaylist.password != playlist.password
+                    
+                    if (urlChanged) {
+                        channelDao.deleteChannelsByPlaylist(playlist.id)
+                        playlistCache.remove(oldPlaylist.url)
+                        playlistCache.remove(playlist.url)
+                    }
+                }
+            }
+            playlistDao.insertPlaylist(playlist)
+        }
     }
 
     override suspend fun deletePlaylist(playlist: com.codesrahul.streamplus.data.local.PlaylistEntity) {

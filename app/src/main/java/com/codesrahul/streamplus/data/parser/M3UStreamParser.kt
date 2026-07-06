@@ -232,10 +232,66 @@ class M3UStreamParser : StreamParser {
     }
 
     private fun parseProps(input: String, onProp: (String, String) -> Unit) {
-        PROP_REGEX.findAll(input).forEach { match ->
-            val key = match.groupValues[1].ifEmpty { match.groupValues[3] }
-            val value = match.groupValues[2].ifEmpty { match.groupValues[4] }
-            onProp(key, value)
+        var i = 0
+        val len = input.length
+        while (i < len) {
+            // Skip whitespace
+            while (i < len && input[i].isWhitespace()) {
+                i++
+            }
+            if (i >= len) break
+            
+            // Find key name
+            val keyStart = i
+            while (i < len && input[i] != '=' && !input[i].isWhitespace()) {
+                i++
+            }
+            val keyEnd = i
+            if (keyStart == keyEnd) {
+                i++
+                continue
+            }
+            val key = input.substring(keyStart, keyEnd)
+            
+            // Skip whitespace to '='
+            while (i < len && input[i].isWhitespace()) {
+                i++
+            }
+            
+            if (i < len && input[i] == '=') {
+                i++ // Skip '='
+                // Skip whitespace after '='
+                while (i < len && input[i].isWhitespace()) {
+                    i++
+                }
+                if (i >= len) break
+                
+                if (input[i] == '"') {
+                    i++ // Skip '"'
+                    val valStart = i
+                    while (i < len && input[i] != '"') {
+                        if (input[i] == '\\' && i + 1 < len && input[i + 1] == '"') {
+                            i += 2
+                        } else {
+                            i++
+                        }
+                    }
+                    val valEnd = i
+                    val value = input.substring(valStart, valEnd).replace("\\\"", "\"")
+                    if (i < len) i++ // Skip closing '"'
+                    onProp(key, value)
+                } else {
+                    val valStart = i
+                    while (i < len && !input[i].isWhitespace() && input[i] != ',') {
+                        i++
+                    }
+                    val valEnd = i
+                    val value = input.substring(valStart, valEnd)
+                    onProp(key, value)
+                }
+            } else {
+                onProp(key, "")
+            }
         }
     }
 

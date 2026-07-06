@@ -190,6 +190,7 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        com.codesrahul.streamplus.util.RefreshRateHelper.enableHighRefreshRate(this)
         if (android.os.Build.VERSION.SDK_INT >= 34) {
             overrideActivityTransition(
                 android.app.Activity.OVERRIDE_TRANSITION_OPEN,
