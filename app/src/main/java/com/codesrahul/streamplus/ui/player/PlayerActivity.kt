@@ -420,6 +420,7 @@ fun PlayerScreen(
     }
     val scope = rememberCoroutineScope()
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val playerHolder = remember { PlayerHolder(context, okHttpClientProvider) }
     val settingsState by settingsRepository.settings.collectAsState(initial = com.codesrahul.streamplus.data.settings.AppSettings())
     
     // Audio Boost State
@@ -465,7 +466,7 @@ fun PlayerScreen(
     
     // Lock State
     var isLocked by remember { mutableStateOf(false) }
-    var isControlsVisible by remember { mutableStateOf(true) }
+    var isControlsVisible by remember { mutableStateOf(false) }
     
     // Aspect Ratio State Tracking
     var sessionResizeMode by remember { mutableStateOf<Int?>(null) }
@@ -702,10 +703,40 @@ fun PlayerScreen(
         )
         val preferredLang = audioLanguagesMap[settingsState.defaultAudioLanguage] ?: settingsState.defaultAudioLanguage.takeIf { it != "Auto" }?.lowercase()
 
-        val player = ExoPlayer.Builder(context, renderersFactory)
-            .setMediaSourceFactory(mediaSourceFactory)
-            .setLoadControl(loadControl)
-            .build()
+        val player = playerHolder.getOrCreate(
+            mediaSourceFactory = mediaSourceFactory,
+            loadControl = loadControl,
+            renderersFactory = renderersFactory,
+            onReleasePlayer = { oldPlayer ->
+                val pos = try { oldPlayer.currentPosition } catch (e: Exception) { 0L }
+                val dur = try { oldPlayer.duration } catch (e: Exception) { 0L }
+                if (pos > 5000 && resolvedItem.url.isNotBlank()) {
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            historyRepository.saveProgress(
+                                url = resolvedItem.url,
+                                name = resolvedItem.name,
+                                logo = resolvedItem.logoUrl,
+                                group = groupTitle,
+                                playlistId = playlistId,
+                                userAgent = resolvedItem.userAgent,
+                                headers = resolvedItem.headers,
+                                cookie = cookie,
+                                referer = referer,
+                                origin = origin,
+                                licenseUrl = resolvedItem.licenseUrl,
+                                drmScheme = resolvedItem.drmScheme,
+                                drmHeaders = resolvedItem.drmHeaders,
+                                position = pos,
+                                duration = if (dur == androidx.media3.common.C.TIME_UNSET || dur < 0) 0L else dur
+                            )
+                        } catch (e: Exception) {
+                            Log.e("PlayerScreen", "Failed to save final progress in holder", e)
+                        }
+                    }
+                }
+            }
+        )
             
         player.setTrackSelectionParameters(
             player.trackSelectionParameters.buildUpon()
@@ -1025,39 +1056,38 @@ fun PlayerScreen(
         }
     }
 
-    DisposableEffect(resolvedItem, exoPlayer) {
+    DisposableEffect(playerHolder) {
         onDispose {
-            // Save on exit
-            val pos = try { exoPlayer.currentPosition } catch (e: Exception) { 0L }
-            val dur = try { exoPlayer.duration } catch (e: Exception) { 0L }
-            
-            if (pos > 5000 && resolvedItem.url.isNotBlank()) {
-                 // Use a dedicated scope that survives the composable disposal
-                 CoroutineScope(Dispatchers.IO).launch {
-                    try {
-                        historyRepository.saveProgress(
-                            url = resolvedItem.url,
-                            name = resolvedItem.name,
-                            logo = resolvedItem.logoUrl,
-                            group = groupTitle,
-                            playlistId = playlistId,
-                            userAgent = resolvedItem.userAgent,
-                            headers = resolvedItem.headers,
-                            cookie = cookie,
-                            referer = referer,
-                            origin = origin,
-                            licenseUrl = resolvedItem.licenseUrl,
-                            drmScheme = resolvedItem.drmScheme,
-                            drmHeaders = resolvedItem.drmHeaders,
-                            position = pos,
-                            duration = if (dur == C.TIME_UNSET || dur < 0) 0L else dur
-                        )
-                    } catch (e: Exception) {
-                        Log.e("PlayerScreen", "Failed to save final progress", e)
-                    }
+            playerHolder.player?.let { activeExo ->
+                val pos = try { activeExo.currentPosition } catch (e: Exception) { 0L }
+                val dur = try { activeExo.duration } catch (e: Exception) { 0L }
+                if (pos > 5000 && resolvedItem.url.isNotBlank()) {
+                     CoroutineScope(Dispatchers.IO).launch {
+                         try {
+                             historyRepository.saveProgress(
+                                 url = resolvedItem.url,
+                                 name = resolvedItem.name,
+                                 logo = resolvedItem.logoUrl,
+                                 group = groupTitle,
+                                 playlistId = playlistId,
+                                 userAgent = resolvedItem.userAgent,
+                                 headers = resolvedItem.headers,
+                                 cookie = cookie,
+                                 referer = referer,
+                                 origin = origin,
+                                 licenseUrl = resolvedItem.licenseUrl,
+                                 drmScheme = resolvedItem.drmScheme,
+                                 drmHeaders = resolvedItem.drmHeaders,
+                                 position = pos,
+                                 duration = if (dur == C.TIME_UNSET || dur < 0) 0L else dur
+                             )
+                         } catch (e: Exception) {
+                             Log.e("PlayerScreen", "Failed to save final progress on dispose", e)
+                         }
+                     }
                 }
             }
-            try { exoPlayer.release() } catch (e: Exception) {}
+            playerHolder.release()
         }
     }
 
@@ -1220,6 +1250,14 @@ fun PlayerScreen(
                 val playerView = view.findViewById<androidx.media3.ui.PlayerView>(com.codesrahul.streamplus.R.id.player_view)
                 playerView.player = exoPlayer
                 playerView.keepScreenOn = true
+
+                // Add a listener to sync our Compose state with the actual ExoPlayer controller visibility
+                playerView.setControllerVisibilityListener(androidx.media3.ui.PlayerView.ControllerVisibilityListener { visibility ->
+                    android.util.Log.d("PlayerScreen", "ControllerVisibilityListener: visibility = $visibility, isLocked = $isLocked")
+                    if (!isLocked) {
+                        isControlsVisible = (visibility == android.view.View.VISIBLE)
+                    }
+                })
 
                 
                 val detector = android.view.GestureDetector(context, object : android.view.GestureDetector.SimpleOnGestureListener() {
@@ -1395,11 +1433,6 @@ fun PlayerScreen(
                 }
                 playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.btn_pip)?.setOnClickListener { onEnterPip() }
                 
-                // Add a listener to sync our Compose state with the actual ExoPlayer controller visibility
-                playerView.setControllerVisibilityListener(androidx.media3.ui.PlayerView.ControllerVisibilityListener { visibility ->
-                    isControlsVisible = (visibility == android.view.View.VISIBLE)
-                })
-
                 // Hide controls in PiP and Lock Mode
                 playerView.useController = !isInPip && !isLocked
                 if (isInPip || isLocked) playerView.hideController()
@@ -1866,6 +1899,53 @@ private fun getFriendlyLanguageName(langCode: String?): String {
         "ja", "jpn" -> "Japanese"
         "pt", "por" -> "Portuguese"
         else -> langCode.uppercase()
+    }
+}
+
+private class PlayerHolder(
+    private val context: android.content.Context,
+    private val okHttpClientProvider: javax.inject.Provider<okhttp3.OkHttpClient>
+) {
+    var player: androidx.media3.exoplayer.ExoPlayer? = null
+        private set
+
+    fun getOrCreate(
+        mediaSourceFactory: androidx.media3.exoplayer.source.MediaSourceFactory,
+        loadControl: androidx.media3.exoplayer.LoadControl,
+        renderersFactory: androidx.media3.exoplayer.RenderersFactory,
+        onReleasePlayer: (androidx.media3.exoplayer.ExoPlayer) -> Unit
+    ): androidx.media3.exoplayer.ExoPlayer {
+        player?.let {
+            try {
+                onReleasePlayer(it)
+            } catch (e: Exception) {
+                android.util.Log.e("PlayerHolder", "Error in onReleasePlayer callback", e)
+            }
+            try {
+                it.release()
+            } catch (e: Exception) {
+                android.util.Log.e("PlayerHolder", "Error releasing old player", e)
+            }
+        }
+        
+        val newPlayer = androidx.media3.exoplayer.ExoPlayer.Builder(context, renderersFactory)
+            .setMediaSourceFactory(mediaSourceFactory)
+            .setLoadControl(loadControl)
+            .build()
+            
+        player = newPlayer
+        return newPlayer
+    }
+
+    fun release() {
+        player?.let {
+            try {
+                it.release()
+            } catch (e: Exception) {
+                android.util.Log.e("PlayerHolder", "Error releasing player", e)
+            }
+        }
+        player = null
     }
 }
 

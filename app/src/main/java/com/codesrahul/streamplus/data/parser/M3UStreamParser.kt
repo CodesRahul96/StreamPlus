@@ -76,7 +76,6 @@ class M3UStreamParser : StreamParser {
                 epgId = currentEpgId,
                 isVod = currentDuration > 0 || isVodGroup(sanitizedGroup)
             ))
-            Log.d("M3UParser", "Created item: $sanitizedName, UA=${mergedHeaders["User-Agent"]}, DRM Scheme=${detectedScheme}")
         }
 
         reader.useLines { lines ->
@@ -133,9 +132,7 @@ class M3UStreamParser : StreamParser {
                     currentGroup = trimmed.substringAfter("#EXTGRP:").trim()
                 } else if (trimmed.startsWith("#EXTVLCOPT:") || trimmed.startsWith("# EXTVLCOPT:")) {
                     val opt = trimmed.substringAfter("VLCOPT:")
-                    Log.d("M3UParser", "Parsing EXTVLCOPT: $opt")
                     parseOption(opt, currentHeaders)
-                    Log.d("M3UParser", "Current headers after EXTVLCOPT: $currentHeaders")
                 } else if (trimmed.startsWith("#EXT-X-KEY:") || trimmed.startsWith("# EXT-X-KEY:")) {
                      val info = trimmed.substringAfter("KEY:")
                      parseProps(info) { k, v ->
@@ -223,6 +220,7 @@ class M3UStreamParser : StreamParser {
             }
         }
         
+        Log.d("M3UParser", "Parsed ${items.size} channels from $sourceUrl")
         return items
     }
 
@@ -262,7 +260,6 @@ class M3UStreamParser : StreamParser {
                 // Known mappings
                 key == "http-user-agent" || key == "user-agent" -> {
                     headers["User-Agent"] = value
-                    Log.d("M3UParser", ">>> FOUND User-Agent in EXTVLCOPT: $value")
                 }
                 key == "http-referrer" || key == "referrer" -> headers["Referer"] = value
                 key == "http-origin" || key == "origin" -> headers["Origin"] = value

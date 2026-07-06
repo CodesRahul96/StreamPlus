@@ -204,6 +204,7 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                                 ),
                                 colors = CardDefaults.cardColors(
                                     containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
+                                                     else if (MaterialTheme.colorScheme.surface == Color(0xFF000000)) MaterialTheme.colorScheme.surface
                                                      else MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
                                 )
                             ) {
@@ -313,6 +314,7 @@ private fun ThemeCard(
         ),
         colors = CardDefaults.cardColors(
             containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f) 
+                             else if (MaterialTheme.colorScheme.surface == Color(0xFF000000)) MaterialTheme.colorScheme.surface
                              else MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
         )
     ) {
@@ -414,7 +416,10 @@ fun ThemeModeDialog(currentMode: ThemeMode, onSelect: (ThemeMode) -> Unit, onDis
         ) {
             Column(
                 modifier = Modifier
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
+                    .background(
+                        if (MaterialTheme.colorScheme.surface == Color(0xFF000000)) MaterialTheme.colorScheme.surface
+                        else MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+                    )
                     .padding(24.dp)
             ) {
                 Text(
@@ -638,7 +643,10 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             ) {
                 Column(
                     modifier = Modifier
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
+                        .background(
+                            if (MaterialTheme.colorScheme.surface == Color(0xFF000000)) MaterialTheme.colorScheme.surface
+                            else MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+                        )
                         .padding(24.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
@@ -748,7 +756,10 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             ) {
                 Column(
                     modifier = Modifier
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
+                        .background(
+                            if (MaterialTheme.colorScheme.surface == Color(0xFF000000)) MaterialTheme.colorScheme.surface
+                            else MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+                        )
                         .padding(24.dp)
                 ) {
                     Text("Backup & Restore", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)

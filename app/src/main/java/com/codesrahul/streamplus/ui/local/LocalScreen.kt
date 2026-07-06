@@ -357,9 +357,11 @@ fun LocalMediaList(
         }
     }
 
+    val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
     if (videoToDelete != null) {
         AlertDialog(
             onDismissRequest = { videoToDelete = null },
+            tonalElevation = if (isPitchBlack) 0.dp else AlertDialogDefaults.TonalElevation,
             title = { Text(if (currentType == MediaType.VIDEO) stringResource(R.string.delete_video_title) else stringResource(R.string.delete_song_title)) },
             text = { Text(stringResource(R.string.delete_media_confirm)) },
             confirmButton = {
@@ -383,6 +385,7 @@ fun LocalMediaList(
     if (videoToRename != null) {
         AlertDialog(
             onDismissRequest = { videoToRename = null },
+            tonalElevation = if (isPitchBlack) 0.dp else AlertDialogDefaults.TonalElevation,
             title = { Text(if (currentType == MediaType.VIDEO) stringResource(R.string.rename_video_title) else stringResource(R.string.rename_song_title)) },
             text = {
                 OutlinedTextField(
@@ -633,20 +636,26 @@ fun VideoPosterItem(
                                 Icon(Icons.Filled.MoreVert, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
                         }
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
+                        MaterialTheme(
+                            colorScheme = MaterialTheme.colorScheme.copy(
+                                surface = MaterialTheme.colorScheme.surface.copy(alpha = 1.0f)
+                            )
                         ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.rename_menu_item)) },
-                                leadingIcon = { Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp)) },
-                                onClick = { showMenu = false; onRename() }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.delete_menu_item), color = MaterialTheme.colorScheme.error) },
-                                leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp)) },
-                                onClick = { showMenu = false; onDelete() }
-                            )
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.rename_menu_item)) },
+                                    leadingIcon = { Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp)) },
+                                    onClick = { showMenu = false; onRename() }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.delete_menu_item), color = MaterialTheme.colorScheme.error) },
+                                    leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp)) },
+                                    onClick = { showMenu = false; onDelete() }
+                                )
+                            }
                         }
                     }
                 }
@@ -775,9 +784,15 @@ fun VideoPosterItem(
             IconButton(onClick = { showMenu = true }) {
                 Icon(Icons.Default.MoreVert, null)
             }
-            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                DropdownMenuItem(text = { Text(stringResource(R.string.rename_menu_item)) }, onClick = { showMenu = false; onRename() })
-                DropdownMenuItem(text = { Text(stringResource(R.string.delete_menu_item), color = MaterialTheme.colorScheme.error) }, onClick = { showMenu = false; onDelete() })
+            MaterialTheme(
+                colorScheme = MaterialTheme.colorScheme.copy(
+                    surface = MaterialTheme.colorScheme.surface.copy(alpha = 1.0f)
+                )
+            ) {
+                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                    DropdownMenuItem(text = { Text(stringResource(R.string.rename_menu_item)) }, onClick = { showMenu = false; onRename() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.delete_menu_item), color = MaterialTheme.colorScheme.error) }, onClick = { showMenu = false; onDelete() })
+                }
             }
         }
     }
@@ -951,13 +966,14 @@ fun GallerySettingsBottomSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
         dragHandle = { BottomSheetDefaults.DragHandle(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.4f)) },
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        tonalElevation = 8.dp
+        tonalElevation = if (isPitchBlack) 0.dp else 8.dp
     ) {
         Column(
             modifier = Modifier

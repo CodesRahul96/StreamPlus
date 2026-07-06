@@ -274,8 +274,6 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
-                AppInfoFooter()
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
@@ -451,52 +449,6 @@ fun SettingsSectionHeader(title: String) {
 }
 
 @Composable
-fun AppInfoFooter() {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val version = remember {
-        try {
-            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.0"
-        } catch (e: Exception) { "1.0.0" }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(
-                    Brush.linearGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.tertiary
-                        )
-                    )
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Default.PlayCircle, null, tint = Color.White, modifier = Modifier.size(32.dp))
-        }
-        Spacer(modifier = Modifier.height(10.dp))
-        Text(
-            "StreamPlus",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.ExtraBold
-        )
-        Text(
-            "v$version · Stable",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-    }
-}
-
-@Composable
 fun SettingsCategoryItem(
     title: String,
     subtitle: String,
@@ -624,7 +576,10 @@ fun AboutDialog(onDismiss: () -> Unit) {
         ) {
             Column(
                 modifier = Modifier
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
+                    .background(
+                        if (MaterialTheme.colorScheme.surface == Color(0xFF000000)) MaterialTheme.colorScheme.surface
+                        else MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+                    )
                     .padding(24.dp)
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.Start
@@ -746,7 +701,10 @@ fun HelpFaqDialog(onDismiss: () -> Unit) {
         ) {
             Column(
                 modifier = Modifier
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
+                    .background(
+                        if (MaterialTheme.colorScheme.surface == Color(0xFF000000)) MaterialTheme.colorScheme.surface
+                        else MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+                    )
                     .padding(24.dp)
                     .fillMaxWidth()
             ) {

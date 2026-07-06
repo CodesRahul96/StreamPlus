@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -42,6 +43,9 @@ class PlaylistDetailViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
+    private val _isBackgroundLoading = MutableStateFlow(false)
+    val isBackgroundLoading = _isBackgroundLoading.asStateFlow()
+
     private val _error = MutableSharedFlow<String>()
     val error = _error.asSharedFlow()
 
@@ -64,7 +68,13 @@ class PlaylistDetailViewModel @Inject constructor(
         .map { list -> list.map { "${it.name}|${it.groupTitle}|${it.playlistId}" }.toSet() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
-    val filteredChannels = combine(_channels, _searchQuery, _selectedGroup, _selectedStreamType, _isXtreamPlaylist) { channels, query, group, streamType, isXtream ->
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
+    private val _debouncedSearchQuery = _searchQuery
+        .debounce(300)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
+    val filteredChannels = combine(_channels, _debouncedSearchQuery, _selectedGroup, _selectedStreamType, _isXtreamPlaylist) { channels, query, group, streamType, isXtream ->
         kotlinx.coroutines.withContext(Dispatchers.Default) {
             val afterTypeFiler = if (isXtream) channels.filter { it.streamType == streamType } else channels
             if (query.isBlank() && group == "All") {
@@ -161,13 +171,26 @@ class PlaylistDetailViewModel @Inject constructor(
         loadChannelsJob?.cancel()
         loadChannelsJob = viewModelScope.launch {
             _isLoading.value = true
+            _isBackgroundLoading.value = forceRefresh
             try {
-                _channels.value = repository.loadPlaylist(url, userAgent, forceRefresh, playlistId)
+                // If forceRefresh is requested, first quickly load from cache (forceRefresh = false)
+                // so the user doesn't see a blank shimmer screen while waiting for the network
+                if (forceRefresh) {
+                    val cached = repository.loadPlaylist(url, userAgent, forceRefresh = false, playlistId)
+                    if (cached.isNotEmpty()) {
+                        _channels.value = cached
+                        _isLoading.value = false // We have content, hide full shimmer!
+                    }
+                }
+                
+                val freshChannels = repository.loadPlaylist(url, userAgent, forceRefresh, playlistId)
+                _channels.value = freshChannels
             } catch (e: Exception) {
                 e.printStackTrace()
                 _error.emit(e.message ?: "Failed to refresh playlist: Network error")
             } finally {
                 _isLoading.value = false
+                _isBackgroundLoading.value = false
             }
         }
     }

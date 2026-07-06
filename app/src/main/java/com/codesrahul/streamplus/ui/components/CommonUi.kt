@@ -80,11 +80,12 @@ fun StatCard(
     color: Color,
     modifier: Modifier = Modifier
 ) {
+    val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
+            containerColor = if (isPitchBlack) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {

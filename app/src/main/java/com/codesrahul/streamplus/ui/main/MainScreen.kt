@@ -77,10 +77,11 @@ fun MainScreen(initialTab: String? = null) {
 
     Scaffold(
         bottomBar = {
+            val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
             NavigationBar(
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface,
-                tonalElevation = 8.dp
+                tonalElevation = if (isPitchBlack) 0.dp else 8.dp
             ) {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination

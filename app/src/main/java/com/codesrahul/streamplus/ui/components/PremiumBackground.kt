@@ -16,6 +16,7 @@ fun PremiumBackground(
     content: @Composable () -> Unit
 ) {
     val bgColor = MaterialTheme.colorScheme.background
+    val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
     
     // Create a very subtle, elegant gradient based on the exact theme background
     // This allows the Glassmorphism surfaces to float perfectly over it
@@ -25,11 +26,17 @@ fun PremiumBackground(
         bgColor
     )
 
-    Box(
-        modifier = Modifier
+    val backgroundModifier = if (isPitchBlack) {
+        Modifier.fillMaxSize().background(bgColor)
+    } else {
+        Modifier
             .fillMaxSize()
             .background(bgColor)
             .background(Brush.verticalGradient(gradientColors))
+    }
+
+    Box(
+        modifier = backgroundModifier
     ) {
         content()
     }

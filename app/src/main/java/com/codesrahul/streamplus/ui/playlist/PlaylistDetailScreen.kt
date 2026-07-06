@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,12 +57,15 @@ fun PlaylistDetailScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedGroup by viewModel.selectedGroup.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isBackgroundLoading by viewModel.isBackgroundLoading.collectAsState()
     val favoriteIdentities by viewModel.favoriteIdentities.collectAsState()
     val settingsState by hiltViewModel<SettingsViewModel>().settings.collectAsState(initial = AppSettings())
     val isXtreamPlaylist by viewModel.isXtreamPlaylist.collectAsState()
     val selectedStreamType by viewModel.selectedStreamType.collectAsState()
     
     val snackbarHostState = remember { SnackbarHostState() }
+    var showGroupSelectionSheet by remember { mutableStateOf(false) }
+    var isListView by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.error.collect { errorMessage ->
@@ -103,49 +107,54 @@ fun PlaylistDetailScreen(
                     )
                 }
             } else if (groups.size > 1) {
-                val selectedTabIndex = groups.indexOf(selectedGroup).coerceAtLeast(0)
-                val listState = rememberLazyListState()
+                val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+                val screenWidth = configuration.screenWidthDp
                 
-                LaunchedEffect(selectedTabIndex) {
-                    if (selectedTabIndex >= 0 && selectedTabIndex < groups.size) {
-                        listState.animateScrollToItem(selectedTabIndex)
+                if (screenWidth >= 600) {
+                    val selectedTabIndex = groups.indexOf(selectedGroup).coerceAtLeast(0)
+                    val listState = rememberLazyListState()
+                    
+                    LaunchedEffect(selectedTabIndex) {
+                        if (selectedTabIndex >= 0 && selectedTabIndex < groups.size) {
+                            listState.animateScrollToItem(selectedTabIndex)
+                        }
                     }
-                }
-                
-                LazyRow(
-                    state = listState,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    items(
-                        count = groups.size,
-                        key = { index -> groups[index] }
-                    ) { index ->
-                        val group = groups[index]
-                        val isSelected = selectedGroup == group
-                        
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(
-                                    if (isSelected) MaterialTheme.colorScheme.primary 
-                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    
+                    LazyRow(
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        items(
+                            count = groups.size,
+                            key = { index -> groups[index] }
+                        ) { index ->
+                            val group = groups[index]
+                            val isSelected = selectedGroup == group
+                            
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.primary 
+                                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                    )
+                                    .clickable { viewModel.setSelectedGroup(group) }
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = group,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary 
+                                            else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                .clickable { viewModel.setSelectedGroup(group) }
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = group,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary 
-                                        else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            }
                         }
                     }
                 }
@@ -208,14 +217,30 @@ fun PlaylistDetailScreen(
                                             )
                                         }
                                     }
-                                    Column {
+                                    Column(
+                                        modifier = Modifier.clickable {
+                                            if (groups.size > 1) showGroupSelectionSheet = true
+                                        }
+                                    ) {
                                         Text(
                                             playlist?.name ?: "Playlist",
                                             style = MaterialTheme.typography.titleLarge,
                                             fontWeight = FontWeight.Bold
                                         )
-                                        if (!isLoading && viewModel.channels.value.isNotEmpty()) {
-                                            Text("${filteredChannels.size} channels", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                selectedGroup,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            if (groups.size > 1) {
+                                                Icon(
+                                                    imageVector = Icons.Default.ArrowDropDown,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -232,11 +257,32 @@ fun PlaylistDetailScreen(
                                 }
                             },
                             actions = {
+                                IconButton(onClick = { isListView = !isListView }) {
+                                    Icon(
+                                        imageVector = if (isListView) Icons.Default.GridView else Icons.Default.ViewList,
+                                        contentDescription = "Toggle View Mode"
+                                    )
+                                }
+                                if (groups.size > 1) {
+                                    IconButton(onClick = { showGroupSelectionSheet = true }) {
+                                        Icon(Icons.Default.Folder, contentDescription = "Select Category")
+                                    }
+                                }
                                 IconButton(onClick = { viewModel.refresh() }) {
                                     Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                                 }
                             }
                         )
+                        
+                        if (isBackgroundLoading) {
+                            LinearProgressIndicator(
+                                modifier = Modifier.fillMaxWidth().height(2.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = Color.Transparent
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.height(2.dp))
+                        }
 
                         // Unified search bar
                         OutlinedTextField(
@@ -266,7 +312,9 @@ fun PlaylistDetailScreen(
                         )
 
                         // For Xtream playlists, display sub-categories below the search bar
-                        if (isXtreamPlaylist && groups.size > 1) {
+                        val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+                        val screenWidth = configuration.screenWidthDp
+                        if (isXtreamPlaylist && groups.size > 1 && screenWidth >= 600) {
                             androidx.compose.foundation.lazy.LazyRow(
                                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                                 contentPadding = PaddingValues(horizontal = 16.dp),
@@ -286,28 +334,64 @@ fun PlaylistDetailScreen(
                 }
             ) { padding ->
             Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-                when {
-                    isLoading -> {
-                        val configuration = androidx.compose.ui.platform.LocalConfiguration.current
-                        val screenWidth = configuration.screenWidthDp
-                        val columns = when {
+                val isVodView = remember(filteredChannels, isXtreamPlaylist, selectedStreamType) {
+                    if (isXtreamPlaylist) {
+                        selectedStreamType == "vod" || selectedStreamType == "series"
+                    } else {
+                        filteredChannels.any { it.isVod }
+                    }
+                }
+
+                val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+                val screenWidth = configuration.screenWidthDp
+                val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
+                val columns = remember(screenWidth, isLandscape) {
+                    if (isLandscape) {
+                        when {
                             screenWidth >= 1200 -> 6
                             screenWidth >= 900  -> 5
                             screenWidth >= 600  -> 4
                             else -> 3
                         }
-                        val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-                        val cardAspectRatio = if (isLandscape) 1.2f else 0.85f
+                    } else {
+                        when {
+                            screenWidth >= 1200 -> 5
+                            screenWidth >= 900  -> 4
+                            screenWidth >= 600  -> 3
+                            else -> 2
+                        }
+                    }
+                }
+
+                val cardAspectRatio = remember(isVodView, columns) {
+                    if (isVodView) {
+                        if (columns <= 2) 0.85f else 0.68f
+                    } else {
+                        1.0f
+                    }
+                }
+
+                val gridColumns = if (isListView) 1 else columns
+                val verticalSpacing = if (isListView) 8.dp else 16.dp
+                val horizontalSpacing = if (isListView) 0.dp else 16.dp
+
+                when {
+                    isLoading && filteredChannels.isEmpty() -> {
                         LazyVerticalGrid(
-                            columns = GridCells.Fixed(columns),
+                            columns = GridCells.Fixed(gridColumns),
                             modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
                             contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(verticalSpacing),
+                            horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
                             userScrollEnabled = false
                         ) {
-                            items(columns * 3) {
-                                com.codesrahul.streamplus.ui.components.ShimmerChannelItem(cardAspectRatio)
+                            items(gridColumns * 3) {
+                                if (isListView) {
+                                    ShimmerChannelListItem()
+                                } else {
+                                    com.codesrahul.streamplus.ui.components.ShimmerChannelItem(cardAspectRatio)
+                                }
                             }
                         }
                     }
@@ -321,24 +405,12 @@ fun PlaylistDetailScreen(
                         }
                     }
                     else -> {
-                        val configuration = androidx.compose.ui.platform.LocalConfiguration.current
-                        val screenWidth = configuration.screenWidthDp
-                        val columns = when {
-                            screenWidth >= 1200 -> 6
-                            screenWidth >= 900  -> 5
-                            screenWidth >= 600  -> 4
-                            else -> 3 // Mobile: 3 columns for better proportions
-                        }
-                        
-                        val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-                        val cardAspectRatio = if (isLandscape) 1.2f else 0.85f
-                        
                         LazyVerticalGrid(
-                            columns = GridCells.Fixed(columns),
+                            columns = GridCells.Fixed(gridColumns),
                             modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
                             contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
-                            verticalArrangement   = Arrangement.spacedBy(16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            verticalArrangement   = Arrangement.spacedBy(verticalSpacing),
+                            horizontalArrangement = Arrangement.spacedBy(horizontalSpacing)
                         ) {
                             items(
                                 count = filteredChannels.size,
@@ -411,25 +483,136 @@ fun PlaylistDetailScreen(
                                         }
                                     }
                                 }
-
-                                ChannelItem(
-                                    channel = channel,
-                                    hideImage = settingsState.hideChannelImage,
-                                    currentProgram = currentProgram?.title,
-                                    isFavorite = isFav,
-                                    onToggleFavorite = onToggleFav,
-                                    onClick = onItemClick,
-                                    cardAspectRatio = cardAspectRatio,
-                                    sharedTransitionScope = sharedTransitionScope,
-                                    animatedVisibilityScope = animatedVisibilityScope
-                                )
+                                if (isListView) {
+                                    ChannelListItem(
+                                        channel = channel,
+                                        hideImage = settingsState.hideChannelImage,
+                                        currentProgram = currentProgram?.title,
+                                        isFavorite = isFav,
+                                        onToggleFavorite = onToggleFav,
+                                        onClick = onItemClick,
+                                        isVodView = isVodView
+                                    )
+                                } else {
+                                    ChannelItem(
+                                        channel = channel,
+                                        hideImage = settingsState.hideChannelImage,
+                                        currentProgram = currentProgram?.title,
+                                        isFavorite = isFav,
+                                        onToggleFavorite = onToggleFav,
+                                        onClick = onItemClick,
+                                        cardAspectRatio = cardAspectRatio,
+                                        isVodView = isVodView,
+                                        sharedTransitionScope = sharedTransitionScope,
+                                        animatedVisibilityScope = animatedVisibilityScope
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
         }
+
+        if (showGroupSelectionSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showGroupSelectionSheet = false },
+            sheetState = sheetState,
+            containerColor = if (MaterialTheme.colorScheme.surface == Color(0xFF000000)) Color(0xFF0C0C0C) else MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp
+        ) {
+            var groupSearchQuery by remember { mutableStateOf("") }
+            val filteredGroups = remember(groups, groupSearchQuery) {
+                if (groupSearchQuery.isBlank()) {
+                    groups
+                } else {
+                    groups.filter { it.contains(groupSearchQuery, ignoreCase = true) }
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight(0.85f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                Text(
+                    text = "Select Category",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                OutlinedTextField(
+                    value = groupSearchQuery,
+                    onValueChange = { groupSearchQuery = it },
+                    placeholder = { Text("Search categories...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    items(filteredGroups) { group ->
+                        val isSelected = selectedGroup == group
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    viewModel.setSelectedGroup(group)
+                                    showGroupSelectionSheet = false
+                                },
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer 
+                                    else Color.Transparent,
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Folder,
+                                    contentDescription = null,
+                                    tint = if (isSelected) MaterialTheme.colorScheme.primary 
+                                           else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Text(
+                                    text = group,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer 
+                                           else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
     }
+}
 }
 }
 
@@ -443,10 +626,11 @@ fun ChannelItem(
     onToggleFavorite: (() -> Unit)? = null,
     onClick: () -> Unit,
     cardAspectRatio: Float = 0.85f,
+    isVodView: Boolean = false,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
-    if (channel.isVod) {
+    if (isVodView) {
         VodPosterItem(
             channel = channel,
             hideImage = hideImage,
@@ -470,7 +654,7 @@ fun VodPosterItem(
     isFavorite: Boolean,
     onToggleFavorite: (() -> Unit)?,
     onClick: () -> Unit,
-    aspectRatio: Float = 0.85f,
+    aspectRatio: Float = 0.68f,
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null
@@ -489,95 +673,134 @@ fun VodPosterItem(
         border = null,
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            
-            // Logo Area (same 1.2 weight as Live)
-            Box(
-                modifier = Modifier
-                    .weight(1.2f)
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    if (channel.logoUrl.isNotBlank() && !hideImage) {
-                        val isSeries = channel.streamType == "series"
-                        val seriesId = if (isSeries) channel.url.split("/").last().toIntOrNull() ?: channel.id else channel.id
-                        
-                        val sharedTransitionModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
-                            with(sharedTransitionScope) {
-                                Modifier.sharedElement(
-                                    rememberSharedContentState(key = "series_cover_${seriesId}"),
-                                    animatedVisibilityScope = animatedVisibilityScope
-                                )
-                            }
-                        } else {
-                            Modifier
-                        }
-
-                        AsyncImage(
-                            model = channel.logoUrl,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .then(sharedTransitionModifier)
-                                .fillMaxSize().padding(8.dp), 
-                            contentScale = ContentScale.Fit
+        Box(modifier = Modifier.fillMaxSize()) {
+            // 1. Poster Image (Full-bleed)
+            if (channel.logoUrl.isNotBlank() && !hideImage) {
+                val isSeries = channel.streamType == "series"
+                val seriesId = if (isSeries) channel.url.split("/").last().toIntOrNull() ?: channel.id else channel.id
+                
+                val sharedTransitionModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+                    with(sharedTransitionScope) {
+                        Modifier.sharedElement(
+                            rememberSharedContentState(key = "series_cover_${seriesId}"),
+                            animatedVisibilityScope = animatedVisibilityScope
                         )
-                    } else {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.Movie,
-                                contentDescription = null,
-                                modifier = Modifier.size(32.dp),
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-                            )
-                        }
                     }
+                } else {
+                    Modifier
                 }
 
-                // Favorite Toggle
-                if (onToggleFavorite != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(channel.logoUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .then(sharedTransitionModifier)
+                        .fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                // Placeholder
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.02f)
+                                )
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Movie,
+                        contentDescription = null,
+                        modifier = Modifier.size(42.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                    )
+                }
+            }
+
+            // 2. Black Gradient Overlay
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.6f)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.6f),
+                                Color.Black.copy(alpha = 0.95f)
+                            )
+                        )
+                    )
+            )
+
+            // 3. Favorite Toggle
+            if (onToggleFavorite != null) {
+                Surface(
+                    shape = CircleShape,
+                    color = Color.Black.copy(alpha = 0.5f),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .size(32.dp)
+                ) {
                     IconButton(
                         onClick = onToggleFavorite,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(2.dp)
-                            .size(32.dp)
+                        modifier = Modifier.fillMaxSize()
                     ) {
                         Icon(
                             imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = null,
-                            tint = if (isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            modifier = Modifier.size(18.dp)
+                            tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
             }
 
-            // Text Area (same 0.8 weight as Live)
+            // 4. Series/VOD Badge
+            val isSeries = channel.streamType == "series"
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = if (isSeries) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.85f)
+                        else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(8.dp)
+            ) {
+                Text(
+                    text = if (isSeries) "SERIES" else "MOVIE",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = if (isSeries) MaterialTheme.colorScheme.onSecondaryContainer
+                            else MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+
+            // 5. Title Text
             Column(
                 modifier = Modifier
-                    .weight(0.8f)
+                    .align(Alignment.BottomStart)
                     .fillMaxWidth()
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                    .padding(10.dp)
             ) {
                 Text(
                     text = channel.name,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = Color.White,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Start
                 )
             }
         }
@@ -586,7 +809,18 @@ fun VodPosterItem(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String?, isFavorite: Boolean, onToggleFavorite: (() -> Unit)?, onClick: () -> Unit, aspectRatio: Float = 0.85f, modifier: Modifier = Modifier) {
+fun LiveChannelItem(
+    channel: M3UItem,
+    hideImage: Boolean,
+    currentProgram: String?,
+    isFavorite: Boolean,
+    onToggleFavorite: (() -> Unit)?,
+    onClick: () -> Unit,
+    aspectRatio: Float = 1.0f,
+    modifier: Modifier = Modifier
+) {
+    val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -602,19 +836,17 @@ fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            
-            // Logo Area
+            // 1. Logo Area
             Box(
                 modifier = Modifier
-                    .weight(1.2f)
+                    .weight(1.25f)
                     .fillMaxWidth()
                     .padding(8.dp),
                 contentAlignment = Alignment.Center
             ) {
-                // Background for logos to ensure visibility
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
+                    color = if (isPitchBlack) Color(0xFF121212) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     if (channel.logoUrl.isNotBlank() && !hideImage) {
@@ -624,7 +856,9 @@ fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String
                                 .crossfade(true)
                                 .build(),
                             contentDescription = null,
-                            modifier = Modifier.fillMaxSize().padding(8.dp), 
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(12.dp),
                             contentScale = ContentScale.Fit
                         )
                     } else {
@@ -635,81 +869,264 @@ fun LiveChannelItem(channel: M3UItem, hideImage: Boolean, currentProgram: String
                             Icon(
                                 Icons.Default.Tv,
                                 contentDescription = null,
-                                modifier = Modifier.size(32.dp),
+                                modifier = Modifier.size(36.dp),
                                 tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
                             )
                         }
                     }
                 }
 
-                // Favorite Toggle (overlay on logo area)
+                // Favorite Toggle
                 if (onToggleFavorite != null) {
-                    IconButton(
-                        onClick = onToggleFavorite,
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.Black.copy(alpha = 0.4f),
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(2.dp)
-                            .size(32.dp)
+                            .padding(4.dp)
+                            .size(28.dp)
                     ) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = null,
-                            tint = if (isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            modifier = Modifier.size(18.dp)
-                        )
+                        IconButton(
+                            onClick = onToggleFavorite,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Icon(
+                                imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = null,
+                                tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
                     }
                 }
 
-                // DRM Badge
-                if (!channel.drmScheme.isNullOrBlank()) {
+                // Badges
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // LIVE Badge
                     Surface(
-                        modifier = Modifier.align(Alignment.TopStart).padding(4.dp),
                         shape = RoundedCornerShape(4.dp),
-                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)
+                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
                     ) {
                         Text(
-                            "DRM",
+                            "LIVE",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 0.dp)
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                         )
+                    }
+
+                    // DRM Badge
+                    if (!channel.drmScheme.isNullOrBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)
+                        ) {
+                            Text(
+                                "DRM",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                            )
+                        }
                     }
                 }
             }
 
-            // Text Area
+            // 2. Info Area
             Column(
                 modifier = Modifier
-                    .weight(0.8f)
+                    .weight(0.75f)
                     .fillMaxWidth()
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
                     text = channel.name,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center
                 )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
                 if (!currentProgram.isNullOrBlank()) {
                     Text(
-                        text = currentProgram.take(200),
+                        text = currentProgram,
                         style = androidx.compose.ui.text.TextStyle(
-                            fontSize = MaterialTheme.typography.labelSmall.fontSize * 0.9f,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
+                            fontSize = MaterialTheme.typography.labelSmall.fontSize * 0.95f,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.basicMarquee()
                     )
+                } else {
+                    Text(
+                        text = "No EPG Info",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
         }
     }
 }
+
+@Composable
+fun ChannelListItem(
+    channel: M3UItem,
+    hideImage: Boolean,
+    currentProgram: String? = null,
+    isFavorite: Boolean = false,
+    onToggleFavorite: (() -> Unit)? = null,
+    onClick: () -> Unit,
+    isVodView: Boolean = false
+) {
+    val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(84.dp)
+            .tvFocusable(cornerRadius = 14.dp)
+            .clickable(onClick = onClick)
+            .glassmorphic(cornerRadius = 14.dp)
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Image on the left
+        Box(
+            modifier = Modifier
+                .size(68.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(if (isPitchBlack) Color(0xFF121212) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (channel.logoUrl.isNotBlank() && !hideImage) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(channel.logoUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize().padding(if (isVodView) 0.dp else 8.dp),
+                    contentScale = if (isVodView) ContentScale.Crop else ContentScale.Fit
+                )
+            } else {
+                Icon(
+                    imageVector = if (isVodView) Icons.Default.Movie else Icons.Default.Tv,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // Titles in the middle
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = channel.name,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            
+            if (isVodView) {
+                val subText = when {
+                    channel.streamType == "series" -> "Series"
+                    channel.group.isNotBlank() && channel.group != "0" -> channel.group
+                    else -> "Movie"
+                }
+                Text(
+                    text = subText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            } else {
+                val programText = currentProgram ?: "No EPG info available"
+                Text(
+                    text = programText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (currentProgram != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        // Action buttons on the right
+        if (onToggleFavorite != null) {
+            IconButton(onClick = onToggleFavorite) {
+                Icon(
+                    imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = "Favorite",
+                    tint = if (isFavorite) Color.Red else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ShimmerChannelListItem() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(84.dp)
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(68.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color.White.copy(alpha = 0.08f))
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.6f)
+                    .height(18.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color.White.copy(alpha = 0.08f))
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.4f)
+                    .height(14.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color.White.copy(alpha = 0.08f))
+            )
+        }
+    }
+}
+

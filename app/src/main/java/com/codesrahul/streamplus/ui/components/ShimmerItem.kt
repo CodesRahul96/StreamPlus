@@ -18,34 +18,55 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.Alignment
 
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.unit.IntSize
+
 /**
  * A theme-adaptive shimmer modifier that interpolates based on the current theme's surface/on-surface colors.
  */
 fun Modifier.shimmerEffect(): Modifier = composed {
-    val transition = rememberInfiniteTransition()
+    var size by remember { mutableStateOf(IntSize.Zero) }
+    val transition = rememberInfiniteTransition(label = "shimmer")
     val translateAnim = transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1000f,
+        initialValue = -2.5f,
+        targetValue = 2.5f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = 1500, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Restart
-        )
+        ),
+        label = "shimmer_translate"
     )
 
     val baseColor = MaterialTheme.colorScheme.onSurface
     val shimmerColors = listOf(
-        baseColor.copy(alpha = 0.12f),
-        baseColor.copy(alpha = 0.04f),
-        baseColor.copy(alpha = 0.12f),
+        baseColor.copy(alpha = 0.06f),
+        baseColor.copy(alpha = 0.20f),
+        baseColor.copy(alpha = 0.06f),
     )
 
-    val brush = Brush.linearGradient(
-        colors = shimmerColors,
-        start = Offset.Zero,
-        end = Offset(x = translateAnim.value, y = translateAnim.value)
-    )
+    val width = size.width.toFloat()
+    val height = size.height.toFloat()
+    
+    val brush = if (width > 0f) {
+        val startX = translateAnim.value * width
+        Brush.linearGradient(
+            colors = shimmerColors,
+            start = Offset(x = startX - width, y = 0f),
+            end = Offset(x = startX, y = height)
+        )
+    } else {
+        Brush.linearGradient(
+            colors = shimmerColors,
+            start = Offset.Zero,
+            end = Offset.Zero
+        )
+    }
 
-    background(brush)
+    onGloballyPositioned { size = it.size }.background(brush)
 }
 
 @Composable

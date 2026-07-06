@@ -21,24 +21,31 @@ fun Modifier.glassmorphic(
     cornerRadius: Dp = 16.dp,
     borderWidth: Dp = 1.dp
 ): Modifier = composed {
-    val isDark = (MaterialTheme.colorScheme.surface.red + 
-                  MaterialTheme.colorScheme.surface.green + 
-                  MaterialTheme.colorScheme.surface.blue) < 1.2f
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val isPitchBlack = surfaceColor == Color(0xFF000000)
+    val isDark = isPitchBlack || (surfaceColor.red + surfaceColor.green + surfaceColor.blue) < 1.2f
                  
-    val backgroundColor = if (isDark) {
-        Color(0xFF18181B).copy(alpha = 0.65f)
+    val backgroundColor = if (isPitchBlack) {
+        Color(0xFF0B0B0C)
+    } else if (isDark) {
+        Color(0xFF161619).copy(alpha = 0.7f)
     } else {
-        Color.White.copy(alpha = 0.75f)
+        Color.White.copy(alpha = 0.8f)
     }
     
-    val borderColorStart = if (isDark) {
-        Color.White.copy(alpha = 0.18f)
+    val borderColorStart = if (isPitchBlack) {
+        primaryColor.copy(alpha = 0.18f)
+    } else if (isDark) {
+        primaryColor.copy(alpha = 0.3f)
     } else {
-        Color.White.copy(alpha = 0.45f)
+        primaryColor.copy(alpha = 0.45f)
     }
 
-    val borderColorEnd = if (isDark) {
+    val borderColorEnd = if (isPitchBlack) {
         Color.White.copy(alpha = 0.03f)
+    } else if (isDark) {
+        Color.White.copy(alpha = 0.05f)
     } else {
         Color.Black.copy(alpha = 0.08f)
     }

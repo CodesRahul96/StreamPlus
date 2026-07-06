@@ -86,73 +86,89 @@ fun PlaylistScreen(
     var selectedTab by remember { mutableIntStateOf(0) }
 
     PremiumBackground {
-        Column(modifier = Modifier.fillMaxSize()) {
-            TabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = Color.Transparent,
-                contentColor = MaterialTheme.colorScheme.primary,
-                divider = {}
-            ) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = { Text(stringResource(com.codesrahul.streamplus.R.string.playlists_tab), fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium) }
-                )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    text = { Text(stringResource(com.codesrahul.streamplus.R.string.favorites_tab), fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium) }
-                )
-                Tab(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
-                    text = { Text(stringResource(com.codesrahul.streamplus.R.string.recent_tab), fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Medium) }
-                )
-            }
-
-            Scaffold(
-                modifier = Modifier.weight(1f).nestedScroll(scrollBehavior.nestedScrollConnection),
-                containerColor = Color.Transparent,
-                topBar = {
-                    TopAppBar(
-                        title = {
-                            Column {
-                                Text(
-                                    text = when (selectedTab) {
-                                        0 -> stringResource(com.codesrahul.streamplus.R.string.playlists_tab)
-                                        1 -> stringResource(com.codesrahul.streamplus.R.string.favorites_tab)
-                                        else -> stringResource(com.codesrahul.streamplus.R.string.recent_tab)
-                                    },
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                val countText = when (selectedTab) {
-                                    0 -> if (playlists.isNotEmpty()) "${playlists.size} sources" else ""
-                                    1 -> "${favorites.size} channels"
-                                    else -> "${recentlyWatched.size} channels"
-                                }
-                                if (countText.isNotEmpty()) {
-                                    Text(
-                                        text = countText,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+        Scaffold(
+            modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    navigationIcon = {
+                        if (selectedTab != 0) {
+                            IconButton(onClick = { selectedTab = 0 }) {
+                                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                             }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = Color.Transparent,
-                            titleContentColor = MaterialTheme.colorScheme.onSurface,
-                            actionIconContentColor = MaterialTheme.colorScheme.onSurface,
-                            scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
-                        ),
-                        scrollBehavior = scrollBehavior,
-                        windowInsets = WindowInsets(0.dp),
-                        actions = {
-                            if (selectedTab == 0) {
-                                IconButton(onClick = { showMenu = true }) {
-                                    Icon(Icons.Default.MoreVert, contentDescription = "Menu")
-                                }
+                        }
+                    },
+                    title = {
+                        Column {
+                            Text(
+                                text = when (selectedTab) {
+                                    0 -> stringResource(com.codesrahul.streamplus.R.string.playlists_tab)
+                                    1 -> stringResource(com.codesrahul.streamplus.R.string.favorites_tab)
+                                    else -> stringResource(com.codesrahul.streamplus.R.string.recent_tab)
+                                },
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            val countText = when (selectedTab) {
+                                0 -> if (playlists.isNotEmpty()) "${playlists.size} sources" else ""
+                                1 -> "${favorites.size} channels"
+                                else -> "${recentlyWatched.size} channels"
+                            }
+                            if (countText.isNotEmpty()) {
+                                Text(
+                                    text = countText,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
+                    ),
+                    scrollBehavior = scrollBehavior,
+                    windowInsets = WindowInsets(0.dp),
+                    actions = {
+                        IconButton(onClick = { selectedTab = 0 }) {
+                            Icon(
+                                imageVector = Icons.Default.List,
+                                contentDescription = "Playlists",
+                                tint = if (selectedTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            )
+                        }
+                        IconButton(onClick = { selectedTab = 1 }) {
+                            Icon(
+                                imageVector = Icons.Default.Favorite,
+                                contentDescription = "Favorites",
+                                tint = if (selectedTab == 1) Color.Red else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            )
+                        }
+                        IconButton(onClick = { selectedTab = 2 }) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = "Recent",
+                                tint = if (selectedTab == 2) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            )
+                        }
+
+                        if (selectedTab == 0) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.PlaylistAdd,
+                                    contentDescription = "Add Playlist",
+                                    modifier = Modifier.size(28.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            MaterialTheme(
+                                colorScheme = MaterialTheme.colorScheme.copy(
+                                    surface = MaterialTheme.colorScheme.surface.copy(alpha = 1.0f)
+                                )
+                            ) {
                                 DropdownMenu(
                                     expanded = showMenu,
                                     onDismissRequest = { showMenu = false }
@@ -184,8 +200,9 @@ fun PlaylistScreen(
                                 }
                             }
                         }
-                    )
-                },
+                    }
+                )
+            },
                 floatingActionButton = {
                     if (selectedTab == 0 && playlists.isNotEmpty()) {
                         Column(horizontalAlignment = Alignment.End) {
@@ -199,40 +216,103 @@ fun PlaylistScreen(
                                     verticalArrangement = Arrangement.spacedBy(12.dp),
                                     modifier = Modifier.padding(bottom = 12.dp)
                                 ) {
-                                    SmallFloatingActionButton(
-                                        onClick = { 
-                                            showFabMenu = false
-                                            filePickerLauncher.launch("*/*") 
-                                        },
-                                        containerColor = MaterialTheme.colorScheme.surface,
-                                        contentColor = MaterialTheme.colorScheme.primary,
-                                        shape = CircleShape
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
-                                        Icon(Icons.Default.UploadFile, contentDescription = "Import File")
+                                        Box(
+                                            modifier = Modifier
+                                                .glassmorphic(cornerRadius = 8.dp)
+                                                .clickable { 
+                                                    showFabMenu = false
+                                                    filePickerLauncher.launch("*/*") 
+                                                }
+                                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                        ) {
+                                            Text(
+                                                text = "File",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                        SmallFloatingActionButton(
+                                            onClick = { 
+                                                showFabMenu = false
+                                                filePickerLauncher.launch("*/*") 
+                                            },
+                                            containerColor = MaterialTheme.colorScheme.surface,
+                                            contentColor = MaterialTheme.colorScheme.primary,
+                                            shape = CircleShape
+                                        ) {
+                                            Icon(Icons.Default.UploadFile, contentDescription = "Import File")
+                                        }
                                     }
                                     
-                                    SmallFloatingActionButton(
-                                        onClick = { 
-                                            showFabMenu = false
-                                            showXtreamDialog = true 
-                                        },
-                                        containerColor = MaterialTheme.colorScheme.surface,
-                                        contentColor = MaterialTheme.colorScheme.primary,
-                                        shape = CircleShape
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
-                                        Icon(Icons.Default.AccountCircle, contentDescription = "Login with Xtream Codes")
+                                        Box(
+                                            modifier = Modifier
+                                                .glassmorphic(cornerRadius = 8.dp)
+                                                .clickable { 
+                                                    showFabMenu = false
+                                                    showXtreamDialog = true 
+                                                }
+                                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                        ) {
+                                            Text(
+                                                text = "Xtream",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                        SmallFloatingActionButton(
+                                            onClick = { 
+                                                showFabMenu = false
+                                                showXtreamDialog = true 
+                                            },
+                                            containerColor = MaterialTheme.colorScheme.surface,
+                                            contentColor = MaterialTheme.colorScheme.primary,
+                                            shape = CircleShape
+                                        ) {
+                                            Icon(Icons.Default.AccountCircle, contentDescription = "Login with Xtream Codes")
+                                        }
                                     }
                                     
-                                    SmallFloatingActionButton(
-                                        onClick = { 
-                                            showFabMenu = false
-                                            showAddDialog = true 
-                                        },
-                                        containerColor = MaterialTheme.colorScheme.surface,
-                                        contentColor = MaterialTheme.colorScheme.primary,
-                                        shape = CircleShape
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
-                                        Icon(Icons.Default.AddLink, contentDescription = "Add Playlist URL")
+                                        Box(
+                                            modifier = Modifier
+                                                .glassmorphic(cornerRadius = 8.dp)
+                                                .clickable { 
+                                                    showFabMenu = false
+                                                    showAddDialog = true 
+                                                }
+                                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                        ) {
+                                            Text(
+                                                text = "URL",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                        SmallFloatingActionButton(
+                                            onClick = { 
+                                                showFabMenu = false
+                                                showAddDialog = true 
+                                            },
+                                            containerColor = MaterialTheme.colorScheme.surface,
+                                            contentColor = MaterialTheme.colorScheme.primary,
+                                            shape = CircleShape
+                                        ) {
+                                            Icon(Icons.Default.AddLink, contentDescription = "Add Playlist URL")
+                                        }
                                     }
                                 }
                             }
@@ -549,7 +629,6 @@ fun PlaylistScreen(
                     }
                 }
             }
-        }
     }
 
     if (showAddDialog) {
@@ -664,9 +743,11 @@ fun PlaylistScreen(
         )
     }
 
+    val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
     playlistToDelete?.let { playlist ->
         AlertDialog(
             onDismissRequest = { playlistToDelete = null },
+            tonalElevation = if (isPitchBlack) 0.dp else AlertDialogDefaults.TonalElevation,
             title = { Text(stringResource(com.codesrahul.streamplus.R.string.delete_playlist_confirm_title), fontWeight = FontWeight.Bold) },
             text = { Text(stringResource(com.codesrahul.streamplus.R.string.delete_playlist_confirm_desc)) },
             confirmButton = {
@@ -849,10 +930,12 @@ fun PlaylistDialog(
         0xFFFF9500.toInt(), 0xFFFF3B30.toInt(), 0xFF5E5CE6.toInt(), 0xFF5AC8FA.toInt()
     )
 
+    val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
     if (showCustomUADialog) {
         AlertDialog(
             shape = RoundedCornerShape(16.dp),
             onDismissRequest = { showCustomUADialog = false },
+            tonalElevation = if (isPitchBlack) 0.dp else AlertDialogDefaults.TonalElevation,
             title = { Text(stringResource(com.codesrahul.streamplus.R.string.custom_ua_title)) },
             text = {
                 OutlinedTextField(
@@ -879,6 +962,7 @@ fun PlaylistDialog(
     AlertDialog(
         shape = RoundedCornerShape(16.dp),
         onDismissRequest = onDismiss,
+        tonalElevation = if (isPitchBlack) 0.dp else AlertDialogDefaults.TonalElevation,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -958,10 +1042,15 @@ fun PlaylistDialog(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.menuAnchor().fillMaxWidth()
                     )
-                    ExposedDropdownMenu(
-                        expanded = isUserAgentExpanded,
-                        onDismissRequest = { isUserAgentExpanded = false }
+                    MaterialTheme(
+                        colorScheme = MaterialTheme.colorScheme.copy(
+                            surface = MaterialTheme.colorScheme.surface.copy(alpha = 1.0f)
+                        )
                     ) {
+                        ExposedDropdownMenu(
+                            expanded = isUserAgentExpanded,
+                            onDismissRequest = { isUserAgentExpanded = false }
+                        ) {
                         userAgentOptions.forEach { option ->
                             DropdownMenuItem(
                                 text = { Text(option) },
@@ -980,6 +1069,7 @@ fun PlaylistDialog(
                         }
                     }
                 }
+            }
                 
                 Spacer(modifier = Modifier.height(20.dp))
                 Text(stringResource(com.codesrahul.streamplus.R.string.icon_theme_sec), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
@@ -1225,8 +1315,10 @@ fun XtreamPlaylistDialog(
     var username by remember { mutableStateOf(initialUsername) }
     var password by remember { mutableStateOf(initialPassword) }
 
+    val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
     AlertDialog(
         onDismissRequest = onDismiss,
+        tonalElevation = if (isPitchBlack) 0.dp else AlertDialogDefaults.TonalElevation,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(

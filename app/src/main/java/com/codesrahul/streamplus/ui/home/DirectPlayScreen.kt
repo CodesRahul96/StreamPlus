@@ -44,6 +44,10 @@ import com.codesrahul.streamplus.util.UserAgentManager
 import com.codesrahul.streamplus.ui.util.tvFocusable
 import androidx.compose.ui.res.stringResource
 import com.codesrahul.streamplus.R
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.hilt.navigation.compose.hiltViewModel
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,6 +56,8 @@ fun DirectPlayScreen(
     onNavigateToHistory: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
+    val historyViewModel: HistoryViewModel = hiltViewModel()
+    val historyItems by historyViewModel.history.collectAsState(initial = emptyList())
 
     // Core fields
     var streamUrl by remember { mutableStateOf("") }
@@ -75,6 +81,19 @@ fun DirectPlayScreen(
     var showDrmDialog     by remember { mutableStateOf(false) }
     var showAdvanced      by remember { mutableStateOf(false) }
     var urlError          by remember { mutableStateOf(false) }
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            streamUrl = it.toString()
+            streamTitle = it.lastPathSegment?.substringAfterLast('/') ?: "Local File"
+        }
+    }
+
+    val directHistory = remember(historyItems) {
+        historyItems.filter { it.playlistId == -1 }.sortedByDescending { it.timestamp }
+    }
 
     val advancedRotation by animateFloatAsState(
         targetValue = if (showAdvanced) 180f else 0f,
@@ -211,16 +230,50 @@ fun DirectPlayScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.weight(1f))
-                        TextButton(
-                            onClick = {
-                                val clip = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clip.primaryClip?.getItemAt(0)?.text?.toString()?.let { handlePaste(it) }
-                            },
-                            contentPadding = PaddingValues(horizontal = 12.dp)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.ContentPaste, null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(stringResource(R.string.paste_btn), fontWeight = FontWeight.SemiBold)
+                            // Paste Button
+                            IconButton(
+                                onClick = {
+                                    val clip = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    clip.primaryClip?.getItemAt(0)?.text?.toString()?.let { handlePaste(it) }
+                                },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(Icons.Default.ContentPaste, contentDescription = "Paste", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                            }
+                            
+                            // File Picker Button
+                            IconButton(
+                                onClick = {
+                                    filePickerLauncher.launch("video/*")
+                                },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(Icons.Default.UploadFile, contentDescription = "Choose File", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                            }
+                            
+                            // Clear Form Button
+                            IconButton(
+                                onClick = {
+                                    streamUrl = ""
+                                    streamTitle = ""
+                                    cookie = ""
+                                    referer = ""
+                                    origin = ""
+                                    selectedUAName = "Chrome"
+                                    customUserAgent = ""
+                                    drmScheme = "None"
+                                    drmLicenseUrl = ""
+                                    showAdvanced = false
+                                    urlError = false
+                                },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(Icons.Default.DeleteSweep, contentDescription = "Clear Form", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
@@ -432,6 +485,149 @@ fun DirectPlayScreen(
                     }
                 }
 
+                // ── Recent Streams Card ──────────────────────────────────────
+                if (directHistory.isNotEmpty()) {
+                    SectionCard {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                                modifier = Modifier.size(42.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.Default.History,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Text(
+                                "Recent Streams",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            directHistory.take(5).forEach { item ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f))
+                                        .clickable {
+                                            // POPULATE ALL EDITABLE FIELDS
+                                            streamUrl = item.url
+                                            streamTitle = item.name
+                                            cookie = item.cookie ?: ""
+                                            referer = item.referer ?: ""
+                                            origin = item.origin ?: ""
+                                            drmScheme = item.drmScheme?.let { scheme ->
+                                                when {
+                                                    scheme.contains("widevine", ignoreCase = true) -> "Widevine"
+                                                    scheme.contains("clearkey", ignoreCase = true) -> "ClearKey"
+                                                    scheme.contains("playready", ignoreCase = true) -> "PlayReady"
+                                                    else -> "None"
+                                                }
+                                            } ?: "None"
+                                            drmLicenseUrl = item.licenseUrl ?: ""
+                                            
+                                            val ua = item.userAgent ?: ""
+                                            if (ua.isNotEmpty()) {
+                                                val preset = com.codesrahul.streamplus.util.UserAgentManager.presets.find { 
+                                                    com.codesrahul.streamplus.util.UserAgentManager.getFullUserAgent(it.name) == ua 
+                                                }
+                                                if (preset != null) {
+                                                    selectedUAName = preset.name
+                                                    customUserAgent = ""
+                                                } else {
+                                                    selectedUAName = "Custom"
+                                                    customUserAgent = ua
+                                                }
+                                            } else {
+                                                selectedUAName = "Chrome"
+                                                customUserAgent = ""
+                                            }
+                                            
+                                            if (cookie.isNotBlank() || referer.isNotBlank() || origin.isNotBlank() || drmScheme != "None") {
+                                                showAdvanced = true
+                                            }
+                                        }
+                                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = item.name,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = item.url,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    
+                                    // Play icon to play immediately
+                                    IconButton(
+                                        onClick = {
+                                            val intent = Intent(context, PlayerActivity::class.java).apply {
+                                                putExtra(PlayerActivity.EXTRA_STREAM_URL,   item.url)
+                                                putExtra(PlayerActivity.EXTRA_STREAM_TITLE, item.name.ifBlank { "Unknown Stream" })
+                                                item.logoUrl?.let   { putExtra(PlayerActivity.EXTRA_CHANNEL_LOGO, it) }
+                                                item.userAgent?.let { putExtra(PlayerActivity.EXTRA_USER_AGENT,   it) }
+                                                item.cookie?.let    { putExtra(PlayerActivity.EXTRA_COOKIE,       it) }
+                                                item.referer?.let   { putExtra(PlayerActivity.EXTRA_REFERER,      it) }
+                                                item.origin?.let    { putExtra(PlayerActivity.EXTRA_ORIGIN,       it) }
+                                                item.licenseUrl?.let{ putExtra(PlayerActivity.EXTRA_DRM_LICENSE_URL, it) }
+                                                item.drmScheme?.let { putExtra(PlayerActivity.EXTRA_DRM_SCHEME,   it) }
+                                                putExtra(PlayerActivity.EXTRA_PLAYLIST_ID, item.playlistId)
+                                                putExtra(PlayerActivity.EXTRA_STREAM_GROUP, item.group)
+                                            }
+                                            context.startActivity(intent)
+                                        },
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.PlayArrow,
+                                            contentDescription = "Play",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                    
+                                    // Delete icon
+                                    IconButton(
+                                        onClick = {
+                                            historyViewModel.deleteHistory(item)
+                                        },
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.DeleteOutline,
+                                            contentDescription = "Delete",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(100.dp))
             }
         }
@@ -459,11 +655,12 @@ fun SectionCard(
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
     Card(
         modifier = Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         shape    = RoundedCornerShape(24.dp),
         colors   = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)
+            containerColor = if (isPitchBlack) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         border = borderStroke()
@@ -508,11 +705,12 @@ fun UserAgentSelectionDialog(
     onDismiss: () -> Unit,
     onSelect: (String) -> Unit
 ) {
+    val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(28.dp),
             color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 6.dp,
+            tonalElevation = if (isPitchBlack) 0.dp else 6.dp,
             border = borderStroke()
         ) {
             Column(
@@ -579,11 +777,12 @@ fun DrmSelectionDialog(
     onSelect: (String) -> Unit
 ) {
     val options = listOf("None", "Widevine", "ClearKey", "PlayReady")
+    val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(28.dp),
             color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 6.dp,
+            tonalElevation = if (isPitchBlack) 0.dp else 6.dp,
             border = borderStroke()
         ) {
             Column(modifier = Modifier.padding(24.dp).fillMaxWidth()) {

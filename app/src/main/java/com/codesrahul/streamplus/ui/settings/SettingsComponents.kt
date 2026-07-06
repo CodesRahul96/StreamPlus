@@ -349,7 +349,10 @@ fun <T> PremiumSelectionDialog(
         ) {
             Column(
                 modifier = Modifier
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.3f))
+                    .background(
+                        if (MaterialTheme.colorScheme.surface == Color(0xFF000000)) MaterialTheme.colorScheme.surface
+                        else MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+                    )
                     .padding(24.dp)
             ) {
                 Text(
