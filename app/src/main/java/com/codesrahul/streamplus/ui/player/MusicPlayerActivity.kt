@@ -13,6 +13,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,6 +40,8 @@ import com.codesrahul.streamplus.ui.util.tvFocusable
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 
 @UnstableApi
 @AndroidEntryPoint
@@ -65,6 +69,8 @@ class MusicPlayerActivity : AppCompatActivity() {
         // Read intent extras
         val playlistUris = intent.getStringArrayExtra("EXTRA_PLAYLIST_URIS") ?: emptyArray()
         val playlistTitles = intent.getStringArrayExtra("EXTRA_PLAYLIST_TITLES") ?: emptyArray()
+        val playlistArtists = intent.getStringArrayExtra("EXTRA_PLAYLIST_ARTISTS") ?: emptyArray()
+        val playlistAlbums = intent.getStringArrayExtra("EXTRA_PLAYLIST_ALBUMS") ?: emptyArray()
         val playlistIndex = intent.getIntExtra("EXTRA_PLAYLIST_INDEX", 0)
 
         Log.d("MusicPlayerActivity", "Initializing music player: size=${playlistUris.size}, index=$playlistIndex")
@@ -76,12 +82,16 @@ class MusicPlayerActivity : AppCompatActivity() {
         // Build media items
         val mediaItems = playlistUris.mapIndexed { idx, url ->
             val title = playlistTitles.getOrNull(idx) ?: "Track ${idx + 1}"
+            val artist = playlistArtists.getOrNull(idx) ?: "Unknown Artist"
+            val album = playlistAlbums.getOrNull(idx) ?: "Unknown Album"
             MediaItem.Builder()
                 .setUri(Uri.parse(url))
                 .setMediaId(url)
                 .setMediaMetadata(
                     androidx.media3.common.MediaMetadata.Builder()
                         .setTitle(title)
+                        .setArtist(artist)
+                        .setAlbumTitle(album)
                         .build()
                 )
                 .build()
@@ -128,18 +138,30 @@ class MusicPlayerActivity : AppCompatActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MusicPlayerScreen(
     player: ExoPlayer,
     onClose: () -> Unit
 ) {
     var playingTitle by remember { mutableStateOf("Unknown Track") }
+    var playingArtist by remember { mutableStateOf("Unknown Artist") }
+    var playingAlbum by remember { mutableStateOf("Unknown Album") }
+    var currentTrackIndex by remember { mutableIntStateOf(player.currentMediaItemIndex) }
+    
     var isPlaying by remember { mutableStateOf(false) }
     var currentPos by remember { mutableLongStateOf(0L) }
     var duration by remember { mutableLongStateOf(1L) }
     
     var currentTimeFormatted by remember { mutableStateOf("00:00") }
     var durationFormatted by remember { mutableStateOf("00:00") }
+    
+    var isShuffleEnabled by remember { mutableStateOf(player.shuffleModeEnabled) }
+    var repeatMode by remember { mutableIntStateOf(player.repeatMode) }
+    
+    var showQueue by remember { mutableStateOf(false) }
+    var sleepTimerRemainingSec by remember { mutableIntStateOf(0) }
+    var showSleepTimerDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(player) {
         val listener = object : Player.Listener {
@@ -151,16 +173,39 @@ fun MusicPlayerScreen(
             }
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 duration = player.duration.coerceAtLeast(1L)
+                currentTrackIndex = player.currentMediaItemIndex
                 mediaItem?.mediaMetadata?.title?.toString()?.let { title ->
                     playingTitle = title
                 }
+                mediaItem?.mediaMetadata?.artist?.toString()?.let { artist ->
+                    playingArtist = artist
+                }
+                mediaItem?.mediaMetadata?.albumTitle?.toString()?.let { album ->
+                    playingAlbum = album
+                }
+            }
+            override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+                isShuffleEnabled = shuffleModeEnabled
+            }
+            override fun onRepeatModeChanged(rm: Int) {
+                repeatMode = rm
             }
         }
         player.addListener(listener)
         isPlaying = player.isPlaying
         duration = player.duration.coerceAtLeast(1L)
+        currentTrackIndex = player.currentMediaItemIndex
+        isShuffleEnabled = player.shuffleModeEnabled
+        repeatMode = player.repeatMode
+        
         player.currentMediaItem?.mediaMetadata?.title?.toString()?.let { title ->
             playingTitle = title
+        }
+        player.currentMediaItem?.mediaMetadata?.artist?.toString()?.let { artist ->
+            playingArtist = artist
+        }
+        player.currentMediaItem?.mediaMetadata?.albumTitle?.toString()?.let { album ->
+            playingAlbum = album
         }
 
         try {
@@ -175,6 +220,16 @@ fun MusicPlayerScreen(
             }
         } finally {
             player.removeListener(listener)
+        }
+    }
+
+    LaunchedEffect(sleepTimerRemainingSec) {
+        if (sleepTimerRemainingSec > 0) {
+            delay(1000)
+            sleepTimerRemainingSec -= 1
+            if (sleepTimerRemainingSec == 0) {
+                player.pause()
+            }
         }
     }
 
@@ -219,8 +274,40 @@ fun MusicPlayerScreen(
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.5.sp
             )
-            // Empty spacer for symmetry
-            Spacer(modifier = Modifier.size(48.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (sleepTimerRemainingSec > 0) {
+                    Text(
+                        text = formatSleepTime(sleepTimerRemainingSec),
+                        color = Color(0xFF00E5FF),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                }
+                IconButton(
+                    onClick = { showSleepTimerDialog = true },
+                    modifier = Modifier.tvFocusable(cornerRadius = 20.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Snooze,
+                        contentDescription = "Sleep Timer",
+                        tint = if (sleepTimerRemainingSec > 0) Color(0xFF00E5FF) else Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(
+                    onClick = { showQueue = !showQueue },
+                    modifier = Modifier.tvFocusable(cornerRadius = 20.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                        contentDescription = "Queue",
+                        tint = if (showQueue) Color(0xFF00E5FF) else Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
         }
 
         // Center Vinyl Disc
@@ -322,10 +409,13 @@ fun MusicPlayerScreen(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "StreamPlus Music Player",
+                text = if (playingArtist.isNotEmpty() && playingArtist != "Unknown Artist") "$playingArtist • $playingAlbum" else playingAlbum,
                 color = Color.White.copy(0.5f),
                 fontSize = 14.sp,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 24.dp)
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -376,6 +466,21 @@ fun MusicPlayerScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Shuffle button
+                IconButton(
+                    onClick = { player.shuffleModeEnabled = !isShuffleEnabled },
+                    modifier = Modifier
+                        .size(54.dp)
+                        .tvFocusable(cornerRadius = 27.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Shuffle,
+                        contentDescription = "Shuffle",
+                        tint = if (isShuffleEnabled) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.5f),
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+
                 // Previous button
                 IconButton(
                     onClick = { player.seekToPreviousMediaItem() },
@@ -402,7 +507,7 @@ fun MusicPlayerScreen(
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(Color(0xFF00E5FF), Color(0xFFE040FB))
-                            )
+                              )
                         )
                         .tvFocusable(cornerRadius = 36.dp)
                 ) {
@@ -428,8 +533,154 @@ fun MusicPlayerScreen(
                         modifier = Modifier.size(36.dp)
                     )
                 }
+
+                // Repeat button
+                val repeatIcon = if (repeatMode == Player.REPEAT_MODE_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat
+                val repeatTint = if (repeatMode != Player.REPEAT_MODE_OFF) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.5f)
+                IconButton(
+                    onClick = {
+                        player.repeatMode = when (repeatMode) {
+                            Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+                            Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+                            else -> Player.REPEAT_MODE_OFF
+                        }
+                    },
+                    modifier = Modifier
+                        .size(54.dp)
+                        .tvFocusable(cornerRadius = 27.dp)
+                ) {
+                    Icon(
+                        imageVector = repeatIcon,
+                        contentDescription = "Repeat",
+                        tint = repeatTint,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+
+    if (showSleepTimerDialog) {
+        AlertDialog(
+            onDismissRequest = { showSleepTimerDialog = false },
+            title = { Text(text = "Sleep Timer", color = Color.White, fontWeight = FontWeight.Bold) },
+            containerColor = Color(0xFF14131B),
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val options = listOf(
+                        "Turn Off" to 0,
+                        "5 Minutes" to 300,
+                        "15 Minutes" to 900,
+                        "30 Minutes" to 1800,
+                        "45 Minutes" to 2700,
+                        "60 Minutes" to 3600
+                    )
+                    options.forEach { (label, secs) ->
+                        TextButton(
+                            onClick = {
+                                sleepTimerRemainingSec = secs
+                                showSleepTimerDialog = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = label, 
+                                color = if (sleepTimerRemainingSec == secs) Color(0xFF00E5FF) else Color.White, 
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showSleepTimerDialog = false }) {
+                    Text("Cancel", color = Color(0xFF00E5FF))
+                }
+            }
+        )
+    }
+
+    if (showQueue) {
+        ModalBottomSheet(
+            onDismissRequest = { showQueue = false },
+            containerColor = Color(0xFF14131B),
+            dragHandle = { BottomSheetDefaults.DragHandle(color = Color.White.copy(0.3f)) },
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.7f)
+                    .padding(horizontal = 24.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = "Play Queue",
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    val mediaItemCount = player.mediaItemCount
+                    items((0 until mediaItemCount).toList()) { index ->
+                        val item = player.getMediaItemAt(index)
+                        val title = item.mediaMetadata.title?.toString() ?: "Track ${index + 1}"
+                        val artist = item.mediaMetadata.artist?.toString() ?: "Unknown Artist"
+                        val isCurrent = index == currentTrackIndex
+                        
+                        Surface(
+                            onClick = {
+                                player.seekTo(index, 0L)
+                                player.play()
+                                showQueue = false
+                            },
+                            color = if (isCurrent) Color(0xFF00E5FF).copy(alpha = 0.15f) else Color.Transparent,
+                            shape = RoundedCornerShape(12.dp),
+                            border = if (isCurrent) androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF00E5FF)) else null,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = title,
+                                        color = if (isCurrent) Color(0xFF00E5FF) else Color.White,
+                                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = 16.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = artist,
+                                        color = if (isCurrent) Color(0xFF00E5FF).copy(0.7f) else Color.White.copy(0.5f),
+                                        fontSize = 13.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                if (isCurrent && isPlaying) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                        contentDescription = "Playing",
+                                        tint = Color(0xFF00E5FF),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -483,4 +734,10 @@ private fun formatMusicTime(timeMs: Long): String {
             String.format(locale, "%02d:%02d", minutes, seconds)
         }
     }
+}
+
+private fun formatSleepTime(seconds: Int): String {
+    val mins = seconds / 60
+    val secs = seconds % 60
+    return String.format(java.util.Locale.getDefault(), "%02d:%02d", mins, secs)
 }

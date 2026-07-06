@@ -538,10 +538,14 @@ fun LocalMediaList(
                                 
                                 val playlistUris = filteredVideos.map { it.uri.toString() }.toTypedArray()
                                 val playlistTitles = filteredVideos.map { it.title }.toTypedArray()
+                                val playlistArtists = filteredVideos.map { it.artist ?: "Unknown Artist" }.toTypedArray()
+                                val playlistAlbums = filteredVideos.map { it.album ?: "Unknown Album" }.toTypedArray()
                                 val clickedIndex = filteredVideos.indexOf(video)
                                 
                                 putExtra("EXTRA_PLAYLIST_URIS", playlistUris)
                                 putExtra("EXTRA_PLAYLIST_TITLES", playlistTitles)
+                                putExtra("EXTRA_PLAYLIST_ARTISTS", playlistArtists)
+                                putExtra("EXTRA_PLAYLIST_ALBUMS", playlistAlbums)
                                 putExtra("EXTRA_PLAYLIST_INDEX", clickedIndex)
                                 
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
