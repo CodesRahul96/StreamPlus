@@ -6,19 +6,18 @@ class HeaderResolver : StreamResolver {
 
     override fun resolve(item: M3UItem): M3UItem {
         val currentHeaders = item.headers
-        val headers = HashMap(currentHeaders)
-
-        // Determine the final User-Agent:
-        //  1. If item already has a non-blank userAgent (e.g., from the player intent), use it.
-        //  2. Else fall back to whatever is in the headers map.
-        //  3. Else use the app default UA.
+        val hasUa = currentHeaders.containsKey("User-Agent")
         val finalUa = when {
             item.userAgent.isNotBlank() -> item.userAgent
-            headers.containsKey("User-Agent") -> headers["User-Agent"]!!
+            hasUa -> currentHeaders["User-Agent"]!!
             else -> com.codesrahul.streamplus.util.UserAgentManager.DEFAULT_UA
         }
 
-        // Keep the headers map in sync so OkHttp also sees the correct UA
+        if (item.userAgent == finalUa && hasUa && currentHeaders["User-Agent"] == finalUa) {
+            return item
+        }
+
+        val headers = HashMap(currentHeaders)
         headers["User-Agent"] = finalUa
 
         return item.copy(

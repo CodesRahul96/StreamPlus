@@ -108,7 +108,7 @@ class PlaylistRepositoryImpl @Inject constructor(
         
         val settings = settingsRepository.settings.first()
         val playlistEntity = if (playlistId != -1) {
-            playlistDao.getPlaylist(playlistId).first()
+            playlistDao.getPlaylistSync(playlistId)
         } else {
             playlistDao.getAllPlaylistsList().find { it.url == url }
         }
@@ -400,10 +400,10 @@ class PlaylistRepositoryImpl @Inject constructor(
             // Update disk cache
             if (actualPlaylistId != -1) {
                 channelDao.deleteChannelsByPlaylist(actualPlaylistId)
-                channelDao.insertChannels(items.map { it.toEntity(actualPlaylistId) })
-                val reloaded = channelDao.getChannelsByPlaylist(actualPlaylistId).map { it.toDomain() }
-                if (reloaded.isNotEmpty()) {
-                    finalItems = reloaded
+                val entities = items.map { it.toEntity(actualPlaylistId) }
+                val ids = channelDao.insertChannels(entities)
+                finalItems = items.mapIndexed { index, m3uItem ->
+                    m3uItem.copy(id = ids.getOrNull(index)?.toInt() ?: 0)
                 }
             }
             if (settings.playlistCache) {
@@ -505,7 +505,7 @@ class PlaylistRepositoryImpl @Inject constructor(
     override suspend fun insertPlaylist(playlist: com.codesrahul.streamplus.data.local.PlaylistEntity) {
         withContext(Dispatchers.IO) {
             if (playlist.id != 0) {
-                val oldPlaylist = playlistDao.getPlaylist(playlist.id).firstOrNull()
+                val oldPlaylist = playlistDao.getPlaylistSync(playlist.id)
                 if (oldPlaylist != null) {
                     val urlChanged = oldPlaylist.url != playlist.url ||
                             oldPlaylist.serverUrl != playlist.serverUrl ||

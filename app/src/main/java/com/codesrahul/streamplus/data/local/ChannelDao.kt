@@ -12,7 +12,7 @@ interface ChannelDao {
     suspend fun getChannelsByPlaylist(playlistId: Int): List<ChannelEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertChannels(channels: List<ChannelEntity>)
+    suspend fun insertChannels(channels: List<ChannelEntity>): List<Long>
 
     @Query("DELETE FROM channels WHERE playlistId = :playlistId")
     suspend fun deleteChannelsByPlaylist(playlistId: Int)
