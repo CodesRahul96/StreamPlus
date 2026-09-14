@@ -22,33 +22,37 @@ import androidx.compose.runtime.Composable
 @Composable
 fun Modifier.glassmorphic(
     cornerRadius: Dp = 16.dp,
-    borderWidth: Dp = 1.dp
+    borderWidth: Dp = 1.dp,
+    backgroundAlpha: Float? = null,
+    accentGlowColor: Color? = null
 ): Modifier {
     val primaryColor = MaterialTheme.colorScheme.primary
     val surfaceColor = MaterialTheme.colorScheme.surface
     val isPitchBlack = surfaceColor == Color(0xFF000000)
     val isDark = isPitchBlack || (surfaceColor.red + surfaceColor.green + surfaceColor.blue) < 1.2f
                  
+    val defaultAlpha = backgroundAlpha ?: if (isPitchBlack) 0.85f else if (isDark) 0.72f else 0.85f
+
     val backgroundColor = if (isPitchBlack) {
-        Color(0xFF0B0B0C)
+        Color(0xFF0C0C12).copy(alpha = defaultAlpha)
     } else if (isDark) {
-        Color(0xFF161619).copy(alpha = 0.7f)
+        Color(0xFF14141E).copy(alpha = defaultAlpha)
     } else {
-        Color.White.copy(alpha = 0.8f)
+        Color.White.copy(alpha = defaultAlpha)
     }
     
-    val borderColorStart = if (isPitchBlack) {
-        primaryColor.copy(alpha = 0.18f)
+    val borderColorStart = accentGlowColor ?: if (isPitchBlack) {
+        primaryColor.copy(alpha = 0.28f)
     } else if (isDark) {
-        primaryColor.copy(alpha = 0.3f)
+        primaryColor.copy(alpha = 0.38f)
     } else {
-        primaryColor.copy(alpha = 0.45f)
+        primaryColor.copy(alpha = 0.5f)
     }
 
     val borderColorEnd = if (isPitchBlack) {
-        Color.White.copy(alpha = 0.03f)
+        Color.White.copy(alpha = 0.04f)
     } else if (isDark) {
-        Color.White.copy(alpha = 0.05f)
+        Color.White.copy(alpha = 0.07f)
     } else {
         Color.Black.copy(alpha = 0.08f)
     }

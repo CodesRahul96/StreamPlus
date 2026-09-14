@@ -30,8 +30,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -338,7 +341,7 @@ fun PlaylistDetailScreen(
                     if (isXtreamPlaylist) {
                         selectedStreamType == "vod" || selectedStreamType == "series"
                     } else {
-                        filteredChannels.any { it.isVod }
+                        filteredChannels.isNotEmpty() && filteredChannels.all { it.isVod }
                     }
                 }
 
@@ -364,11 +367,11 @@ fun PlaylistDetailScreen(
                     }
                 }
 
-                val cardAspectRatio = remember(isVodView, columns) {
+                val cardAspectRatio = remember(isVodView) {
                     if (isVodView) {
-                        if (columns <= 2) 0.85f else 0.68f
+                        0.70f
                     } else {
-                        1.0f
+                        0.92f
                     }
                 }
 
@@ -477,6 +480,8 @@ fun PlaylistDetailScreen(
                                                     }
                                                     putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_PLAYLIST_ID, playlist?.id ?: -1)
                                                     putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_GROUP, channel.group)
+                                                    putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_IS_VOD, channel.isVod || isVodView)
+                                                    putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_TYPE, channel.streamType)
                                                 }
                                                 context.startActivity(intent)
                                             }
@@ -625,12 +630,21 @@ fun ChannelItem(
     isFavorite: Boolean = false,
     onToggleFavorite: (() -> Unit)? = null,
     onClick: () -> Unit,
-    cardAspectRatio: Float = 0.85f,
+    cardAspectRatio: Float = 0.92f,
     isVodView: Boolean = false,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
-    if (isVodView) {
+    val lowerUrl = channel.url.lowercase()
+    val isExplicitLiveStream = lowerUrl.contains(".m3u8") || lowerUrl.contains("/live/") ||
+            lowerUrl.contains("play/live.php") || lowerUrl.substringBefore("?").endsWith(".ts") ||
+            lowerUrl.contains(".mpd")
+    val isItemVod = !isExplicitLiveStream && (
+        channel.streamType == "series" || channel.streamType == "movie" || channel.streamType == "vod" ||
+        (channel.isVod && !channel.group.contains("tamil", ignoreCase = true) && !channel.name.contains("TV", ignoreCase = true) && !channel.name.contains("HD", ignoreCase = true)) ||
+        (isVodView && channel.streamType != "live")
+    )
+    if (isItemVod) {
         VodPosterItem(
             channel = channel,
             hideImage = hideImage,
@@ -642,7 +656,15 @@ fun ChannelItem(
             animatedVisibilityScope = animatedVisibilityScope
         )
     } else {
-        LiveChannelItem(channel, hideImage, currentProgram, isFavorite, onToggleFavorite, onClick, cardAspectRatio)
+        LiveChannelItem(
+            channel = channel,
+            hideImage = hideImage,
+            currentProgram = currentProgram,
+            isFavorite = isFavorite,
+            onToggleFavorite = onToggleFavorite,
+            onClick = onClick,
+            aspectRatio = cardAspectRatio
+        )
     }
 }
 
@@ -654,31 +676,38 @@ fun VodPosterItem(
     isFavorite: Boolean,
     onToggleFavorite: (() -> Unit)?,
     onClick: () -> Unit,
-    aspectRatio: Float = 0.68f,
+    aspectRatio: Float = 0.92f,
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
+    val isSeries = channel.streamType == "series"
+    val seriesId = if (isSeries) channel.url.split("/").last().toIntOrNull() ?: channel.id else channel.id
+
     Card(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(aspectRatio)
-            .tvFocusable(cornerRadius = 16.dp)
-            .clickable(onClick = onClick)
-            .glassmorphic(cornerRadius = 16.dp),
-        shape = RoundedCornerShape(16.dp),
+            .tvFocusable(cornerRadius = 18.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
+            containerColor = Color(0xFF141724)
         ),
-        border = null,
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        border = BorderStroke(
+            1.dp,
+            Brush.verticalGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.16f),
+                    Color.White.copy(alpha = 0.03f)
+                )
+            )
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            // 1. Poster Image (Full-bleed)
+            // 1. Full-bleed Poster Image
             if (channel.logoUrl.isNotBlank() && !hideImage) {
-                val isSeries = channel.streamType == "series"
-                val seriesId = if (isSeries) channel.url.split("/").last().toIntOrNull() ?: channel.id else channel.id
-                
                 val sharedTransitionModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
                     with(sharedTransitionScope) {
                         Modifier.sharedElement(
@@ -695,45 +724,45 @@ fun VodPosterItem(
                         .data(channel.logoUrl)
                         .crossfade(true)
                         .build(),
-                    contentDescription = null,
+                    contentDescription = channel.name,
                     modifier = Modifier
                         .then(sharedTransitionModifier)
                         .fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
             } else {
-                // Placeholder
+                // High-end cinematic gradient backdrop
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.02f)
+                            Brush.linearGradient(
+                                listOf(
+                                    Color(0xFF1E1B4B),
+                                    Color(0xFF0F172A),
+                                    Color(0xFF090D16)
                                 )
                             )
                         ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        Icons.Default.Movie,
+                        imageVector = if (isSeries) Icons.Default.Tv else Icons.Default.Movie,
                         contentDescription = null,
-                        modifier = Modifier.size(42.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                        modifier = Modifier.size(48.dp),
+                        tint = Color(0xFF818CF8).copy(alpha = 0.35f)
                     )
                 }
             }
 
-            // 2. Black Gradient Overlay
+            // 2. Cinematic Multi-Stop Scrim
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.6f)
-                    .align(Alignment.BottomCenter)
+                    .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(
+                            listOf(
+                                Color.Black.copy(alpha = 0.15f),
                                 Color.Transparent,
                                 Color.Black.copy(alpha = 0.6f),
                                 Color.Black.copy(alpha = 0.95f)
@@ -742,11 +771,32 @@ fun VodPosterItem(
                     )
             )
 
-            // 3. Favorite Toggle
+            // 3. Top-Left Badge (Series / Movie)
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = if (isSeries) Color(0xDD7C3AED) else Color(0xDDF59E0B),
+                border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.35f)),
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(10.dp)
+            ) {
+                Text(
+                    text = if (isSeries) "SERIES" else "MOVIE",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 9.sp,
+                    letterSpacing = 0.6.sp,
+                    color = Color.White,
+                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                )
+            }
+
+            // 4. Top-Right Frosted Heart Button
             if (onToggleFavorite != null) {
                 Surface(
                     shape = CircleShape,
-                    color = Color.Black.copy(alpha = 0.5f),
+                    color = Color(0x80000000),
+                    border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.2f)),
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(8.dp)
@@ -758,49 +808,59 @@ fun VodPosterItem(
                     ) {
                         Icon(
                             imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = null,
-                            tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White,
+                            contentDescription = if (isFavorite) "Favorited" else "Favorite",
+                            tint = if (isFavorite) Color(0xFFFF2D55) else Color.White,
                             modifier = Modifier.size(16.dp)
                         )
                     }
                 }
             }
 
-            // 4. Series/VOD Badge
-            val isSeries = channel.streamType == "series"
+            // 5. Floating Play Accent (Bottom Right)
             Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = if (isSeries) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.85f)
-                        else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
+                shape = CircleShape,
+                color = Color(0xCC0F172A),
+                border = BorderStroke(1.dp, Color(0xFF06B6D4).copy(alpha = 0.6f)),
                 modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(8.dp)
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 10.dp, bottom = 10.dp)
+                    .size(32.dp)
             ) {
-                Text(
-                    text = if (isSeries) "SERIES" else "MOVIE",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = if (isSeries) MaterialTheme.colorScheme.onSecondaryContainer
-                            else MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                )
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        contentDescription = "Play",
+                        tint = Color(0xFF38BDF8),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
 
-            // 5. Title Text
+            // 6. Title and Metadata (Bottom Left)
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .fillMaxWidth()
-                    .padding(10.dp)
+                    .fillMaxWidth(0.78f)
+                    .padding(start = 10.dp, bottom = 10.dp, end = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
                     text = channel.name,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Start
+                    fontSize = 13.sp
+                )
+                val groupSubtitle = if (channel.group.isNotBlank() && channel.group != "0") channel.group else if (isSeries) "Series" else "Movie"
+                Text(
+                    text = groupSubtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF94A3B8),
+                    fontSize = 10.5.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -816,75 +876,196 @@ fun LiveChannelItem(
     isFavorite: Boolean,
     onToggleFavorite: (() -> Unit)?,
     onClick: () -> Unit,
-    aspectRatio: Float = 1.0f,
+    aspectRatio: Float = 0.92f,
     modifier: Modifier = Modifier
 ) {
-    val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
+    val infiniteTransition = rememberInfiniteTransition(label = "live_pulse")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_alpha"
+    )
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(aspectRatio)
-            .tvFocusable(cornerRadius = 16.dp)
-            .clickable(onClick = onClick)
-            .glassmorphic(cornerRadius = 16.dp),
-        shape = RoundedCornerShape(16.dp),
+            .tvFocusable(cornerRadius = 18.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
+            containerColor = Color(0xFF131522)
         ),
-        border = null,
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        border = BorderStroke(
+            1.dp,
+            Brush.verticalGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.12f),
+                    Color.White.copy(alpha = 0.03f)
+                )
+            )
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // 1. Logo Area
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(10.dp)
+        ) {
+            // 1. Channel Logo Podium Stage
             Box(
                 modifier = Modifier
-                    .weight(1.25f)
+                    .weight(1f)
                     .fillMaxWidth()
-                    .padding(8.dp),
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                Color(0xFF222638),
+                                Color(0xFF131622)
+                            )
+                        )
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = if (isPitchBlack) Color(0xFF121212) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    if (channel.logoUrl.isNotBlank() && !hideImage) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(channel.logoUrl)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(12.dp),
-                            contentScale = ContentScale.Fit
+                // Subtle inner border for logo podium
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .border(
+                            1.dp,
+                            Color.White.copy(alpha = 0.05f),
+                            RoundedCornerShape(14.dp)
                         )
-                    } else {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.Tv,
-                                contentDescription = null,
-                                modifier = Modifier.size(36.dp),
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                )
+
+                // Logo or Monogram
+                if (channel.logoUrl.isNotBlank() && !hideImage) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(channel.logoUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = channel.name,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(12.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    // Luxury initial monogram fallback
+                    val initials = remember(channel.name) {
+                        val words = channel.name.trim().split(" ").filter { it.isNotBlank() }
+                        if (words.size >= 2) {
+                            "${words[0].first()}${words[1].first()}".uppercase()
+                        } else {
+                            channel.name.take(2).uppercase()
+                        }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        Color(0xFF0284C7),
+                                        Color(0xFF0F172A)
+                                    )
+                                )
                             )
+                            .border(1.dp, Color(0xFF38BDF8).copy(alpha = 0.4f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = initials,
+                            color = Color.White,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 18.sp
+                        )
+                    }
+                }
+
+                // Top-Left Badges: LIVE + DRM
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // LIVE Pill with pulsing dot
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = Color(0xDDFF1744),
+                        border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.3f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = pulseAlpha))
+                            )
+                            Text(
+                                "LIVE",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 9.sp,
+                                letterSpacing = 0.5.sp,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    // DRM Lock Pill
+                    if (!channel.drmScheme.isNullOrBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color(0xCC1E293B),
+                            border = BorderStroke(0.5.dp, Color(0xFFF59E0B).copy(alpha = 0.5f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = Color(0xFFF59E0B),
+                                    modifier = Modifier.size(10.dp)
+                                )
+                                Text(
+                                    "DRM",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 9.sp,
+                                    color = Color(0xFFF59E0B)
+                                )
+                            }
                         }
                     }
                 }
 
-                // Favorite Toggle
+                // Top-Right Favorite Heart
                 if (onToggleFavorite != null) {
                     Surface(
                         shape = CircleShape,
-                        color = Color.Black.copy(alpha = 0.4f),
+                        color = Color(0x80000000),
+                        border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.15f)),
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(4.dp)
-                            .size(28.dp)
+                            .padding(6.dp)
+                            .size(30.dp)
                     ) {
                         IconButton(
                             onClick = onToggleFavorite,
@@ -892,123 +1073,70 @@ fun LiveChannelItem(
                         ) {
                             Icon(
                                 imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = null,
-                                tint = if (isFavorite) MaterialTheme.colorScheme.error else Color.White,
-                                modifier = Modifier.size(14.dp)
-                            )
-                        }
-                    }
-                }
-
-                // Badges
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // LIVE Badge
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
-                    ) {
-                        Text(
-                            "LIVE",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                        )
-                    }
-
-                    // DRM Badge
-                    if (!channel.drmScheme.isNullOrBlank()) {
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)
-                        ) {
-                            Text(
-                                "DRM",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                            )
-                        }
-                    }
-
-                    // Status Badge if not UNKNOWN
-                    if (channel.status != com.codesrahul.streamplus.domain.model.StreamStatus.UNKNOWN) {
-                        val statusColor = when (channel.status) {
-                            com.codesrahul.streamplus.domain.model.StreamStatus.ACTIVE -> Color(0xFF00E676)
-                            com.codesrahul.streamplus.domain.model.StreamStatus.DEAD -> Color(0xFFFF5252)
-                            else -> Color(0xFFFFD740)
-                        }
-                        val statusText = when (channel.status) {
-                            com.codesrahul.streamplus.domain.model.StreamStatus.ACTIVE -> "ONLINE"
-                            com.codesrahul.streamplus.domain.model.StreamStatus.DEAD -> "OFFLINE"
-                            else -> "TIMEOUT"
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = statusColor.copy(alpha = 0.9f)
-                        ) {
-                            Text(
-                                statusText,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = if (channel.status == com.codesrahul.streamplus.domain.model.StreamStatus.ACTIVE || channel.status == com.codesrahul.streamplus.domain.model.StreamStatus.DEAD) Color.White else Color.Black,
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                contentDescription = if (isFavorite) "Favorited" else "Favorite",
+                                tint = if (isFavorite) Color(0xFFFF2D55) else Color.White.copy(alpha = 0.8f),
+                                modifier = Modifier.size(15.dp)
                             )
                         }
                     }
                 }
             }
 
-            // 2. Info Area
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // 2. Channel Info & EPG Stage (Fixed 42dp for perfectly identical card alignment)
             Column(
                 modifier = Modifier
-                    .weight(0.75f)
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                    .height(42.dp)
+                    .padding(horizontal = 4.dp),
                 verticalArrangement = Arrangement.Center
             ) {
+                // Channel Title
                 Text(
                     text = channel.name,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center
+                    fontSize = 13.5.sp
                 )
 
                 Spacer(modifier = Modifier.height(2.dp))
 
+                // EPG or Category row
                 if (!currentProgram.isNullOrBlank()) {
-                    Text(
-                        text = currentProgram,
-                        style = androidx.compose.ui.text.TextStyle(
-                            fontSize = MaterialTheme.typography.labelSmall.fontSize * 0.95f,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Medium
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.basicMarquee()
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(5.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF38BDF8))
+                        )
+                        Text(
+                            text = currentProgram,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF38BDF8),
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.basicMarquee()
+                        )
+                    }
                 } else {
+                    val groupText = if (channel.group.isNotBlank() && channel.group != "0") channel.group else "Broadcast"
                     Text(
-                        text = "No EPG Info",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        ),
+                        text = groupText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF94A3B8),
+                        fontSize = 11.sp,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -1026,95 +1154,215 @@ fun ChannelListItem(
     onClick: () -> Unit,
     isVodView: Boolean = false
 ) {
-    val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
-    Row(
+    val lowerUrl = channel.url.lowercase()
+    val isExplicitLiveStream = lowerUrl.contains(".m3u8") || lowerUrl.contains("/live/") ||
+            lowerUrl.contains("play/live.php") || lowerUrl.substringBefore("?").endsWith(".ts") ||
+            lowerUrl.contains(".mpd")
+    val isItemVod = !isExplicitLiveStream && (
+        channel.streamType == "series" || channel.streamType == "movie" || channel.streamType == "vod" ||
+        (channel.isVod && !channel.group.contains("tamil", ignoreCase = true) && !channel.name.contains("TV", ignoreCase = true) && !channel.name.contains("HD", ignoreCase = true)) ||
+        (isVodView && channel.streamType != "live")
+    )
+
+    Card(
         modifier = Modifier
             .fillMaxWidth()
             .height(84.dp)
-            .tvFocusable(cornerRadius = 14.dp)
-            .clickable(onClick = onClick)
-            .glassmorphic(cornerRadius = 14.dp)
-            .padding(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Image on the left
-        Box(
-            modifier = Modifier
-                .size(68.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(if (isPitchBlack) Color(0xFF121212) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)),
-            contentAlignment = Alignment.Center
-        ) {
-            if (channel.logoUrl.isNotBlank() && !hideImage) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(channel.logoUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize().padding(if (isVodView) 0.dp else 8.dp),
-                    contentScale = if (isVodView) ContentScale.Crop else ContentScale.Fit
+            .tvFocusable(cornerRadius = 16.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF131522)
+        ),
+        border = BorderStroke(
+            1.dp,
+            Brush.verticalGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.12f),
+                    Color.White.copy(alpha = 0.03f)
                 )
-            } else {
-                Icon(
-                    imageVector = if (isVodView) Icons.Default.Movie else Icons.Default.Tv,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        // Titles in the middle
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = channel.name,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
             )
-            
-            if (isVodView) {
-                val subText = when {
-                    channel.streamType == "series" -> "Series"
-                    channel.group.isNotBlank() && channel.group != "0" -> channel.group
-                    else -> "Movie"
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Left: Logo Podium / Poster Thumbnail
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        Brush.radialGradient(
+                            listOf(
+                                Color(0xFF222638),
+                                Color(0xFF131622)
+                            )
+                        )
+                    )
+                    .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (channel.logoUrl.isNotBlank() && !hideImage) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(channel.logoUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(if (isItemVod) 0.dp else 8.dp),
+                        contentScale = if (isItemVod) ContentScale.Crop else ContentScale.Fit
+                    )
+                } else {
+                    val initials = remember(channel.name) {
+                        val words = channel.name.trim().split(" ").filter { it.isNotBlank() }
+                        if (words.size >= 2) "${words[0].first()}${words[1].first()}".uppercase()
+                        else channel.name.take(2).uppercase()
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.linearGradient(listOf(Color(0xFF0284C7), Color(0xFF0F172A)))
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(initials, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
                 }
-                Text(
-                    text = subText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            } else {
-                val programText = currentProgram ?: "No EPG info available"
-                Text(
-                    text = programText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (currentProgram != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
             }
-        }
 
-        // Action buttons on the right
-        if (onToggleFavorite != null) {
-            IconButton(onClick = onToggleFavorite) {
-                Icon(
-                    imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = "Favorite",
-                    tint = if (isFavorite) Color.Red else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    modifier = Modifier.size(22.dp)
-                )
+            Spacer(modifier = Modifier.width(14.dp))
+
+            // Center: Channel Information & Meta
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = channel.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+
+                    if (!isItemVod) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color(0xDDFF1744)
+                        ) {
+                            Text(
+                                "LIVE",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 8.5.sp,
+                                letterSpacing = 0.5.sp,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                            )
+                        }
+                    } else if (channel.streamType == "series") {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color(0xDD7C3AED)
+                        ) {
+                            Text(
+                                "SERIES",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 8.5.sp,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
+
+                    if (!channel.drmScheme.isNullOrBlank()) {
+                        Icon(
+                            Icons.Default.Lock,
+                            contentDescription = "DRM",
+                            tint = Color(0xFFF59E0B),
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                if (isItemVod) {
+                    val subText = when {
+                        channel.streamType == "series" -> "Series"
+                        channel.group.isNotBlank() && channel.group != "0" -> channel.group
+                        else -> "Movie"
+                    }
+                    Text(
+                        text = subText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF94A3B8),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                } else {
+                    val programText = currentProgram ?: channel.group.ifBlank { "Live Broadcast" }
+                    Text(
+                        text = programText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (currentProgram != null) Color(0xFF38BDF8) else Color(0xFF94A3B8),
+                        fontWeight = if (currentProgram != null) FontWeight.Medium else FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = if (currentProgram != null) Modifier.basicMarquee() else Modifier
+                    )
+                }
+            }
+
+            // Right: Actions (Favorite + Play arrow)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                if (onToggleFavorite != null) {
+                    IconButton(
+                        onClick = onToggleFavorite,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "Favorite",
+                            tint = if (isFavorite) Color(0xFFFF2D55) else Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = CircleShape,
+                    color = Color.White.copy(alpha = 0.08f),
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            contentDescription = "Play",
+                            tint = Color(0xFF38BDF8),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
             }
         }
     }

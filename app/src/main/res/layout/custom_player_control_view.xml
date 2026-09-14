@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#80000000"> <!-- Semi-transparent background -->
+    android:background="@drawable/bg_player_controller_scrim">
 
     <!-- Top Bar -->
     <LinearLayout
@@ -13,9 +13,9 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="44dp"
-        android:paddingEnd="44dp"
-        android:paddingTop="24dp"
+        android:paddingStart="36dp"
+        android:paddingEnd="36dp"
+        android:paddingTop="20dp"
         android:paddingBottom="16dp"
         app:layout_constraintTop_toTopOf="parent">
 
@@ -23,7 +23,7 @@
             android:id="@+id/btn_close"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:background="@drawable/bg_player_icon_btn"
             android:contentDescription="Close"
             android:padding="8dp"
             android:src="@drawable/ic_close_white"
@@ -33,20 +33,52 @@
             android:id="@+id/tv_player_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="12dp"
+            android:layout_marginHorizontal="14dp"
             android:layout_weight="1"
             android:ellipsize="marquee"
             android:singleLine="true"
             android:text="Stream Title"
             android:textColor="@android:color/white"
-            android:textSize="18sp"
+            android:textSize="17sp"
             android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_live_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_live_badge"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:text="🔴 LIVE"
+            android:textColor="#EF4444"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tv_stream_quality_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:background="@drawable/bg_quality_badge"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:text="AUTO"
+            android:textColor="#06B6D4"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
 
         <ImageButton
             android:id="@+id/exo_speed_top"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:background="@drawable/bg_player_icon_btn"
             android:contentDescription="Playback Speed"
             android:padding="8dp"
             android:src="@drawable/ic_speed"
@@ -56,8 +88,8 @@
             android:id="@+id/exo_playlist_top"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:layout_marginStart="8dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/bg_player_icon_btn"
             android:contentDescription="Playlist"
             android:padding="8dp"
             android:src="@drawable/ic_playlist"
@@ -67,8 +99,8 @@
             android:id="@+id/exo_settings"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:layout_marginStart="8dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/bg_player_icon_btn"
             android:contentDescription="Settings"
             android:padding="8dp"
             android:src="@drawable/ic_settings"
@@ -76,26 +108,52 @@
 
     </LinearLayout>
 
-    <!-- Center Play/Pause only (Minimalist) -->
-    <FrameLayout
+    <!-- Center Controls: 10s Rewind, Play/Pause, 10s Fast Forward -->
+    <LinearLayout
         android:id="@+id/center_controls"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
         <ImageButton
+            android:id="@id/exo_rew"
+            style="@style/ExoMediaButton.Rewind"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:background="@drawable/bg_player_center_btn"
+            android:contentDescription="Rewind 10s"
+            android:padding="12dp"
+            android:src="@drawable/ic_replay_10"
+            android:tint="@android:color/white" />
+
+        <ImageButton
             android:id="@id/exo_play_pause"
             style="@style/ExoMediaButton.Play"
             android:layout_width="72dp"
             android:layout_height="72dp"
-            android:background="@android:color/transparent"
-            android:tint="@android:color/white"
-            android:visibility="gone" /> <!-- Usually controlled by ExoPlayer automatic logic -->
+            android:layout_marginStart="36dp"
+            android:layout_marginEnd="36dp"
+            android:background="@drawable/bg_player_play_pause_btn"
+            android:padding="16dp"
+            android:tint="@android:color/white" />
 
-    </FrameLayout>
+        <ImageButton
+            android:id="@id/exo_ffwd"
+            style="@style/ExoMediaButton.FastForward"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:background="@drawable/bg_player_center_btn"
+            android:contentDescription="Fast Forward 10s"
+            android:padding="12dp"
+            android:src="@drawable/ic_forward_10"
+            android:tint="@android:color/white" />
+
+    </LinearLayout>
 
     <!-- Bottom Section -->
     <LinearLayout
@@ -106,23 +164,27 @@
         android:paddingBottom="16dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
-        <!-- Full Width Progress Bar -->
+        <!-- Full Width Neon Progress Bar -->
         <androidx.media3.ui.DefaultTimeBar
             android:id="@id/exo_progress"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:buffered_color="#80FFFFFF"
-            app:played_color="#FFFFFF"
-            app:scrubber_color="#FFFFFF"
-            app:unplayed_color="#40FFFFFF" />
+            app:bar_height="4dp"
+            app:touch_target_height="28dp"
+            app:buffered_color="#59FFFFFF"
+            app:played_color="#06B6D4"
+            app:scrubber_color="#38BDF8"
+            app:scrubber_enabled_size="12dp"
+            app:scrubber_dragged_size="16dp"
+            app:unplayed_color="#26FFFFFF" />
 
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingStart="44dp"
-            android:paddingEnd="44dp"
+            android:paddingStart="36dp"
+            android:paddingEnd="36dp"
             android:paddingTop="8dp"
-            android:paddingBottom="16dp">
+            android:paddingBottom="12dp">
 
             <!-- Combined Time Display -->
             <TextView
@@ -132,7 +194,7 @@
                 android:layout_alignParentStart="true"
                 android:layout_centerVertical="true"
                 android:textColor="@android:color/white"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 android:textStyle="bold"
                 tools:text="00:00 - 00:00" />
             
@@ -150,33 +212,33 @@
 
                 <ImageButton
                     android:id="@+id/btn_pip"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:background="@drawable/bg_player_icon_btn"
                     android:contentDescription="PiP"
-                    android:padding="6dp"
+                    android:padding="8dp"
                     android:src="@drawable/ic_pip"
                     android:tint="@android:color/white" />
 
                 <ImageButton
                     android:id="@+id/exo_resize_mode_button"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:layout_marginStart="16dp"
-                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:layout_marginStart="12dp"
+                    android:background="@drawable/bg_player_icon_btn"
                     android:contentDescription="Aspect Ratio"
-                    android:padding="6dp"
+                    android:padding="8dp"
                     android:src="@drawable/ic_aspect_ratio"
                     android:tint="@android:color/white" />
 
                 <ImageButton
                     android:id="@+id/btn_landscape"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:layout_marginStart="16dp"
-                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:layout_marginStart="12dp"
+                    android:background="@drawable/bg_player_icon_btn"
                     android:contentDescription="Orientation"
-                    android:padding="6dp"
+                    android:padding="8dp"
                     android:src="@drawable/ic_screen_rotation"
                     android:tint="@android:color/white" />
 

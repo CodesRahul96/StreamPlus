@@ -26,30 +26,34 @@ class JsonStreamParser : StreamParser {
         return items
     }
 
-    private fun scanJsonForStreams(jsonElement: Any, items: MutableList<M3UItem>) {
+    private fun scanJsonForStreams(jsonElement: Any, items: MutableList<M3UItem>, parentGroup: String = "Uncategorized") {
         when (jsonElement) {
             is JSONArray -> {
                 for (i in 0 until jsonElement.length()) {
                     val item = jsonElement.opt(i)
                     if (item != null) {
                         if (item is JSONObject && isStreamObject(item)) {
-                            parseStreamObject(item)?.let { items.add(it) }
+                            parseStreamObject(item, parentGroup)?.let { items.add(it) }
                         } else {
-                            scanJsonForStreams(item, items)
+                            scanJsonForStreams(item, items, parentGroup)
                         }
                     }
                 }
             }
             is JSONObject -> {
                 if (isStreamObject(jsonElement)) {
-                    parseStreamObject(jsonElement)?.let { items.add(it) }
+                    parseStreamObject(jsonElement, parentGroup)?.let { items.add(it) }
                 } else {
+                    val groupName = listOf("name", "title", "category", "group")
+                        .mapNotNull { k -> jsonElement.optString(k).takeIf { it.isNotBlank() } }
+                        .firstOrNull() ?: parentGroup
+
                     val keys = jsonElement.keys()
                     while (keys.hasNext()) {
                         val key = keys.next()
                         val value = jsonElement.opt(key)
                         if (value != null) {
-                            scanJsonForStreams(value, items)
+                            scanJsonForStreams(value, items, groupName)
                         }
                     }
                 }
@@ -61,11 +65,12 @@ class JsonStreamParser : StreamParser {
         // Must contain at least one URL-like key
         return obj.has("url") || obj.has("link") || obj.has("stream") || 
                obj.has("stream_url") || obj.has("source") || obj.has("file") || 
-               obj.has("src") || obj.has("uri")
+               obj.has("src") || obj.has("uri") || obj.has("embed") || 
+               obj.has("target") || obj.has("playback_url") || obj.has("hls") || obj.has("mpd")
     }
 
-    private fun parseStreamObject(obj: JSONObject): M3UItem? {
-        val url = listOf("url", "link", "stream", "stream_url", "source", "file", "src", "uri")
+    private fun parseStreamObject(obj: JSONObject, fallbackGroup: String = "Uncategorized"): M3UItem? {
+        val url = listOf("url", "link", "stream", "stream_url", "source", "file", "src", "uri", "embed", "target", "playback_url", "hls", "mpd")
             .mapNotNull { key -> obj.optString(key).takeIf { it.isNotBlank() } }
             .firstOrNull() ?: return null
 
@@ -81,7 +86,7 @@ class JsonStreamParser : StreamParser {
 
         val group = listOf("group", "grouptitle", "group-title", "category", "category_name", "genre")
             .mapNotNull { key -> obj.optString(key).takeIf { it.isNotBlank() } }
-            .firstOrNull() ?: "Uncategorized"
+            .firstOrNull() ?: fallbackGroup
 
         val headers = mutableMapOf<String, String>()
         listOf("user-agent", "useragent", "ua").forEach { key ->

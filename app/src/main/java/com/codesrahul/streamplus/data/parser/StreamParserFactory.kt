@@ -12,16 +12,18 @@ object StreamParserFactory {
         val jsonParser = JsonStreamParser()
         val xmlPlsParser = XmlPlsStreamParser()
         
+        // If content contains M3U markers or ends with common m3u extensions, prioritize M3U
+        val isM3u = url.endsWith(".m3u", true) || 
+                    url.endsWith(".m3u8", true) || 
+                    url.endsWith(".ts", true) || 
+                    url.endsWith(".txt", true) ||
+                    prefix.contains("#EXTM3U", ignoreCase = true) ||
+                    prefix.contains("#EXTINF", ignoreCase = true)
+
         return when {
+            isM3u -> m3uParser
             jsonParser.canParse(url, prefix) -> jsonParser
             xmlPlsParser.canParse(url, prefix) -> xmlPlsParser
-            
-            // Explicit extension check for common playlist types to force M3U parser
-            url.endsWith(".m3u", true) || 
-            url.endsWith(".m3u8", true) || 
-            url.endsWith(".ts", true) || 
-            url.endsWith(".txt", true) -> m3uParser
-
             m3uParser.canParse(url, prefix) -> m3uParser
             else -> m3uParser // Default fallback
         }

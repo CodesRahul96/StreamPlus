@@ -7,6 +7,7 @@ import android.content.Intent
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -42,12 +43,22 @@ import com.codesrahul.streamplus.ui.components.PremiumBackground
 import com.codesrahul.streamplus.ui.player.PlayerActivity
 import com.codesrahul.streamplus.util.UserAgentManager
 import com.codesrahul.streamplus.ui.util.tvFocusable
+import com.codesrahul.streamplus.ui.theme.NeonCyan
 import androidx.compose.ui.res.stringResource
 import com.codesrahul.streamplus.R
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.hilt.navigation.compose.hiltViewModel
 
+
+data class DirectPlayPreset(
+    val label: String,
+    val url: String,
+    val title: String,
+    val drmScheme: String = "None",
+    val drmLicenseUrl: String = "",
+    val userAgent: String = "Chrome"
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,9 +146,16 @@ fun DirectPlayScreen(
         }
         
         var finalDrmLicenseUrl = drmLicenseUrl.trim()
+        val isDrmKeyPair = finalDrmLicenseUrl.contains(":") && 
+            !finalDrmLicenseUrl.startsWith("http://", ignoreCase = true) && 
+            !finalDrmLicenseUrl.startsWith("https://", ignoreCase = true) && 
+            !finalDrmLicenseUrl.startsWith("data:", ignoreCase = true)
+
         if (finalDrmLicenseUrl.isNotEmpty() &&
             !finalDrmLicenseUrl.startsWith("http://", ignoreCase = true) && 
-            !finalDrmLicenseUrl.startsWith("https://", ignoreCase = true)) {
+            !finalDrmLicenseUrl.startsWith("https://", ignoreCase = true) &&
+            !finalDrmLicenseUrl.startsWith("data:", ignoreCase = true) &&
+            !isDrmKeyPair) {
             finalDrmLicenseUrl = "http://$finalDrmLicenseUrl"
         }
 
@@ -163,26 +181,30 @@ fun DirectPlayScreen(
 
     PremiumBackground {
         Scaffold(
-            containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
                     title = {
                         Text(
                             stringResource(R.string.direct_stream_title),
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold
                         )
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        scrolledContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
-                    ),
-                    windowInsets = WindowInsets(0.dp),
                     actions = {
                         IconButton(onClick = { onNavigateToHistory?.invoke() }) {
-                            Icon(Icons.Default.History, contentDescription = stringResource(R.string.history_btn))
+                            Icon(
+                                Icons.Default.History,
+                                contentDescription = stringResource(R.string.recent_tab),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
                         }
-                    }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    windowInsets = WindowInsets(0.dp)
                 )
             },
             floatingActionButton = {
@@ -194,20 +216,106 @@ fun DirectPlayScreen(
                     icon = { Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.play_stream_btn), modifier = Modifier.size(24.dp)) },
                     text = { Text(stringResource(R.string.play_stream_btn), fontWeight = FontWeight.Bold) }
                 )
-            }
+            },
+            containerColor = Color.Transparent
         ) { padding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 20.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Spacer(modifier = Modifier.height(4.dp))
+            Box(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(horizontal = 20.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                // ── Stream URL Card ──────────────────────────────────────────
-                SectionCard {
+                    // ── Curated Studio Stream Presets ──────────────────────────
+                    val presets = remember {
+                        listOf(
+                            DirectPlayPreset(
+                                label = "4K DASH",
+                                url = "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd",
+                                title = "Big Buck Bunny 4K (DASH Multi-Rate)"
+                            ),
+                            DirectPlayPreset(
+                                label = "Live HLS",
+                                url = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+                                title = "Big Buck Bunny (1080p 60FPS HLS)"
+                            ),
+                            DirectPlayPreset(
+                                label = "Apple HLS",
+                                url = "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8",
+                                title = "Apple BipBop (Multi-Audio HLS)"
+                            ),
+                            DirectPlayPreset(
+                                label = "1080p MP4",
+                                url = "https://filesamples.com/samples/video/mp4/sample_1920x1080.mp4",
+                                title = "Sample 1080p Master Video (MP4)"
+                            ),
+                            DirectPlayPreset(
+                                label = "ClearKey DRM",
+                                url = "https://storage.googleapis.com/shaka-demo-assets/angel-one-clearkey/dash.mpd",
+                                title = "Angel One (ClearKey Encrypted DASH)",
+                                drmScheme = "ClearKey",
+                                drmLicenseUrl = "feedf00deedeadbeeff0baadf00dd00d:00112233445566778899aabbccddeeff"
+                            ),
+                            DirectPlayPreset(
+                                label = "Widevine DRM",
+                                url = "https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine/dash.mpd",
+                                title = "Angel One (Widevine Protected DASH)",
+                                drmScheme = "Widevine",
+                                drmLicenseUrl = "https://cwip-shaka-proxy.appspot.com/no_auth"
+                            )
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        presets.forEach { preset ->
+                            Surface(
+                                onClick = {
+                                    streamUrl = preset.url
+                                    streamTitle = preset.title
+                                    drmScheme = preset.drmScheme
+                                    drmLicenseUrl = preset.drmLicenseUrl
+                                    selectedUAName = preset.userAgent
+                                    if (preset.drmScheme != "None" || preset.drmLicenseUrl.isNotEmpty()) {
+                                        showAdvanced = true
+                                    }
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = if (preset.drmScheme != "None") Icons.Default.Lock else Icons.Default.PlayCircleOutline,
+                                        contentDescription = null,
+                                        tint = if (preset.drmScheme != "None") NeonCyan else MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        preset.label,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // ── Stream URL Card ──────────────────────────────────────────
+                    SectionCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
                             shape = CircleShape,
@@ -330,6 +438,67 @@ fun DirectPlayScreen(
                             unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
                         )
                     )
+
+                    // ── AI Auto-Detect Inspector Card ──────────────────────────
+                    val aiProfile = remember(streamUrl) {
+                        if (streamUrl.isNotBlank() && streamUrl.trim().length > 7) {
+                            com.codesrahul.streamplus.data.network.StreamIntelligenceEngine(okhttp3.OkHttpClient())
+                                .analyzeUrlFast(streamUrl)
+                        } else null
+                    }
+
+                    AnimatedVisibility(
+                        visible = aiProfile != null,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        aiProfile?.let { prof ->
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)),
+                                modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(14.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            Icons.Default.AutoAwesome,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            "AI Stream Auto-Detect",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(modifier = Modifier.weight(1f))
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                            modifier = Modifier.padding(horizontal = 4.dp)
+                                        ) {
+                                            Text(
+                                                prof.protocol.displayName,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        prof.aiDiagnosticSummary,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // ── User Agent Card ──────────────────────────────────────────
@@ -648,6 +817,7 @@ fun DirectPlayScreen(
             onSelect  = { drmScheme = it; showDrmDialog = false }
         )
     }
+}
 }
 
 @Composable

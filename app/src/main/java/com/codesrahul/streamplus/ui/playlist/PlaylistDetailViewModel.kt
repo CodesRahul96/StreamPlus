@@ -90,11 +90,12 @@ class PlaylistDetailViewModel @Inject constructor(
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val groups = _channels.map { channels ->
+    val groups = combine(_channels, _selectedStreamType, _isXtreamPlaylist) { channels, streamType, isXtream ->
         kotlinx.coroutines.withContext(Dispatchers.Default) {
+            val relevantChannels = if (isXtream) channels.filter { it.streamType == streamType } else channels
             buildList {
                 add("All")
-                channels.map { it.group.take(100).trim() }.distinct().filter { it.isNotBlank() }.sorted().forEach { add(it) }
+                relevantChannels.map { it.group.take(100).trim() }.distinct().filter { it.isNotBlank() }.sorted().forEach { add(it) }
             }
         }
     }

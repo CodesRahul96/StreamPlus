@@ -1,19 +1,26 @@
  package com.codesrahul.streamplus.ui.main
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -77,53 +84,124 @@ fun MainScreen(initialTab: String? = null) {
 
     Scaffold(
         bottomBar = {
-            val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurface,
-                tonalElevation = if (isPitchBlack) 0.dp else 8.dp
-            ) {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
-                items.forEach { item ->
-                    val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
-                    val titleText = androidx.compose.ui.res.stringResource(item.titleRes)
-                    NavigationBarItem(
-                        icon = {
-                            Icon(
-                                if (selected) item.selectedIcon else item.unselectedIcon,
-                                contentDescription = titleText,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        },
-                        label = if (!hideLabels) {
-                            {
-                                Text(
-                                    titleText,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
-                                )
-                            }
-                        } else null,
-                        selected = selected,
-                        alwaysShowLabel = !hideLabels,
-                        onClick = {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                            selectedTextColor = MaterialTheme.colorScheme.onSurface,
-                            indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentDestination = navBackStackEntry?.destination
+            val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+            val isPitchBlack = !isLight && (MaterialTheme.colorScheme.surface == Color(0xFF000000) || MaterialTheme.colorScheme.background == Color(0xFF000000))
+
+            val navBarColor = when {
+                isLight -> MaterialTheme.colorScheme.surface.copy(alpha = 0.94f)
+                isPitchBlack -> Color(0xF2050508)
+                else -> Color(0xF212121A)
+            }
+
+            val navBorderBrush = if (isLight) {
+                Brush.verticalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                        Color.Black.copy(alpha = 0.08f)
                     )
+                )
+            } else {
+                Brush.verticalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = if (isPitchBlack) 0.40f else 0.35f),
+                        Color.White.copy(alpha = 0.06f)
+                    )
+                )
+            }
+
+            val navItemActiveColor = if (isLight) {
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+            } else {
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+            }
+
+            val navUnselectedTint = if (isLight) {
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.70f)
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.70f)
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    color = navBarColor,
+                    shape = RoundedCornerShape(28.dp),
+                    border = BorderStroke(1.dp, navBorderBrush),
+                    shadowElevation = if (isLight) 10.dp else 12.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp, horizontal = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceAround,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        items.forEach { item ->
+                            val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
+                            val titleText = androidx.compose.ui.res.stringResource(item.titleRes)
+
+                            val iconScale by animateFloatAsState(
+                                targetValue = if (selected) 1.15f else 1.0f,
+                                animationSpec = androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy),
+                                label = "navIconScale"
+                            )
+
+                            Surface(
+                                onClick = {
+                                    navController.navigate(item.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                color = if (selected) navItemActiveColor else Color.Transparent,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .padding(horizontal = 2.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                                        contentDescription = titleText,
+                                        tint = if (selected) MaterialTheme.colorScheme.primary else navUnselectedTint,
+                                        modifier = Modifier
+                                            .size(22.dp)
+                                            .graphicsLayer(scaleX = iconScale, scaleY = iconScale)
+                                    )
+                                    AnimatedVisibility(
+                                        visible = selected && !hideLabels,
+                                        enter = fadeIn() + expandHorizontally(),
+                                        exit = fadeOut() + shrinkHorizontally()
+                                    ) {
+                                        Row {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = titleText,
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         },
@@ -183,6 +261,8 @@ fun MainScreen(initialTab: String? = null) {
                                 putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_PLAYLIST_ID, channel.playlistId)
                                 putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_GROUP, channel.group)
                                 putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_HEADERS, java.util.HashMap(channel.headers))
+                                putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_IS_VOD, channel.isVod)
+                                putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_TYPE, channel.streamType ?: "")
                                 channel.licenseUrl?.let { putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_DRM_LICENSE_URL, it) }
                                 channel.drmScheme?.let { putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_DRM_SCHEME, it) }
                                 if (channel.drmHeaders.isNotEmpty()) {

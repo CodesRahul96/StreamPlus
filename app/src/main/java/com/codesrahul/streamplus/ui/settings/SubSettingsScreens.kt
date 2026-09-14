@@ -50,6 +50,8 @@ import java.io.File
 import java.io.FileOutputStream
 import com.codesrahul.streamplus.ui.util.glassmorphic
 import com.codesrahul.streamplus.ui.util.tvFocusable
+import com.codesrahul.streamplus.ui.theme.NeonCyan
+import com.codesrahul.streamplus.ui.theme.ElectricIndigo
 
 // Specific named color shades for icon containers (iOS-inspired)
 private val GreenApple  = Color(0xFF34C759)
@@ -967,6 +969,9 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
     var showBufferDialog by remember { mutableStateOf(false) }
     var showAspectRatioDialog by remember { mutableStateOf(false) }
     var showOrientationDialog by remember { mutableStateOf(false) }
+    var showCodecDialog by remember { mutableStateOf(false) }
+    var showSubtitleTranscodeDialog by remember { mutableStateOf(false) }
+    var showAiHealingDialog by remember { mutableStateOf(false) }
 
     com.codesrahul.streamplus.ui.components.PremiumBackground {
         Scaffold(
@@ -994,6 +999,40 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
             ) {
+                // ── Universal Codec & AI Engine ───────────────────────────
+                SettingsSectionHeader("Universal Engine & AI")
+                SettingsCard {
+                    SettingsClickableItem(
+                        title = "Universal Codec & Container Suite",
+                        subtitle = when (settingsState.decoderPriority) {
+                            1 -> "Active: Software Decoder (CPU Fallback)"
+                            2 -> "Active: Hardware Only (Strict H.264/H.265)"
+                            else -> "Active: Hardware Accelerated (H.264, H.265/HEVC, VP9, AV1)"
+                        },
+                        icon = Icons.Default.Memory,
+                        iconColor = NeonCyan,
+                        onClick = { showCodecDialog = true },
+                        showDivider = true
+                    )
+                    SettingsClickableItem(
+                        title = "Universal Subtitle Transcoding",
+                        subtitle = "SubRip (.srt), ASS/SSA, and TTML cues transcoding active",
+                        icon = Icons.Default.Subtitles,
+                        iconColor = TealSea,
+                        onClick = { showSubtitleTranscodeDialog = true },
+                        showDivider = true
+                    )
+                    SettingsClickableItem(
+                        title = "AI Stream Inspector & Self-Healing",
+                        subtitle = "Anti-hotlink spoofing, automatic HTTP 403 bypass & live recovery",
+                        icon = Icons.Default.AutoAwesome,
+                        iconColor = ElectricIndigo,
+                        onClick = { showAiHealingDialog = true },
+                        showDivider = false
+                    )
+                }
+
+                SettingsSectionHeader("Playback Preferences")
                 SettingsCard {
                     SettingsClickableItem(
                         title = stringResource(com.codesrahul.streamplus.R.string.video_quality),
@@ -1257,6 +1296,179 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 )
             }
         )
+    }
+
+    if (showCodecDialog) {
+        val options = listOf(
+            0 to "Hardware Accelerated (Auto Fallback)",
+            1 to "Application (Software Decoder)",
+            2 to "Hardware Only (Strict HW)"
+        )
+        val selectedOption = options.find { it.first == settingsState.decoderPriority } ?: options[0]
+        PremiumSelectionDialog(
+            title = "Universal Codec & Container Suite",
+            subtitle = "Configures hardware and software decoder priority for H.264, H.265 (HEVC), VP9, and AV1 across TS, MP4, and MKV containers.",
+            options = options,
+            selectedOption = selectedOption,
+            onOptionSelected = { viewModel.setDecoderPriority(it.first) },
+            onDismiss = { showCodecDialog = false },
+            labelProvider = { it.second },
+            descriptionProvider = { option ->
+                when (option.first) {
+                    0 -> "Recommended. Decodes H.264/H.265 using device GPU/DSP chips, with automatic software fallback if a profile is unsupported."
+                    1 -> "CPU-based decoding. Ensures playback compatibility for rare or broken H.265/HEVC profiles at the cost of higher battery usage."
+                    2 -> "Strict hardware-only decoding for maximum efficiency. Fails fast if hardware doesn't support the codec."
+                    else -> ""
+                }
+            },
+            iconProvider = { option ->
+                Icon(
+                    imageVector = when (option.first) {
+                        0 -> Icons.Default.Memory
+                        1 -> Icons.Default.Code
+                        else -> Icons.Default.SettingsSuggest
+                    },
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        )
+    }
+
+    if (showSubtitleTranscodeDialog) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showSubtitleTranscodeDialog = false }) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                border = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .glassmorphic(cornerRadius = 24.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .background(
+                            if (MaterialTheme.colorScheme.surface == Color(0xFF000000)) MaterialTheme.colorScheme.surface
+                            else MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+                        )
+                        .padding(24.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Subtitles, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Universal Subtitle Engine",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Real-time Text Cue Transcoding",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "• SubRip (.srt): Parsed into native UTF-8 timed cues.\n• ASS/SSA: Strips complex styling into readable subtitles.\n• TTML / WebVTT: Full support for multi-track stream captions.\n• Live Transcoding: Active and enforced on all media sources.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                        lineHeight = 22.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Button(
+                        onClick = { showSubtitleTranscodeDialog = false },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Done", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+
+    if (showAiHealingDialog) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showAiHealingDialog = false }) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                border = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .glassmorphic(cornerRadius = 24.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .background(
+                            if (MaterialTheme.colorScheme.surface == Color(0xFF000000)) MaterialTheme.colorScheme.surface
+                            else MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+                        )
+                        .padding(24.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(ElectricIndigo.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = ElectricIndigo)
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "AI Stream Inspector",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Autonomous Self-Healing Active",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "• HTTP 403 Forbidden Bypass: Auto-rotates User-Agent & Referer headers to Smart TV signatures upon access denial.\n• Decoder Crash Auto-Recovery: Drops to software fallback without terminating stream.\n• Live Edge Alignment: Automatically seeks to live window if stream clock slips.\n• Zero-Buffer Reconnect: Resumes interrupted live streams with exponential backoff.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                        lineHeight = 22.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Button(
+                        onClick = { showAiHealingDialog = false },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Active & Monitored", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
     }
 }
 

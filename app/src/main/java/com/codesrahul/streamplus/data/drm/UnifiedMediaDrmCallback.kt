@@ -58,6 +58,28 @@ class UnifiedMediaDrmCallback(
             return handleDataUri(licenseUri)
         }
 
+        // 1.5. Handle ClearKey direct keypair (clearkey.direct/kid:key or raw kid:key)
+        if (uuid == C.CLEARKEY_UUID && (licenseUri.contains("clearkey.direct", ignoreCase = true) || 
+            (licenseUri.contains(":") && !licenseUri.contains("?") && !licenseUri.contains("&")))) {
+            val keyPairString = licenseUri.substringAfter("clearkey.direct/").removePrefix("http://").removePrefix("https://").trim('/')
+            val pairMatch = Regex("([0-9a-zA-Z_\\-]{22,32}):([0-9a-zA-Z_\\-]{22,32})").find(keyPairString)
+            if (pairMatch != null) {
+                try {
+                    val kidStr = pairMatch.groupValues[1]
+                    val keyStr = pairMatch.groupValues[2]
+                    val kidBytes = if (kidStr.length == 32 && kidStr.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) hexToByteArray(kidStr) else Base64.decode(kidStr, Base64.DEFAULT)
+                    val keyBytes = if (keyStr.length == 32 && keyStr.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) hexToByteArray(keyStr) else Base64.decode(keyStr, Base64.DEFAULT)
+                    val kidB64 = Base64.encodeToString(kidBytes, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
+                    val keyB64 = Base64.encodeToString(keyBytes, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
+                    val synthesizedJson = "{\"keys\":[{\"kty\":\"oct\",\"k\":\"$keyB64\",\"kid\":\"$kidB64\"}],\"type\":\"temporary\"}"
+                    Log.d("UnifiedMediaDrm", "Synthesized ClearKey JSON from keypair: $synthesizedJson")
+                    return synthesizedJson.toByteArray()
+                } catch (e: Exception) {
+                    Log.w("UnifiedMediaDrm", "Failed to synthesize ClearKey from keypair: ${e.message}")
+                }
+            }
+        }
+
         // 2. Handle ClearKey over HTTP:
         //    POST the ExoPlayer key request body to the license URL (standard W3C ClearKey protocol).
         //    Many proxy servers (e.g. Jio/Cloudflare Workers) return the key JSON in response to a POST.
@@ -101,6 +123,19 @@ class UnifiedMediaDrmCallback(
             Log.e("UnifiedMediaDrm", "Failed to decode license from data URI", e)
             ByteArray(0)
         }
+    }
+
+    private fun hexToByteArray(hex: String): ByteArray {
+        val s = hex.replace(" ", "").replace(":", "")
+        if (s.length % 2 != 0) return ByteArray(0)
+        val len = s.length
+        val data = ByteArray(len / 2)
+        var i = 0
+        while (i < len) {
+            data[i / 2] = ((Character.digit(s[i], 16) shl 4) + Character.digit(s[i + 1], 16)).toByte()
+            i += 2
+        }
+        return data
     }
 
     private fun fetchClearKeyFromUrl(url: String, requestData: ByteArray): ByteArray? {

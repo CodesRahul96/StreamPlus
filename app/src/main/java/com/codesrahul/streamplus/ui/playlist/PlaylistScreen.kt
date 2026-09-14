@@ -2,6 +2,7 @@ package com.codesrahul.streamplus.ui.playlist
 
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,6 +20,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
@@ -38,6 +43,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.codesrahul.streamplus.ui.theme.NeonCyan
+import com.codesrahul.streamplus.ui.theme.ElectricIndigo
+import com.codesrahul.streamplus.ui.theme.ObsidianSlate
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.codesrahul.streamplus.data.local.FavoriteEntity
 import com.codesrahul.streamplus.data.local.PlaylistEntity
@@ -165,38 +174,126 @@ fun PlaylistScreen(
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
+                            val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
                             MaterialTheme(
                                 colorScheme = MaterialTheme.colorScheme.copy(
-                                    surface = MaterialTheme.colorScheme.surface.copy(alpha = 1.0f)
+                                    surface = if (isPitchBlack) Color(0xF212121A) else MaterialTheme.colorScheme.surface.copy(alpha = 0.98f)
                                 )
                             ) {
                                 DropdownMenu(
                                     expanded = showMenu,
-                                    onDismissRequest = { showMenu = false }
+                                    onDismissRequest = { showMenu = false },
+                                    modifier = Modifier
+                                        .background(
+                                            if (isPitchBlack) Color(0xF2101018) else MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
+                                            RoundedCornerShape(20.dp)
+                                        )
+                                        .border(
+                                            BorderStroke(
+                                                1.dp,
+                                                Brush.verticalGradient(
+                                                    listOf(NeonCyan.copy(alpha = 0.45f), ElectricIndigo.copy(alpha = 0.25f), Color.White.copy(alpha = 0.08f))
+                                                )
+                                            ),
+                                            RoundedCornerShape(20.dp)
+                                        ),
+                                    shape = RoundedCornerShape(20.dp)
                                 ) {
                                     DropdownMenuItem(
-                                        text = { Text(stringResource(com.codesrahul.streamplus.R.string.add_playlist_url)) },
+                                        text = {
+                                            Column {
+                                                Text(
+                                                    stringResource(com.codesrahul.streamplus.R.string.add_playlist_url),
+                                                    fontWeight = FontWeight.Bold,
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                                Text(
+                                                    "M3U, M3U8, or JSON URL",
+                                                    fontSize = 11.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        },
                                         onClick = {
                                             showMenu = false
                                             showAddDialog = true
                                         },
-                                        leadingIcon = { Icon(Icons.Default.AddLink, null, modifier = Modifier.size(20.dp)) }
+                                        leadingIcon = {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(36.dp)
+                                                    .background(NeonCyan.copy(alpha = 0.15f), CircleShape)
+                                                    .border(1.dp, NeonCyan.copy(alpha = 0.4f), CircleShape),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(Icons.Default.AddLink, null, tint = NeonCyan, modifier = Modifier.size(20.dp))
+                                            }
+                                        },
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                                     )
                                     DropdownMenuItem(
-                                        text = { Text(stringResource(com.codesrahul.streamplus.R.string.login_xtream)) },
+                                        text = {
+                                            Column {
+                                                Text(
+                                                    stringResource(com.codesrahul.streamplus.R.string.login_xtream),
+                                                    fontWeight = FontWeight.Bold,
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                                Text(
+                                                    "Xtream Codes API v2 Login",
+                                                    fontSize = 11.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        },
                                         onClick = {
                                             showMenu = false
                                             showXtreamDialog = true
                                         },
-                                        leadingIcon = { Icon(Icons.Default.AccountCircle, null, modifier = Modifier.size(20.dp)) }
+                                        leadingIcon = {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(36.dp)
+                                                    .background(ElectricIndigo.copy(alpha = 0.2f), CircleShape)
+                                                    .border(1.dp, ElectricIndigo.copy(alpha = 0.4f), CircleShape),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(Icons.Default.AccountCircle, null, tint = ElectricIndigo, modifier = Modifier.size(20.dp))
+                                            }
+                                        },
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                                     )
                                     DropdownMenuItem(
-                                        text = { Text(stringResource(com.codesrahul.streamplus.R.string.add_local_playlist)) },
+                                        text = {
+                                            Column {
+                                                Text(
+                                                    stringResource(com.codesrahul.streamplus.R.string.add_local_playlist),
+                                                    fontWeight = FontWeight.Bold,
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                                Text(
+                                                    "Browse device storage",
+                                                    fontSize = 11.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        },
                                         onClick = {
                                             showMenu = false
                                             filePickerLauncher.launch("*/*")
                                         },
-                                        leadingIcon = { Icon(Icons.Default.UploadFile, null, modifier = Modifier.size(20.dp)) }
+                                        leadingIcon = {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(36.dp)
+                                                    .background(Color(0xFF10B981).copy(alpha = 0.15f), CircleShape)
+                                                    .border(1.dp, Color(0xFF10B981).copy(alpha = 0.4f), CircleShape),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(Icons.Default.UploadFile, null, tint = Color(0xFF10B981), modifier = Modifier.size(20.dp))
+                                            }
+                                        },
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                                     )
                                 }
                             }
@@ -385,12 +482,26 @@ fun PlaylistScreen(
                                         Spacer(modifier = Modifier.height(32.dp))
                                         Button(
                                             onClick = { showAddDialog = true },
-                                            shape = RoundedCornerShape(12.dp),
-                                            modifier = Modifier.height(50.dp).fillMaxWidth(0.7f)
+                                            shape = RoundedCornerShape(16.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                                            contentPadding = PaddingValues(),
+                                            modifier = Modifier.height(52.dp).fillMaxWidth(0.72f)
                                         ) {
-                                            Icon(Icons.Default.Add, null)
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text("Add Playlist", fontWeight = FontWeight.Bold)
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .background(
+                                                        Brush.horizontalGradient(listOf(ElectricIndigo, NeonCyan)),
+                                                        shape = RoundedCornerShape(16.dp)
+                                                    ),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Icon(Icons.Default.Add, null, tint = Color.White)
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    Text("Add Playlist", fontWeight = FontWeight.Bold, color = Color.White)
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -473,16 +584,122 @@ fun PlaylistScreen(
                                                         
                                                         putExtra(PlayerActivity.EXTRA_HEADERS, java.util.HashMap(channel.headers))
                                                         channel.licenseUrl?.let { putExtra(PlayerActivity.EXTRA_DRM_LICENSE_URL, it) }
-                                                        channel.drmScheme?.let { putExtra(PlayerActivity.EXTRA_DRM_SCHEME, it) }
+                                                        channel.drmScheme?.let  { putExtra(PlayerActivity.EXTRA_DRM_SCHEME, it) }
                                                         if (channel.drmHeaders.isNotEmpty()) {
                                                             putExtra(PlayerActivity.EXTRA_DRM_HEADERS, java.util.HashMap(channel.drmHeaders))
                                                         }
+                                                        putExtra(PlayerActivity.EXTRA_IS_VOD, channel.isVod)
+                                                        putExtra(PlayerActivity.EXTRA_STREAM_TYPE, channel.streamType)
                                                     }
                                                     context.startActivity(intent)
                                                 })
                                             }
                                         }
                                     } else {
+                                        item {
+                                            Surface(
+                                                shape = RoundedCornerShape(20.dp),
+                                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
+                                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                            ) {
+                                                Column(modifier = Modifier.padding(16.dp)) {
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.SpaceBetween
+                                                    ) {
+                                                        Column {
+                                                            Text(
+                                                                "Stream Vault",
+                                                                style = MaterialTheme.typography.titleMedium,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = MaterialTheme.colorScheme.onSurface
+                                                            )
+                                                            Text(
+                                                                "${playlists.size} active source${if (playlists.size != 1) "s" else ""} • Universal Codec Engine",
+                                                                style = MaterialTheme.typography.bodySmall,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                            )
+                                                        }
+                                                        Surface(
+                                                            shape = RoundedCornerShape(12.dp),
+                                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                                        ) {
+                                                            Row(
+                                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
+                                                                Box(
+                                                                    modifier = Modifier.size(8.dp).background(Color(0xFF10B981), CircleShape)
+                                                                )
+                                                                Spacer(modifier = Modifier.width(6.dp))
+                                                                Text(
+                                                                    "AI Active",
+                                                                    style = MaterialTheme.typography.labelSmall,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    color = Color(0xFF10B981)
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                    Spacer(modifier = Modifier.height(12.dp))
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                    ) {
+                                                        Surface(
+                                                            onClick = { showAddDialog = true },
+                                                            shape = RoundedCornerShape(12.dp),
+                                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                                            modifier = Modifier.weight(1f)
+                                                        ) {
+                                                            Row(
+                                                                modifier = Modifier.padding(vertical = 8.dp, horizontal = 8.dp),
+                                                                horizontalArrangement = Arrangement.Center,
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
+                                                                Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                                                                Spacer(modifier = Modifier.width(4.dp))
+                                                                Text("Add M3U", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                                            }
+                                                        }
+                                                        Surface(
+                                                            onClick = { showXtreamDialog = true },
+                                                            shape = RoundedCornerShape(12.dp),
+                                                            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+                                                            modifier = Modifier.weight(1f)
+                                                        ) {
+                                                            Row(
+                                                                modifier = Modifier.padding(vertical = 8.dp, horizontal = 8.dp),
+                                                                horizontalArrangement = Arrangement.Center,
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
+                                                                Icon(Icons.Default.CloudDownload, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.secondary)
+                                                                Spacer(modifier = Modifier.width(4.dp))
+                                                                Text("Xtream API", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+                                                            }
+                                                        }
+                                                        Surface(
+                                                            onClick = { filePickerLauncher.launch("*/*") },
+                                                            shape = RoundedCornerShape(12.dp),
+                                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                                            modifier = Modifier.weight(1f)
+                                                        ) {
+                                                            Row(
+                                                                modifier = Modifier.padding(vertical = 8.dp, horizontal = 8.dp),
+                                                                horizontalArrangement = Arrangement.Center,
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
+                                                                Icon(Icons.Default.FolderOpen, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                                Spacer(modifier = Modifier.width(4.dp))
+                                                                Text("File", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
                                         items(sortedPlaylists, key = { it.id }, contentType = { "playlist" }) { playlist ->
                                             val onPlaylistClickLambda = remember(playlist.id) { { onPlaylistClick(playlist.id) } }
                                             val onEditLambda = remember(playlist) { { showEditDialog = playlist } }
@@ -637,16 +854,30 @@ fun PlaylistScreen(
             title = "Add Playlist",
             confirmButtonText = "Save",
             onConfirm = { name, url, userAgent, icon, color, epgUrl ->
-                var finalUrl = url.trim()
-                if (finalUrl.isNotEmpty() &&
-                    !finalUrl.startsWith("http://", ignoreCase = true) && 
-                    !finalUrl.startsWith("https://", ignoreCase = true)) {
-                    finalUrl = "http://$finalUrl"
+                val trimmed = url.trim()
+                val finalUrl = when {
+                    trimmed.startsWith("file://", ignoreCase = true) ||
+                    trimmed.startsWith("content://", ignoreCase = true) ||
+                    trimmed.startsWith("/") ||
+                    trimmed.contains("://") -> trimmed
+                    trimmed.contains("#EXTINF") || trimmed.contains("#EXTM3U") || trimmed.contains("#KODIPROP") ||
+                    (trimmed.startsWith("[") && trimmed.endsWith("]")) || (trimmed.startsWith("{") && trimmed.endsWith("}")) -> {
+                        // Raw playlist pasted directly! Save locally
+                        try {
+                            val playlistDir = java.io.File(context.filesDir, "playlists").apply { if (!exists()) mkdirs() }
+                            val ext = if (trimmed.startsWith("[") || trimmed.startsWith("{")) "json" else "m3u"
+                            val file = java.io.File(playlistDir, "${System.currentTimeMillis()}_custom.$ext")
+                            file.writeText(trimmed)
+                            android.net.Uri.fromFile(file).toString()
+                        } catch (e: Exception) {
+                            trimmed
+                        }
+                    }
+                    trimmed.isNotEmpty() -> "http://$trimmed"
+                    else -> trimmed
                 }
                 var finalEpgUrl = epgUrl.trim()
-                if (finalEpgUrl.isNotEmpty() &&
-                    !finalEpgUrl.startsWith("http://", ignoreCase = true) && 
-                    !finalEpgUrl.startsWith("https://", ignoreCase = true)) {
+                if (finalEpgUrl.isNotEmpty() && !finalEpgUrl.contains("://") && !finalEpgUrl.startsWith("/")) {
                     finalEpgUrl = "http://$finalEpgUrl"
                 }
                 viewModel.addPlaylist(name, finalUrl, userAgent, icon, color, finalEpgUrl)
@@ -704,16 +935,17 @@ fun PlaylistScreen(
                 initialEpgUrl = playlist.epgUrl ?: "",
                 confirmButtonText = "Update",
                 onConfirm = { name, url, userAgent, icon, color, epgUrl ->
-                    var finalUrl = url.trim()
-                    if (finalUrl.isNotEmpty() &&
-                        !finalUrl.startsWith("http://", ignoreCase = true) && 
-                        !finalUrl.startsWith("https://", ignoreCase = true)) {
-                        finalUrl = "http://$finalUrl"
+                    val trimmed = url.trim()
+                    val finalUrl = when {
+                        trimmed.startsWith("file://", ignoreCase = true) ||
+                        trimmed.startsWith("content://", ignoreCase = true) ||
+                        trimmed.startsWith("/") ||
+                        trimmed.contains("://") -> trimmed
+                        trimmed.isNotEmpty() -> "http://$trimmed"
+                        else -> trimmed
                     }
                     var finalEpgUrl = epgUrl.trim()
-                    if (finalEpgUrl.isNotEmpty() &&
-                        !finalEpgUrl.startsWith("http://", ignoreCase = true) && 
-                        !finalEpgUrl.startsWith("https://", ignoreCase = true)) {
+                    if (finalEpgUrl.isNotEmpty() && !finalEpgUrl.contains("://") && !finalEpgUrl.startsWith("/")) {
                         finalEpgUrl = "http://$finalEpgUrl"
                     }
                     viewModel.updatePlaylist(playlist.copy(name = name, url = finalUrl, userAgent = userAgent, icon = icon, color = color, epgUrl = finalEpgUrl))
@@ -887,6 +1119,22 @@ fun PlaylistItem(
     }
 }
 
+private fun extractPlaylistNameFromUrl(streamUrl: String): String? {
+    return try {
+        val uri = android.net.Uri.parse(streamUrl)
+        val lastSegment = uri.lastPathSegment ?: return null
+        val dotIndex = lastSegment.lastIndexOf('.')
+        val base = if (dotIndex != -1) lastSegment.substring(0, dotIndex) else lastSegment
+        val cleaned = base.replace(Regex("[_\\-]"), " ")
+            .split(" ").joinToString(" ") { word ->
+                word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+            }.trim()
+        cleaned.ifEmpty { null }
+    } catch (e: Exception) {
+        null
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlaylistDialog(
@@ -934,17 +1182,17 @@ fun PlaylistDialog(
     val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
     if (showCustomUADialog) {
         AlertDialog(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(20.dp),
             onDismissRequest = { showCustomUADialog = false },
             tonalElevation = if (isPitchBlack) 0.dp else AlertDialogDefaults.TonalElevation,
-            title = { Text(stringResource(com.codesrahul.streamplus.R.string.custom_ua_title)) },
+            title = { Text(stringResource(com.codesrahul.streamplus.R.string.custom_ua_title), fontWeight = FontWeight.Bold) },
             text = {
                 OutlinedTextField(
                     value = customUAInput,
                     onValueChange = { customUAInput = it },
                     label = { Text(stringResource(com.codesrahul.streamplus.R.string.ua_string_label)) },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(14.dp)
                 )
             },
             confirmButton = {
@@ -952,7 +1200,7 @@ fun PlaylistDialog(
                     userAgentValue = customUAInput.ifBlank { UserAgentManager.DEFAULT_UA }
                     userAgentDisplay = "Custom"
                     showCustomUADialog = false
-                }) { Text(stringResource(com.codesrahul.streamplus.R.string.confirm_btn)) }
+                }) { Text(stringResource(com.codesrahul.streamplus.R.string.confirm_btn), fontWeight = FontWeight.Bold, color = NeonCyan) }
             },
             dismissButton = {
                 TextButton(onClick = { showCustomUADialog = false }) { Text(stringResource(com.codesrahul.streamplus.R.string.cancel_btn)) }
@@ -960,71 +1208,280 @@ fun PlaylistDialog(
         )
     }
 
-    AlertDialog(
-        shape = RoundedCornerShape(16.dp),
+    val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
+    val detectedProtocol = remember(url) {
+        val trimmed = url.trim().lowercase()
+        when {
+            trimmed.isEmpty() -> null
+            trimmed.contains(".m3u8") || trimmed.contains(".m3u") -> "M3U / HLS Playlist"
+            trimmed.contains("/get.php") || trimmed.contains("player_api.php") -> "Xtream Codes Stream"
+            trimmed.contains(".mpd") -> "MPEG-DASH Stream"
+            trimmed.contains(".mp4") || trimmed.contains(".mkv") -> "Direct Media File"
+            else -> "Custom IPTV Stream"
+        }
+    }
+
+    Dialog(
         onDismissRequest = onDismiss,
-        tonalElevation = if (isPitchBlack) 0.dp else AlertDialogDefaults.TonalElevation,
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    if (onDelete != null) Icons.Default.Edit else Icons.Default.AddCircleOutline,
-                    null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 20.dp),
+            shape = RoundedCornerShape(28.dp),
+            color = if (isPitchBlack) Color(0xF50A0A12) else MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
+            border = BorderStroke(
+                1.dp,
+                Brush.verticalGradient(
+                    listOf(
+                        NeonCyan.copy(alpha = 0.55f),
+                        ElectricIndigo.copy(alpha = 0.3f),
+                        Color.White.copy(alpha = 0.08f)
+                    )
                 )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            }
-        },
-        text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                Spacer(modifier = Modifier.height(8.dp))
+            ),
+            shadowElevation = 24.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(22.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(ElectricIndigo.copy(alpha = 0.35f), NeonCyan.copy(alpha = 0.2f))
+                                    )
+                                )
+                                .border(1.dp, NeonCyan.copy(alpha = 0.5f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                if (onDelete != null) Icons.Default.Edit else Icons.Default.AddLink,
+                                contentDescription = null,
+                                tint = NeonCyan,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column {
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = NeonCyan.copy(alpha = 0.12f)
+                            ) {
+                                Text(
+                                    text = "M3U8 • M3U • JSON • Local Stream",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = NeonCyan,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // Quick Clipboard Paste Pill
+                val clipboardText = remember { clipboardManager.getText()?.text?.trim() ?: "" }
+                if (clipboardText.isNotEmpty() &&
+                    (clipboardText.startsWith("http://", ignoreCase = true) || clipboardText.startsWith("https://", ignoreCase = true)) &&
+                    url != clipboardText
+                ) {
+                    Surface(
+                        onClick = {
+                            url = clipboardText
+                            if (!isNameModified && clipboardText.isNotEmpty()) {
+                                extractPlaylistNameFromUrl(clipboardText)?.let { name = it }
+                            }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        color = NeonCyan.copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, NeonCyan.copy(alpha = 0.35f)),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.ContentPaste, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Paste Detected Stream URL", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = NeonCyan)
+                                Text(clipboardText, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Paste", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = NeonCyan)
+                        }
+                    }
+                }
+
+                // Playlist Name Field
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it; isNameModified = true },
                     label = { Text(stringResource(com.codesrahul.streamplus.R.string.playlist_name)) },
+                    leadingIcon = {
+                        Icon(Icons.Default.PlaylistPlay, contentDescription = null, tint = NeonCyan)
+                    },
+                    trailingIcon = {
+                        if (name.isNotEmpty()) {
+                            IconButton(onClick = { name = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
+                    shape = RoundedCornerShape(16.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f),
+                        focusedBorderColor = NeonCyan,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    )
                 )
+
                 Spacer(modifier = Modifier.height(12.dp))
+
+                // M3U / Media URL Field
                 OutlinedTextField(
                     value = url,
                     onValueChange = { newUrl ->
                         url = newUrl
                         if (!isNameModified && newUrl.isNotEmpty()) {
-                            try {
-                                val uri = android.net.Uri.parse(newUrl)
-                                val lastSegment = uri.lastPathSegment
-                                if (!lastSegment.isNullOrEmpty()) {
-                                    var fileName = lastSegment
-                                    val dotIndex = fileName.lastIndexOf('.')
-                                    if (dotIndex != -1) fileName = fileName.substring(0, dotIndex)
-                                    fileName = fileName.replace(Regex("[_\\-]"), " ")
-                                        .split(" ").joinToString(" ") { word ->
-                                            word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
-                                        }.trim()
-                                    if (fileName.isNotEmpty()) name = fileName
-                                }
-                            } catch (e: Exception) {}
+                            extractPlaylistNameFromUrl(newUrl)?.let { name = it }
                         }
                     },
                     label = { Text(stringResource(com.codesrahul.streamplus.R.string.m3u_url_placeholder)) },
+                    leadingIcon = {
+                        Icon(Icons.Default.Link, contentDescription = null, tint = ElectricIndigo)
+                    },
+                    trailingIcon = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(
+                                onClick = {
+                                    val text = clipboardManager.getText()?.text
+                                    if (!text.isNullOrBlank()) {
+                                        url = text.trim()
+                                        if (!isNameModified) {
+                                            extractPlaylistNameFromUrl(text.trim())?.let { name = it }
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(Icons.Default.ContentPaste, contentDescription = "Paste", tint = NeonCyan, modifier = Modifier.size(18.dp))
+                            }
+                            if (url.isNotEmpty()) {
+                                IconButton(onClick = { url = "" }, modifier = Modifier.size(32.dp)) {
+                                    Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    trailingIcon = { Icon(Icons.Default.Link, null, modifier = Modifier.size(20.dp)) }
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f),
+                        focusedBorderColor = ElectricIndigo,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    )
                 )
+
+                // AI Protocol Detection Badge
+                if (detectedProtocol != null) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = NeonCyan.copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, NeonCyan.copy(alpha = 0.35f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "AI Detected: $detectedProtocol",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = NeonCyan
+                            )
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(12.dp))
+
+                // EPG XMLTV URL
                 OutlinedTextField(
                     value = epgUrl,
                     onValueChange = { epgUrl = it },
                     label = { Text(stringResource(com.codesrahul.streamplus.R.string.epg_url_placeholder)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
                     placeholder = { Text(stringResource(com.codesrahul.streamplus.R.string.epg_optional)) },
-                    trailingIcon = { Icon(Icons.Default.FormatListBulleted, null, modifier = Modifier.size(20.dp)) }
+                    leadingIcon = {
+                        Icon(Icons.Default.FormatListBulleted, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    },
+                    trailingIcon = {
+                        if (epgUrl.isNotEmpty()) {
+                            IconButton(onClick = { epgUrl = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f),
+                        focusedBorderColor = NeonCyan,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    )
                 )
+
                 Spacer(modifier = Modifier.height(12.dp))
+
+                // User Agent Selector
                 ExposedDropdownMenuBox(
                     expanded = isUserAgentExpanded,
                     onExpandedChange = { isUserAgentExpanded = it },
@@ -1035,126 +1492,214 @@ fun PlaylistDialog(
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(stringResource(com.codesrahul.streamplus.R.string.user_agent_label)) },
+                        leadingIcon = {
+                            Icon(Icons.Default.Language, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isUserAgentExpanded) },
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f),
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
                         ),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.menuAnchor().fillMaxWidth()
                     )
                     MaterialTheme(
                         colorScheme = MaterialTheme.colorScheme.copy(
-                            surface = MaterialTheme.colorScheme.surface.copy(alpha = 1.0f)
+                            surface = if (isPitchBlack) Color(0xF212121A) else MaterialTheme.colorScheme.surface.copy(alpha = 1.0f)
                         )
                     ) {
                         ExposedDropdownMenu(
                             expanded = isUserAgentExpanded,
                             onDismissRequest = { isUserAgentExpanded = false }
                         ) {
-                        userAgentOptions.forEach { option ->
-                            DropdownMenuItem(
-                                text = { Text(option) },
-                                onClick = {
-                                    when (option) {
-                                        "Auto (Inbuilt)" -> { userAgentDisplay = option; userAgentValue = "Auto" }
-                                        "Custom" -> { customUAInput = userAgentValue; showCustomUADialog = true }
-                                        else -> {
-                                            userAgentDisplay = option
-                                            userAgentValue = UserAgentManager.getFullUserAgent(option)
+                            userAgentOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option, fontWeight = FontWeight.Medium) },
+                                    onClick = {
+                                        when (option) {
+                                            "Auto (Inbuilt)" -> { userAgentDisplay = option; userAgentValue = "Auto" }
+                                            "Custom" -> { customUAInput = userAgentValue; showCustomUADialog = true }
+                                            else -> {
+                                                userAgentDisplay = option
+                                                userAgentValue = UserAgentManager.getFullUserAgent(option)
+                                            }
                                         }
+                                        isUserAgentExpanded = false
                                     }
-                                    isUserAgentExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-                
-                Spacer(modifier = Modifier.height(20.dp))
-                Text(stringResource(com.codesrahul.streamplus.R.string.icon_theme_sec), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    contentPadding = PaddingValues(bottom = 8.dp)
-                ) {
-                    items(icons) { iconKey ->
-                        val isSelected = icon == iconKey
-                        Surface(
-                            onClick = { icon = iconKey },
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                            modifier = Modifier
-                                .size(44.dp)
-                                .tvFocusable(cornerRadius = 12.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = when (iconKey) {
-                                        "tv"     -> Icons.Default.Tv
-                                        "movie"  -> Icons.Default.Movie
-                                        "sports" -> Icons.Default.SportsSoccer
-                                        "music"  -> Icons.Default.MusicNote
-                                        "news"   -> Icons.Default.Public
-                                        "game"   -> Icons.Default.Games
-                                        "code"   -> Icons.Default.Code
-                                        else     -> Icons.Default.List
-                                    },
-                                    contentDescription = null,
-                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // Section Card: Icon & Color Customization
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    items(colors) { colorInt ->
-                        val isSelected = color == colorInt
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(if (colorInt == -16777216) MaterialTheme.colorScheme.onSurface else Color(colorInt))
-                                .tvFocusable(cornerRadius = 18.dp)
-                                .clickable { color = colorInt }
-                                .border(
-                                    width = if (isSelected) 3.dp else 0.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                    shape = CircleShape
-                                )
-                        )
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                stringResource(com.codesrahul.streamplus.R.string.icon_theme_sec),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = NeonCyan,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text("Personalize", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        LazyRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            items(icons) { iconKey ->
+                                val isSelected = icon == iconKey
+                                Surface(
+                                    onClick = { icon = iconKey },
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = if (isSelected) NeonCyan.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                    border = if (isSelected) BorderStroke(1.5.dp, NeonCyan) else null,
+                                    modifier = Modifier.size(46.dp).tvFocusable(cornerRadius = 14.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = when (iconKey) {
+                                                "tv"     -> Icons.Default.Tv
+                                                "movie"  -> Icons.Default.Movie
+                                                "sports" -> Icons.Default.SportsSoccer
+                                                "music"  -> Icons.Default.MusicNote
+                                                "news"   -> Icons.Default.Public
+                                                "game"   -> Icons.Default.Games
+                                                "code"   -> Icons.Default.Code
+                                                else     -> Icons.Default.List
+                                            },
+                                            contentDescription = null,
+                                            tint = if (isSelected) NeonCyan else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        LazyRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            items(colors) { colorInt ->
+                                val isSelected = color == colorInt
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(if (colorInt == -16777216) MaterialTheme.colorScheme.onSurface else Color(colorInt))
+                                        .tvFocusable(cornerRadius = 18.dp)
+                                        .clickable { color = colorInt }
+                                        .border(
+                                            width = if (isSelected) 3.dp else 0.dp,
+                                            color = if (isSelected) NeonCyan else Color.Transparent,
+                                            shape = CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (isSelected) {
+                                        Icon(
+                                            Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = if (colorInt == -16777216) MaterialTheme.colorScheme.surface else Color.White,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = { if (name.isNotBlank() && url.isNotBlank()) onConfirm(name, url, userAgentValue, icon, color, epgUrl) },
-                enabled = name.isNotBlank() && url.isNotBlank(),
-                shape = RoundedCornerShape(10.dp)
-            ) { Text(confirmButtonText, fontWeight = FontWeight.Bold) }
-        },
-        dismissButton = {
-            Row {
-                TextButton(onClick = onDismiss) { Text(stringResource(com.codesrahul.streamplus.R.string.cancel_btn)) }
-                if (onDelete != null) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    TextButton(onClick = onDelete, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
-                        Text(stringResource(com.codesrahul.streamplus.R.string.delete_btn), fontWeight = FontWeight.Bold)
+
+                Spacer(modifier = Modifier.height(22.dp))
+
+                // Action Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (onDelete != null) {
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.15f))
+                        ) {
+                            Icon(Icons.Default.DeleteOutline, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                        modifier = Modifier.weight(1f).height(48.dp)
+                    ) {
+                        Text(stringResource(com.codesrahul.streamplus.R.string.cancel_btn), fontWeight = FontWeight.SemiBold)
+                    }
+
+                    val canSave = url.isNotBlank()
+                    Button(
+                        onClick = {
+                            val trimmedUrl = url.trim()
+                            if (trimmedUrl.isNotBlank()) {
+                                val finalName = name.trim().ifBlank {
+                                    extractPlaylistNameFromUrl(trimmedUrl) ?: "My Playlist"
+                                }
+                                onConfirm(finalName, trimmedUrl, userAgentValue, icon, color, epgUrl.trim())
+                            }
+                        },
+                        enabled = canSave,
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                        contentPadding = PaddingValues(),
+                        modifier = Modifier.weight(1.3f).height(48.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    if (canSave) {
+                                        Brush.horizontalGradient(listOf(ElectricIndigo, NeonCyan))
+                                    } else {
+                                        Brush.horizontalGradient(listOf(Color.Gray.copy(alpha = 0.25f), Color.Gray.copy(alpha = 0.25f)))
+                                    },
+                                    shape = RoundedCornerShape(14.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(confirmButtonText, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                        }
                     }
                 }
             }
         }
-    )
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -1205,11 +1750,18 @@ fun SearchResultItem(channel: M3UItem, onClick: () -> Unit) {
 fun RecentlyWatchedCard(entry: M3UItem, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(
         modifier = modifier
+            .aspectRatio(0.95f)
             .tvFocusable(cornerRadius = 14.dp)
             .clickable(onClick = onClick)
             .glassmorphic(cornerRadius = 14.dp)
     ) {
-        Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
             Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(52.dp)) {
                 if (entry.logoUrl.isNotBlank()) {
                     coil.compose.AsyncImage(
@@ -1224,12 +1776,13 @@ fun RecentlyWatchedCard(entry: M3UItem, modifier: Modifier = Modifier, onClick: 
                     }
                 }
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             Text(
                 entry.name.take(200),
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.basicMarquee(),
                 textAlign = TextAlign.Center
             )
@@ -1247,12 +1800,19 @@ fun FavouriteChannelCard(
 ) {
     Box(
         modifier = modifier
+            .aspectRatio(0.95f)
             .tvFocusable(cornerRadius = 14.dp)
             .clickable(onClick = onClick)
             .glassmorphic(cornerRadius = 14.dp)
     ) {
-        Box {
-            Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
                 Surface(
                     shape = RoundedCornerShape(10.dp),
                     color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
@@ -1271,12 +1831,13 @@ fun FavouriteChannelCard(
                         }
                     }
                 }
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
                     favorite.name.take(200),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.basicMarquee(),
                     textAlign = TextAlign.Center
                 )
@@ -1315,91 +1876,345 @@ fun XtreamPlaylistDialog(
     var serverUrl by remember { mutableStateOf(initialServerUrl) }
     var username by remember { mutableStateOf(initialUsername) }
     var password by remember { mutableStateOf(initialPassword) }
+    var passwordVisible by remember { mutableStateOf(false) }
 
     val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
-    AlertDialog(
+    val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
+
+    Dialog(
         onDismissRequest = onDismiss,
-        tonalElevation = if (isPitchBlack) 0.dp else AlertDialogDefaults.TonalElevation,
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    if (onDelete != null) Icons.Default.Edit else Icons.Default.AccountCircle,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 20.dp),
+            shape = RoundedCornerShape(28.dp),
+            color = if (isPitchBlack) Color(0xF50A0A12) else MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
+            border = BorderStroke(
+                1.dp,
+                Brush.verticalGradient(
+                    listOf(
+                        ElectricIndigo.copy(alpha = 0.55f),
+                        NeonCyan.copy(alpha = 0.35f),
+                        Color.White.copy(alpha = 0.08f)
+                    )
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(title, fontWeight = FontWeight.Bold)
-            }
-        },
-        text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+            ),
+            shadowElevation = 24.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(22.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(ElectricIndigo.copy(alpha = 0.4f), NeonCyan.copy(alpha = 0.2f))
+                                    )
+                                )
+                                .border(1.dp, ElectricIndigo.copy(alpha = 0.5f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                if (onDelete != null) Icons.Default.Edit else Icons.Default.AccountCircle,
+                                contentDescription = null,
+                                tint = ElectricIndigo,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column {
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = ElectricIndigo.copy(alpha = 0.15f)
+                            ) {
+                                Text(
+                                    text = "Xtream Codes API v2 • Live TV, VOD & Series",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ElectricIndigo,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // Quick Clipboard Paste Pill for Server URL
+                val clipboardText = remember { clipboardManager.getText()?.text?.trim() ?: "" }
+                if (clipboardText.isNotEmpty() &&
+                    (clipboardText.startsWith("http://", ignoreCase = true) || clipboardText.startsWith("https://", ignoreCase = true)) &&
+                    serverUrl != clipboardText
+                ) {
+                    Surface(
+                        onClick = { serverUrl = clipboardText },
+                        shape = RoundedCornerShape(12.dp),
+                        color = ElectricIndigo.copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, ElectricIndigo.copy(alpha = 0.35f)),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.ContentPaste, contentDescription = null, tint = ElectricIndigo, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Paste Server URL", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = ElectricIndigo)
+                                Text(clipboardText, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Paste", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = ElectricIndigo)
+                        }
+                    }
+                }
+
+                // Provider / Account Name
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text(stringResource(com.codesrahul.streamplus.R.string.provider_name)) },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
+                    leadingIcon = {
+                        Icon(Icons.Default.Tv, contentDescription = null, tint = NeonCyan)
+                    },
+                    trailingIcon = {
+                        if (name.isNotEmpty()) {
+                            IconButton(onClick = { name = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f),
+                        focusedBorderColor = NeonCyan,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    )
                 )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Server URL & Port
                 OutlinedTextField(
                     value = serverUrl,
                     onValueChange = { serverUrl = it },
                     label = { Text(stringResource(com.codesrahul.streamplus.R.string.server_url_label)) },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
+                    placeholder = { Text("http://example.com:8080") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Dns, contentDescription = null, tint = ElectricIndigo)
+                    },
+                    trailingIcon = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(
+                                onClick = {
+                                    val text = clipboardManager.getText()?.text
+                                    if (!text.isNullOrBlank()) {
+                                        serverUrl = text.trim()
+                                    }
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(Icons.Default.ContentPaste, contentDescription = "Paste", tint = ElectricIndigo, modifier = Modifier.size(18.dp))
+                            }
+                            if (serverUrl.isNotEmpty()) {
+                                IconButton(onClick = { serverUrl = "" }, modifier = Modifier.size(32.dp)) {
+                                    Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f),
+                        focusedBorderColor = ElectricIndigo,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    )
                 )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Username
                 OutlinedTextField(
                     value = username,
                     onValueChange = { username = it },
                     label = { Text(stringResource(com.codesrahul.streamplus.R.string.username_label)) },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
+                    leadingIcon = {
+                        Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    },
+                    trailingIcon = {
+                        if (username.isNotEmpty()) {
+                            IconButton(onClick = { username = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f),
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    )
                 )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Password with Visibility Toggle
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
                     label = { Text(stringResource(com.codesrahul.streamplus.R.string.password_label)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (name.isNotBlank() && serverUrl.isNotBlank() && username.isNotBlank() && password.isNotBlank()) {
-                        val finalColor = if (initialColor != -1) initialColor else {
-                            val colors = listOf(Color(0xFFE57373), Color(0xFF81C784), Color(0xFF64B5F6), Color(0xFFFFD54F), Color(0xFFBA68C8))
-                            colors.random().toArgb()
+                    leadingIcon = {
+                        Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    },
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                        onConfirm(name.trim(), serverUrl.trim(), username.trim(), password.trim(), initialIcon, finalColor)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f),
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Action Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (onDelete != null) {
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.15f))
+                        ) {
+                            Icon(Icons.Default.DeleteOutline, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                        }
                     }
-                },
-                enabled = name.isNotBlank() && serverUrl.isNotBlank() && username.isNotBlank() && password.isNotBlank(),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text(confirmButtonText, fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            Row {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(com.codesrahul.streamplus.R.string.cancel_btn))
-                }
-                if (onDelete != null) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    TextButton(
-                        onClick = onDelete,
-                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                        modifier = Modifier.weight(1f).height(48.dp)
                     ) {
-                        Text(stringResource(com.codesrahul.streamplus.R.string.delete_btn), fontWeight = FontWeight.Bold)
+                        Text(stringResource(com.codesrahul.streamplus.R.string.cancel_btn), fontWeight = FontWeight.SemiBold)
+                    }
+
+                    val canSaveXtream = serverUrl.isNotBlank() && username.isNotBlank() && password.isNotBlank()
+                    Button(
+                        onClick = {
+                            val trimmedServer = serverUrl.trim()
+                            val trimmedUser = username.trim()
+                            val trimmedPass = password.trim()
+                            if (trimmedServer.isNotBlank() && trimmedUser.isNotBlank() && trimmedPass.isNotBlank()) {
+                                val finalName = name.trim().ifBlank {
+                                    val host = try {
+                                        val uri = android.net.Uri.parse(
+                                            if (trimmedServer.contains("://")) trimmedServer else "http://$trimmedServer"
+                                        )
+                                        uri.host
+                                    } catch (e: Exception) { null }
+                                    host?.takeIf { it.isNotBlank() } ?: "Xtream IPTV"
+                                }
+                                val finalColor = if (initialColor != -1) initialColor else {
+                                    val colors = listOf(Color(0xFFE57373), Color(0xFF81C784), Color(0xFF64B5F6), Color(0xFFFFD54F), Color(0xFFBA68C8))
+                                    colors.random().toArgb()
+                                }
+                                onConfirm(finalName, trimmedServer, trimmedUser, trimmedPass, initialIcon, finalColor)
+                            }
+                        },
+                        enabled = canSaveXtream,
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                        contentPadding = PaddingValues(),
+                        modifier = Modifier.weight(1.3f).height(48.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    if (canSaveXtream) {
+                                        Brush.horizontalGradient(listOf(ElectricIndigo, NeonCyan))
+                                    } else {
+                                        Brush.horizontalGradient(listOf(Color.Gray.copy(alpha = 0.25f), Color.Gray.copy(alpha = 0.25f)))
+                                    },
+                                    shape = RoundedCornerShape(14.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.CloudSync, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(confirmButtonText, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                        }
                     }
                 }
             }
-        },
-        shape = RoundedCornerShape(24.dp)
-    )
+        }
+    }
 }

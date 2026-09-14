@@ -74,7 +74,14 @@ class M3UStreamParser : StreamParser {
                 userAgent = mergedHeaders["User-Agent"] ?: currentUserAgent,
                 isPlaylist = false,
                 epgId = currentEpgId,
-                isVod = currentDuration > 0 || isVodGroup(sanitizedGroup)
+                isVod = run {
+                    val urlLower = finalUrl.lowercase()
+                    val isLive = urlLower.contains(".m3u8") ||
+                            urlLower.contains("/live/") ||
+                            urlLower.contains("play/live.php") ||
+                            urlLower.substringBefore("?").endsWith(".ts")
+                    if (isLive) false else (currentDuration >= 300 || isVodGroup(sanitizedGroup))
+                }
             ))
         }
 
@@ -192,6 +199,16 @@ class M3UStreamParser : StreamParser {
                         else if (bw != info) currentName = "Bandwidth: $bw"
                     }
                 } else if (!trimmed.startsWith("#")) {
+                    // Ignore HTML/XML/JS tags or script content that might wrap or prepend playlists
+                    val lower = trimmed.lowercase()
+                    if (lower.startsWith("<!doctype") || lower.startsWith("<html") || lower.startsWith("</html") ||
+                        lower.startsWith("<head") || lower.startsWith("</head") || lower.startsWith("<body") ||
+                        lower.startsWith("</body") || lower.startsWith("<script") || lower.startsWith("</script") ||
+                        lower.startsWith("window.location") || lower.startsWith("<") || lower.startsWith("var ")
+                    ) {
+                        return@forEach
+                    }
+
                     if (trimmed.contains(",http", ignoreCase = true)) {
                         val commaIdx = trimmed.indexOf(",http", ignoreCase = true)
                         val namePart = trimmed.substring(0, commaIdx).trim()
@@ -200,7 +217,7 @@ class M3UStreamParser : StreamParser {
                             currentName = namePart
                             saveItem(urlPart)
                         }
-                    } else {
+                    } else if (trimmed.contains("://") || trimmed.endsWith(".m3u8", true) || trimmed.endsWith(".ts", true) || trimmed.endsWith(".mpd", true)) {
                         saveItem(trimmed)
                     }
                     // Reset per-item state
@@ -226,7 +243,12 @@ class M3UStreamParser : StreamParser {
 
     override fun canParse(url: String, prefix: String): Boolean {
         return url.contains(".m3u", true) || 
+               url.contains(".m3u8", true) ||
                prefix.contains("#EXTM3U") || 
+               prefix.contains("#EXTINF") || 
+               prefix.contains("#KODIPROP") || 
+               prefix.contains("#EXTVLCOPT") || 
+               prefix.contains("#EXTHTTP") || 
                prefix.contains("http://") || 
                prefix.contains("https://")
     }
@@ -353,7 +375,42 @@ class M3UStreamParser : StreamParser {
                     }
                     onDrm(scheme, null)
                 }
-                "license_key" -> onDrm(null, value)
+                "license_key" -> {
+                    val isUrl = value.startsWith("http://", ignoreCase = true) || value.startsWith("https://", ignoreCase = true)
+                    if (isUrl && value.contains("|")) {
+                        // URL with pipe-separated license headers e.g. https://license.example.com|Header=Value
+                        val licUrl = value.substringBefore("|").trim()
+                        val licHeaders = value.substringAfter("|").trim()
+                        licHeaders.split("&").forEach { param ->
+                            val kv = param.split("=", limit = 2)
+                            if (kv.size == 2) {
+                                try {
+                                    drmHeaders[kv[0].trim()] = java.net.URLDecoder.decode(kv[1].trim(), "UTF-8")
+                                } catch (e: Exception) {
+                                    drmHeaders[kv[0].trim()] = kv[1].trim()
+                                }
+                            }
+                        }
+                        // URL license key always means Widevine (or PlayReady), not ClearKey
+                        onDrm("widevine", licUrl)
+                    } else if (isUrl) {
+                        // Plain URL license server — Widevine
+                        onDrm("widevine", value)
+                    } else if (value.startsWith("{") && value.contains("\"keys\"")) {
+                        // Direct ClearKey JSON format
+                        drmHeaders["X-ClearKey-Data"] = value
+                        onDrm("clearkey", value)
+                    } else {
+                        // Hex KID:KEY pair or other clearkey format — pass through as-is
+                        onDrm(null, value)
+                    }
+                }
+                "manifest_type" -> {
+                    headers["X-Manifest-Type"] = value
+                }
+                "server_certificate" -> {
+                    drmHeaders["X-Drm-Certificate"] = value
+                }
                 "manifest_headers", 
                 "stream_headers" -> {
                     // key=value&key2=value2
@@ -398,17 +455,24 @@ class M3UStreamParser : StreamParser {
     
     private fun detectDrmScheme(explicitScheme: String?, explicitLicense: String?): String? {
         val s = explicitScheme?.lowercase() ?: ""
+        val l = explicitLicense?.lowercase() ?: ""
+        
+        // If license is a URL (http/https), it's always a remote license server → Widevine or PlayReady, never ClearKey
+        // ClearKey uses embedded key data (hex KID:KEY pairs or JSON), never a remote URL
+        val licenseIsUrl = l.startsWith("http://") || l.startsWith("https://")
+        
         if (s.contains("widevine") || s.contains("com.widevine.alpha")) return "widevine"
         if (s.contains("playready") || s.contains("com.microsoft.playready")) return "playready"
-        if (s.contains("clearkey")) return "clearkey"
+        if (s.contains("clearkey") && !licenseIsUrl) return "clearkey"  // Only if license is NOT a URL
         
-        // Infer from license URL only (not from stream URL — .mpd streams are not always DRM-protected)
-        val l = explicitLicense?.lowercase() ?: ""
-        if (l.contains("widevine") || l.endsWith("/wv") || l.contains("/widevine")) return "widevine"
-        if (l.contains("playready")) return "playready"
+        // Infer from license URL
+        if (licenseIsUrl) {
+            if (l.contains("widevine") || l.endsWith("/wv") || l.contains("/widevine")) return "widevine"
+            if (l.contains("playready")) return "playready"
+            // Any unrecognized URL license server → assume Widevine (most common)
+            return "widevine"
+        }
         
-        // Only infer widevine if a license URL is also present (i.e., actual DRM is being used)
-        // Do NOT auto-set widevine just because it's a .mpd file — those can be unprotected DASH
         return null
     }
 

@@ -90,12 +90,17 @@ enum class SortType {
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun LocalScreen() {
-    val permissionState = rememberMultiplePermissionsState(
-        listOf(
-            Manifest.permission.READ_MEDIA_VIDEO,
-            Manifest.permission.READ_MEDIA_AUDIO
-        )
-    )
+    val permissionList = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            listOf(
+                Manifest.permission.READ_MEDIA_VIDEO,
+                Manifest.permission.READ_MEDIA_AUDIO
+            )
+        } else {
+            listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+    }
+    val permissionState = rememberMultiplePermissionsState(permissionList)
 
     val viewModel: LocalViewModel = hiltViewModel()
     val settingsViewModel: SettingsViewModel = hiltViewModel()
@@ -533,6 +538,9 @@ fun LocalMediaList(
                             val intent = Intent(context, targetClass).apply {
                                 putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_URL, video.uri.toString())
                                 putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_TITLE, video.title)
+                                putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_IS_VOD, true)
+                                putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_STREAM_TYPE, "vod")
+                                putExtra(com.codesrahul.streamplus.ui.player.PlayerActivity.EXTRA_PLAYLIST_ID, -1)
                                 putExtra("EXTRA_IS_AUDIO", video.mediaType == MediaType.AUDIO)
                                 putExtra("EXTRA_MEDIA_TYPE", video.mediaType.name)
                                 

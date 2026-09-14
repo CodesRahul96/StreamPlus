@@ -132,6 +132,37 @@ class XmlPlsStreamParser : StreamParser {
                         ))
                     }
                 }
+
+                // 4. XSPF Track Parsing (if items are still empty)
+                if (items.isEmpty()) {
+                    val trackRegex = """(?s)<track>(.*?)</track>""".toRegex(RegexOption.IGNORE_CASE)
+                    val locRegex = """<location>(.*?)</location>""".toRegex(RegexOption.IGNORE_CASE)
+                    val xspfTitleRegex = """<title>(.*?)</title>""".toRegex(RegexOption.IGNORE_CASE)
+                    val imageRegex = """<image>(.*?)</image>""".toRegex(RegexOption.IGNORE_CASE)
+
+                    val trackMatches = trackRegex.findAll(trimmed).toList()
+                    trackMatches.forEach { match ->
+                        val trackContent = match.groupValues[1]
+                        val url = locRegex.find(trackContent)?.groupValues?.get(1)?.trim()
+                        if (!url.isNullOrBlank()) {
+                            val title = xspfTitleRegex.find(trackContent)?.groupValues?.get(1)?.trim() ?: "Stream"
+                            val image = imageRegex.find(trackContent)?.groupValues?.get(1)?.trim() ?: ""
+                            items.add(M3UItem(
+                                name = title.take(300).trim(),
+                                url = url,
+                                group = "XSPF Playlist",
+                                logoUrl = image,
+                                status = StreamStatus.UNKNOWN,
+                                headers = emptyMap(),
+                                drmHeaders = emptyMap(),
+                                licenseUrl = null,
+                                drmScheme = null,
+                                userAgent = "",
+                                isPlaylist = false
+                            ))
+                        }
+                    }
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -141,12 +172,20 @@ class XmlPlsStreamParser : StreamParser {
 
     override fun canParse(url: String, prefix: String): Boolean {
         val trimmed = prefix.trim()
+        if (trimmed.contains("#EXTM3U", ignoreCase = true) || trimmed.contains("#EXTINF", ignoreCase = true)) {
+            return false
+        }
         return url.endsWith(".pls", true) || 
                url.endsWith(".asx", true) || 
                url.endsWith(".wpl", true) || 
+               url.endsWith(".xspf", true) || 
                url.endsWith(".xml", true) || 
                trimmed.contains("[playlist]", ignoreCase = true) || 
-               trimmed.startsWith("<") || 
-               trimmed.contains("<?xml")
+               trimmed.contains("<asx", ignoreCase = true) ||
+               trimmed.contains("<smil", ignoreCase = true) ||
+               trimmed.contains("<xspf", ignoreCase = true) ||
+               trimmed.contains("<rss", ignoreCase = true) ||
+               trimmed.contains("<feed", ignoreCase = true) ||
+               trimmed.contains("<?xml", ignoreCase = true)
     }
 }

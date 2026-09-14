@@ -126,6 +126,9 @@ class PlayerActivity : AppCompatActivity() {
     @Inject
     lateinit var playlistRepository: com.codesrahul.streamplus.domain.repository.PlaylistRepository
 
+    @Inject
+    lateinit var streamIntelligenceEngine: com.codesrahul.streamplus.data.network.StreamIntelligenceEngine
+
     private var castContext: CastContext? = null
     private var castPlayer: CastPlayer? = null
     private var sessionManager: SessionManager? = null
@@ -196,6 +199,8 @@ class PlayerActivity : AppCompatActivity() {
         const val EXTRA_DRM_HEADERS = "extra_drm_headers"
         const val EXTRA_PLAYLIST_ID = "extra_playlist_id"
         const val EXTRA_STREAM_GROUP = "extra_stream_group"
+        const val EXTRA_IS_VOD = "extra_is_vod"
+        const val EXTRA_STREAM_TYPE = "extra_stream_type"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -246,6 +251,8 @@ class PlayerActivity : AppCompatActivity() {
         val drmHeaders = intent.getSerializableExtra(EXTRA_DRM_HEADERS) as? Map<String, String> ?: emptyMap()
         val playlistId = intent.getIntExtra(EXTRA_PLAYLIST_ID, -1)
         val groupTitle = intent.getStringExtra(EXTRA_STREAM_GROUP) ?: "Default"
+        var isVodExtra = intent.getBooleanExtra(EXTRA_IS_VOD, false)
+        var streamTypeExtra = intent.getStringExtra(EXTRA_STREAM_TYPE) ?: ""
         
         val isAudioExtra = intent.getBooleanExtra("EXTRA_IS_AUDIO", false)
         val mediaTypeExtra = intent.getStringExtra("EXTRA_MEDIA_TYPE")
@@ -253,7 +260,7 @@ class PlayerActivity : AppCompatActivity() {
         val playlistTitles = intent.getStringArrayExtra("EXTRA_PLAYLIST_TITLES")
         val playlistIndex = intent.getIntExtra("EXTRA_PLAYLIST_INDEX", -1)
         
-        Log.d("PlayerActivity", ">>> Intent received: URL=$streamUrl, Title=$streamTitle, Cookie=$cookie, UA=$userAgent, DRM=$drmScheme")
+        Log.d("PlayerActivity", ">>> Intent received: URL=$streamUrl, Title=$streamTitle, Cookie=$cookie, UA=$userAgent, DRM=$drmScheme, isVod=$isVodExtra, type=$streamTypeExtra")
 
         updatePipParams()
 
@@ -269,19 +276,25 @@ class PlayerActivity : AppCompatActivity() {
                         origin = fresh.headers["Origin"] ?: origin
                         drmLicenseUrl = fresh.licenseUrl ?: drmLicenseUrl
                         drmScheme = fresh.drmScheme ?: drmScheme
+                        isVodExtra = fresh.isVod
+                        streamTypeExtra = fresh.streamType
                     }
                 }
             }
 
-            // Update App Shortcuts with the current channel info
-            com.codesrahul.streamplus.util.ShortcutHelper.updateShortcuts(
-                context = this@PlayerActivity,
-                streamTitle = streamTitle,
-                streamUrl = streamUrl,
-                channelLogo = channelLogo,
-                playlistId = playlistId,
-                groupTitle = groupTitle
-            )
+            // Update App Shortcuts with the current channel info (only for valid IPTV channels, never local media)
+            val isLocalMedia = playlistId <= 0 || streamUrl.startsWith("content://") ||
+                    streamUrl.startsWith("file://") || streamUrl.startsWith("/storage/") || streamUrl.startsWith("/data/")
+            if (!isLocalMedia && streamTitle != "Unknown Stream") {
+                com.codesrahul.streamplus.util.ShortcutHelper.updateShortcuts(
+                    context = this@PlayerActivity,
+                    streamTitle = streamTitle,
+                    streamUrl = streamUrl,
+                    channelLogo = channelLogo,
+                    playlistId = playlistId,
+                    groupTitle = groupTitle
+                )
+            }
 
             setContent {
                 key(streamUrl, streamTitle) {
@@ -304,6 +317,7 @@ class PlayerActivity : AppCompatActivity() {
                             channelDao = channelDao,
                             playlistDao = playlistDao,
                             playlistRepository = playlistRepository,
+                            streamIntelligenceEngine = streamIntelligenceEngine,
                             playlistId = playlistId,
                             groupTitle = groupTitle,
                             castPlayer = castPlayer,
@@ -313,7 +327,9 @@ class PlayerActivity : AppCompatActivity() {
                             mediaTypeExtra = mediaTypeExtra,
                             playlistUris = playlistUris,
                             playlistTitles = playlistTitles,
-                            playlistIndex = playlistIndex
+                            playlistIndex = playlistIndex,
+                            isVod = isVodExtra,
+                            streamType = streamTypeExtra
                         )
                     }
                 }
@@ -409,6 +425,7 @@ fun PlayerScreen(
     channelDao: com.codesrahul.streamplus.data.local.ChannelDao,
     playlistDao: com.codesrahul.streamplus.data.local.PlaylistDao,
     playlistRepository: com.codesrahul.streamplus.domain.repository.PlaylistRepository,
+    streamIntelligenceEngine: com.codesrahul.streamplus.data.network.StreamIntelligenceEngine,
     playlistId: Int,
     groupTitle: String,
     castPlayer: androidx.media3.cast.CastPlayer? = null,
@@ -418,7 +435,9 @@ fun PlayerScreen(
     mediaTypeExtra: String? = null,
     playlistUris: Array<String>? = null,
     playlistTitles: Array<String>? = null,
-    playlistIndex: Int = -1
+    playlistIndex: Int = -1,
+    isVod: Boolean = false,
+    streamType: String = ""
 ) {
     val context = LocalContext.current
     val activityContext = remember(context) {
@@ -433,9 +452,106 @@ fun PlayerScreen(
     val playerHolder = remember { PlayerHolder(context, okHttpClientProvider) }
     val settingsState by settingsRepository.settings.collectAsState(initial = com.codesrahul.streamplus.data.settings.AppSettings())
     
-    // Audio Boost State
+    // Dynamic Stream & DRM State for seamless in-player channel switching
     var currentStreamUrl by remember { mutableStateOf(streamUrl) }
-    var hasRefreshedPlaylist by remember { mutableStateOf(false) }
+    var currentStreamTitle by remember { mutableStateOf(streamTitle) }
+    var currentChannelLogo by remember { mutableStateOf(channelLogo) }
+    var currentUserAgent by remember { mutableStateOf(userAgent) }
+    var currentReferer by remember { mutableStateOf(referer) }
+    var currentCookie by remember { mutableStateOf(cookie) }
+    var currentOrigin by remember { mutableStateOf(origin) }
+    var currentHeaders by remember { mutableStateOf(headers) }
+    var currentDrmLicenseUrl by remember { mutableStateOf(drmLicenseUrl) }
+    var currentDrmScheme by remember { mutableStateOf(drmScheme) }
+    var currentDrmHeaders by remember { mutableStateOf(drmHeaders) }
+    var currentIsVod by remember { mutableStateOf(isVod) }
+    var currentStreamType by remember { mutableStateOf(streamType) }
+    var currentPlaylistUris by remember { mutableStateOf(playlistUris) }
+    var lastPlaylistRefreshTime by remember { mutableLongStateOf(0L) }
+    var consecutiveLiveErrors by remember { mutableIntStateOf(0) }
+    var liveWatchTimeSeconds by remember(currentStreamUrl) { mutableLongStateOf(0L) }
+    var isLiveStreamState by remember(currentStreamUrl) { mutableStateOf<Boolean?>(null) }
+    // Increment to force resolvedItem to recompute even if URL string is the same
+    var forceRefreshToken by remember { mutableIntStateOf(0) }
+
+    val isLikelyVod = remember(currentStreamUrl, currentIsVod, currentStreamType, currentPlaylistUris, isLiveStreamState) {
+        val isLocalUri = currentStreamUrl.startsWith("content://") ||
+                currentStreamUrl.startsWith("file://") ||
+                currentStreamUrl.startsWith("/storage/") ||
+                currentStreamUrl.startsWith("/data/")
+
+        val isLocalQueue = currentPlaylistUris?.firstOrNull()?.let {
+            it.startsWith("content://") || it.startsWith("file://") || it.startsWith("/storage/") || it.startsWith("/data/")
+        } ?: false
+
+        if (isLocalUri || isLocalQueue) {
+            return@remember true
+        }
+
+        // If ExoPlayer runtime timeline already determined whether this is a live stream or not
+        if (isLiveStreamState != null) {
+            return@remember !isLiveStreamState!!
+        }
+
+        val urlClean = currentStreamUrl.substringBefore("?")
+        val lowerUrl = currentStreamUrl.lowercase()
+
+        val isExplicitVod = currentIsVod ||
+                currentStreamType.equals("vod", ignoreCase = true) ||
+                currentStreamType.equals("series", ignoreCase = true) ||
+                currentStreamType.equals("movie", ignoreCase = true) ||
+                lowerUrl.contains("/movie/") ||
+                lowerUrl.contains("/series/") ||
+                listOf(".mp4", ".mkv", ".avi", ".mov", ".webm").any { urlClean.endsWith(it, ignoreCase = true) }
+
+        if (isExplicitVod) {
+            return@remember true
+        }
+
+        // Channels from IPTV playlists default to live unless explicitly marked VOD
+        val isExplicitLive = currentStreamType.equals("live", ignoreCase = true) ||
+                playlistId > 0 || // Any stream originating from an IPTV playlist is a live channel by default!
+                lowerUrl.contains("/live/") ||
+                lowerUrl.contains("play/live.php") ||
+                lowerUrl.contains(".m3u8") ||
+                lowerUrl.contains(".ts") ||
+                lowerUrl.contains(".mpd") ||
+                lowerUrl.contains("wdvlive") ||
+                lowerUrl.contains("wvlive") ||
+                lowerUrl.contains("/bpk-tv/") ||
+                lowerUrl.contains("jiotv") ||
+                lowerUrl.contains("jiomblive") ||
+                lowerUrl.contains("jiotvmb")
+
+        !isExplicitLive
+    }
+
+    // Stream & Codec Quality State
+    var videoResolution by remember { mutableStateOf("") }
+    var videoCodec by remember { mutableStateOf("") }
+    var videoFps by remember { mutableStateOf("") }
+    var audioChannels by remember { mutableStateOf("") }
+    var activeDecoderMode by remember { mutableIntStateOf(settingsState.decoderPriority) }
+
+    // Quick Channel Drawer State
+    var showChannelDrawer by remember { mutableStateOf(false) }
+    var drawerChannels by remember { mutableStateOf<List<com.codesrahul.streamplus.data.local.ChannelEntity>>(emptyList()) }
+    var drawerSearchQuery by remember { mutableStateOf("") }
+
+    val isLocalOrDirectPlay = playlistId <= 0 || currentStreamUrl.startsWith("content://") || 
+            currentStreamUrl.startsWith("file://") || currentStreamUrl.startsWith("/storage/") || currentStreamUrl.startsWith("/data/")
+
+    LaunchedEffect(playlistId, currentStreamUrl) {
+        withContext(Dispatchers.IO) {
+            // Local gallery media or direct play without a playlist must NOT load all IPTV channels from the database
+            val list = if (playlistId > 0 && !isLocalOrDirectPlay) {
+                channelDao.getChannelsByPlaylist(playlistId)
+            } else {
+                emptyList()
+            }
+            drawerChannels = list
+        }
+    }
     
     var audioBoost by remember { mutableStateOf(0f) }
     var volumeAccumulator by remember { mutableStateOf(0f) }
@@ -454,6 +570,11 @@ fun PlayerScreen(
 
     // Bottom Sheet State
     var showSettingsSheet by remember { mutableStateOf(false) }
+    var showQualitySheet by remember { mutableStateOf(false) }
+    var showAudioSheet by remember { mutableStateOf(false) }
+    var showSubtitleSheet by remember { mutableStateOf(false) }
+    var showSpeedSheet by remember { mutableStateOf(false) }
+    var showSleepTimerSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     
     // Auto-Retry State
@@ -532,6 +653,7 @@ fun PlayerScreen(
     // Combined Time State
     var currentTimeFormatted by remember { mutableStateOf("00:00") }
     var durationFormatted by remember { mutableStateOf("00:00") }
+    var playerViewRef by remember { mutableStateOf<androidx.media3.ui.PlayerView?>(null) }
 
     LaunchedEffect(settingsState.playerOrientation) {
         val activity = context as? android.app.Activity
@@ -546,33 +668,40 @@ fun PlayerScreen(
     }
 
     // 1. Resolve Item immediately based on Inputs
-    val resolvedItem = remember(currentStreamUrl, streamTitle, channelLogo, userAgent, referer, cookie, origin, drmLicenseUrl, drmScheme, headers, drmHeaders) {
+    val resolvedItem = remember(
+        currentStreamUrl, currentStreamTitle, currentChannelLogo, currentUserAgent,
+        currentReferer, currentCookie, currentOrigin, currentDrmLicenseUrl,
+        currentDrmScheme, currentHeaders, currentDrmHeaders
+    ) {
         val isMagUrl = currentStreamUrl.contains("mac=", ignoreCase = true) || 
                        currentStreamUrl.contains("play/live.php", ignoreCase = true) ||
                        currentStreamUrl.contains("/stalker", ignoreCase = true)
         
-        val effectiveUA = if (isMagUrl) "MacroHTTP" else userAgent
+        val effectiveUA = if (isMagUrl) "MacroHTTP" else currentUserAgent
         
         // Build the starting headers map from all individual intent extras
         val startHeaders = mutableMapOf<String, String>()
-        startHeaders.putAll(headers)
-        if (!referer.isNullOrBlank())  startHeaders["Referer"]    = referer
-        if (!cookie.isNullOrBlank())   startHeaders["Cookie"]     = cookie
-        if (!origin.isNullOrBlank())   startHeaders["Origin"]     = origin
+        startHeaders.putAll(currentHeaders)
+        val ref = currentReferer
+        val cook = currentCookie
+        val orig = currentOrigin
+        if (!ref.isNullOrBlank())  startHeaders["Referer"]    = ref
+        if (!cook.isNullOrBlank())   startHeaders["Cookie"]     = cook
+        if (!orig.isNullOrBlank())   startHeaders["Origin"]     = orig
         if (isMagUrl) {
             startHeaders["X-User-Agent"] = "Model: MAG250; Link: Ethernet"
         }
 
         val item = M3UItem(
-            name = streamTitle,
+            name = currentStreamTitle,
             url = currentStreamUrl,
-            logoUrl = channelLogo ?: "",
+            logoUrl = currentChannelLogo ?: "",
             group = "",
-            userAgent = effectiveUA,  // preserved by the fixed HeaderResolver
-            headers = startHeaders, // referer/cookie/origin now in headers from the start
-            licenseUrl = drmLicenseUrl,
-            drmScheme = drmScheme,
-            drmHeaders = drmHeaders
+            userAgent = effectiveUA ?: "",
+            headers = startHeaders,
+            licenseUrl = currentDrmLicenseUrl,
+            drmScheme = currentDrmScheme,
+            drmHeaders = currentDrmHeaders
         )
         // Use new resolvers
         val headerResolver = com.codesrahul.streamplus.data.parser.resolver.HeaderResolver()
@@ -586,11 +715,12 @@ fun PlayerScreen(
         }
     }
 
-    val exoPlayer = remember(resolvedItem, settingsState.skipSslVerification, settingsState.decoderPriority, settingsState.enableTunneling) {
+    val exoPlayer = remember(resolvedItem, settingsState.skipSslVerification, activeDecoderMode, settingsState.enableTunneling) {
         val okHttpClient = okHttpClientProvider.get()
 
         val okHttpDataSourceFactory = OkHttpDataSource.Factory(okHttpClient).apply {
             val finalHeaders = mutableMapOf<String, String>()
+
             // Use headers from resolved item
             finalHeaders.putAll(resolvedItem.headers) 
             if (resolvedItem.userAgent.isNotBlank()) {
@@ -598,17 +728,20 @@ fun PlayerScreen(
                 Log.d("PlayerScreen", "Setting User-Agent: ${resolvedItem.userAgent}")
             }
             // Inject Referer, Cookie, Origin from intent extras into the actual HTTP headers
-            if (!referer.isNullOrBlank()) {
-                finalHeaders["Referer"] = referer
-                Log.d("PlayerScreen", "Setting Referer: $referer")
+            val ref = currentReferer
+            val cook = currentCookie
+            val orig = currentOrigin
+            if (!ref.isNullOrBlank()) {
+                finalHeaders["Referer"] = ref
+                Log.d("PlayerScreen", "Setting Referer: $ref")
             }
-            if (!cookie.isNullOrBlank()) {
-                finalHeaders["Cookie"] = cookie
+            if (!cook.isNullOrBlank()) {
+                finalHeaders["Cookie"] = cook
                 Log.d("PlayerScreen", "Setting Cookie header")
             }
-            if (!origin.isNullOrBlank()) {
-                finalHeaders["Origin"] = origin
-                Log.d("PlayerScreen", "Setting Origin: $origin")
+            if (!orig.isNullOrBlank()) {
+                finalHeaders["Origin"] = orig
+                Log.d("PlayerScreen", "Setting Origin: $orig")
             }
             
             Log.d("PlayerScreen", "Stream URL: ${resolvedItem.url}")
@@ -617,7 +750,11 @@ fun PlayerScreen(
         }
         
         val baseDataSourceFactory = DefaultDataSource.Factory(context, okHttpDataSourceFactory)
-        val dataSourceFactory = com.codesrahul.streamplus.data.cache.CacheManager.createCacheDataSourceFactory(context, baseDataSourceFactory)
+        val dataSourceFactory = if (isLikelyVod) {
+            com.codesrahul.streamplus.data.cache.CacheManager.createCacheDataSourceFactory(context, baseDataSourceFactory)
+        } else {
+            baseDataSourceFactory
+        }
 
         val drmSessionManagerProvider = object : DrmSessionManagerProvider {
             override fun get(mediaItem: MediaItem): DrmSessionManager {
@@ -661,39 +798,43 @@ fun PlayerScreen(
             }
         }
 
-        val extractorsFactory = androidx.media3.extractor.DefaultExtractorsFactory()
-            .setConstantBitrateSeekingEnabled(true)
-            .setAdtsExtractorFlags(androidx.media3.extractor.ts.AdtsExtractor.FLAG_ENABLE_CONSTANT_BITRATE_SEEKING)
-            .setTsExtractorFlags(1 or 8) // FLAG_ALLOW_NON_IDR_KEYFRAMES | FLAG_DETECT_ACCESS_UNITS
+        val mediaSourceFactory = com.codesrahul.streamplus.data.player.MediaCodecConfig.createMediaSourceFactory(
+            context = context,
+            dataSourceFactory = dataSourceFactory,
+            drmSessionManagerProvider = drmSessionManagerProvider
+        )
 
-        val mediaSourceFactory = DefaultMediaSourceFactory(context, extractorsFactory)
-            .setDataSourceFactory(dataSourceFactory)
-            .setDrmSessionManagerProvider(drmSessionManagerProvider)
-
-        val renderersFactory = androidx.media3.exoplayer.DefaultRenderersFactory(context).apply {
-            setExtensionRendererMode(when(settingsState.decoderPriority) {
-                1 -> androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
-                2 -> androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
-                else -> androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
-            })
-            setEnableDecoderFallback(true)
-            if (settingsState.enableTunneling) {
-                setEnableAudioTrackPlaybackParams(true)
-            }
-        }
+        val renderersFactory = com.codesrahul.streamplus.data.player.MediaCodecConfig.createRenderersFactory(
+            context = context,
+            decoderPriority = activeDecoderMode,
+            enableTunneling = settingsState.enableTunneling
+        )
 
         val bufferMs = settingsState.networkBufferSize * 1000
         val playbackStartMs = if (bufferMs < 1000) 500 else 1000
         val rebufferMs = if (bufferMs < 2000) 1000 else 2000
-        val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
-            .setBufferDurationsMs(
-                bufferMs, // Min buffer
-                (bufferMs * 2.5).toInt(), // Max buffer
-                playbackStartMs, // Buffer for playback start
-                rebufferMs  // Buffer for rebuffer
-            )
-            .setPrioritizeTimeOverSizeThresholds(true)
-            .build()
+        val loadControl = if (isLikelyVod) {
+            androidx.media3.exoplayer.DefaultLoadControl.Builder()
+                .setBufferDurationsMs(
+                    bufferMs, // Min buffer
+                    (bufferMs * 2.5).toInt(), // Max buffer
+                    playbackStartMs, // Buffer for playback start
+                    rebufferMs  // Buffer for rebuffer
+                )
+                .setPrioritizeTimeOverSizeThresholds(true)
+                .build()
+        } else {
+            androidx.media3.exoplayer.DefaultLoadControl.Builder()
+                .setBufferDurationsMs(
+                    1_500,  // 1.5s min buffer for live streams (prevents stalling on small live sliding windows)
+                    20_000, // 20s max buffer
+                    500,    // 500ms for instant start
+                    1_000   // 1s for fast rebuffer
+                )
+                .setBackBuffer(0, false)
+                .setPrioritizeTimeOverSizeThresholds(true)
+                .build()
+        }
 
         val audioLanguagesMap = mapOf(
             "English" to "en",
@@ -775,64 +916,159 @@ fun PlayerScreen(
         player.setSkipSilenceEnabled(settingsState.skipSilence)
         player.setRepeatMode(if (settingsState.repeatMode) androidx.media3.common.Player.REPEAT_MODE_ALL else androidx.media3.common.Player.REPEAT_MODE_OFF)
         
+        var liveBufferingWatchdogJob: kotlinx.coroutines.Job? = null
+
         player.addListener(object : androidx.media3.common.Player.Listener {
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 Log.e("PlayerScreen", "Playback Error: ${error.message} [Code: ${error.errorCode}]", error)
                 
+                val isBehindLiveWindow = error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW ||
+                                         error.cause?.javaClass?.name?.contains("BehindLiveWindowException") == true ||
+                                         error.message?.contains("BehindLiveWindowException", ignoreCase = true) == true
+
+                if (isBehindLiveWindow) {
+                    Log.w("PlayerScreen", "Behind live window detected: Seamlessly jumping to live edge...")
+                    val currentItem = player.currentMediaItem
+                    if (currentItem != null) {
+                        player.setMediaItem(currentItem.buildUpon().build())
+                    } else {
+                        player.seekToDefaultPosition()
+                    }
+                    player.prepare()
+                    player.play()
+                    return
+                }
+
+                val httpException = error.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException
+                val httpCode = httpException?.responseCode ?: 0
+                val isAuthError = httpCode == 401 || httpCode == 403
+                val isSegmentExpired = !isLikelyVod && (httpCode == 404 || httpCode == 410)
                 val isNetworkError = error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
                                      error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
                                      error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_UNSPECIFIED
-                
                 val isHttpError = error.cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException ||
                                   error.cause is androidx.media3.datasource.HttpDataSource.HttpDataSourceException
-                
-                if ((isNetworkError || isHttpError) && !hasRefreshedPlaylist && playlistId != -1) {
-                    hasRefreshedPlaylist = true
-                    Log.d("PlayerScreen", "Attempting automatic playlist refresh to resolve token/stream expiration...")
-                    scope.launch {
-                        try {
-                            val playlistEntity = withContext(Dispatchers.IO) {
-                                playlistDao.getPlaylistSync(playlistId)
-                            }
-                            if (playlistEntity != null) {
-                                withContext(Dispatchers.IO) {
-                                    playlistRepository.loadPlaylist(
-                                        url = playlistEntity.url,
-                                        userAgent = playlistEntity.userAgent,
-                                        forceRefresh = true,
-                                        playlistId = playlistId
-                                    )
-                                }
-                                val fresh = withContext(Dispatchers.IO) {
-                                    channelDao.getChannelByIdentity(streamTitle, groupTitle, playlistId)
-                                }
-                                if (fresh != null) {
-                                    Log.d("PlayerScreen", "Playlist refreshed. New URL: ${fresh.url}")
-                                    if (fresh.url != currentStreamUrl) {
-                                        currentStreamUrl = fresh.url
+
+                // --- AUTH ERRORS (401/403): try playlist refresh, then reconnect ---
+                if (isAuthError && !isLikelyVod) {
+                    val now = System.currentTimeMillis()
+                    if (playlistId != -1 && (now - lastPlaylistRefreshTime > 15_000L)) {
+                        lastPlaylistRefreshTime = now
+                        Log.d("PlayerScreen", "HTTP $httpCode on live stream — refreshing playlist for fresh tokens...")
+                        scope.launch {
+                            try {
+                                val playlistEntity = withContext(Dispatchers.IO) { playlistDao.getPlaylistSync(playlistId) }
+                                if (playlistEntity != null) {
+                                    withContext(Dispatchers.IO) {
+                                        playlistRepository.loadPlaylist(
+                                            url = playlistEntity.url, userAgent = playlistEntity.userAgent,
+                                            forceRefresh = true, playlistId = playlistId
+                                        )
+                                    }
+                                    val fresh = withContext(Dispatchers.IO) {
+                                        channelDao.getChannelByIdentity(currentStreamTitle, groupTitle, playlistId)
+                                    }
+                                    if (fresh != null) {
+                                        Log.d("PlayerScreen", "Playlist refreshed. URL: ${fresh.url}")
+                                        if (fresh.url != currentStreamUrl) {
+                                            currentStreamUrl = fresh.url
+                                        } else {
+                                            // Same URL — bump token to force LaunchedEffect to re-run
+                                            forceRefreshToken++
+                                        }
                                         return@launch
                                     }
                                 }
+                            } catch (e: Exception) {
+                                Log.e("PlayerScreen", "Playlist refresh failed: ${e.message}")
                             }
-                        } catch (e: Exception) {
-                            Log.e("PlayerScreen", "Auto-refresh of playlist failed", e)
+                            // Fallback reconnect
+                            kotlinx.coroutines.delay(2000)
+                            val ci = player.currentMediaItem
+                            if (ci != null) player.setMediaItem(ci.buildUpon().build())
+                            player.prepare(); player.play()
                         }
-                        
-                        // If url didn't change or refresh failed, fallback to standard retry
-                        if (retryCount < maxRetries) {
-                            retryCount++
-                            val delayMs = (2000L * retryCount).coerceAtMost(10000L)
-                            kotlinx.coroutines.delay(delayMs)
-                            player.prepare()
-                            player.play()
-                        }
+                        return
+                    }
+                    // Within cooldown — use exponential backoff reconnect
+                    consecutiveLiveErrors++
+                    val delayMs = (2000L * consecutiveLiveErrors).coerceIn(2000L, 12000L)
+                    Log.w("PlayerScreen", "Auth error in cooldown. Reconnecting in ${delayMs}ms (attempt $consecutiveLiveErrors)...")
+                    scope.launch {
+                        kotlinx.coroutines.delay(delayMs)
+                        val ci = player.currentMediaItem
+                        if (ci != null) player.setMediaItem(ci.buildUpon().build())
+                        player.prepare(); player.play()
                     }
                     return
                 }
 
+                // --- 404/410 SEGMENT EXPIRED: exponential backoff reconnect ---
+                if (isSegmentExpired) {
+                    consecutiveLiveErrors++
+                    val delayMs = (1500L * consecutiveLiveErrors).coerceIn(1000L, 8000L)
+                    Log.w("PlayerScreen", "Live segment expired (HTTP $httpCode). Reconnecting in ${delayMs}ms (attempt $consecutiveLiveErrors)...")
+                    scope.launch {
+                        kotlinx.coroutines.delay(delayMs)
+                        val ci = player.currentMediaItem
+                        if (ci != null) player.setMediaItem(ci.buildUpon().build())
+                        else player.seekToDefaultPosition()
+                        player.prepare(); player.play()
+                    }
+                    return
+                }
+
+                // AI Stream Intelligence Self-Healing Analysis
+                val healing = streamIntelligenceEngine.evaluatePlaybackError(error, currentStreamUrl, currentHeaders)
+                when (healing) {
+                    is com.codesrahul.streamplus.data.network.HealingAction.UpdateHeaders -> {
+                        android.widget.Toast.makeText(context, "AI Self-Healing: ${healing.reason}", android.widget.Toast.LENGTH_SHORT).show()
+                        currentHeaders = healing.newHeaders
+                        if (!isLikelyVod) player.seekToDefaultPosition()
+                        player.prepare()
+                        player.play()
+                        return
+                    }
+                    is com.codesrahul.streamplus.data.network.HealingAction.FallbackDecoder -> {
+                        if (activeDecoderMode != 1) {
+                            android.widget.Toast.makeText(context, "AI Self-Healing: ${healing.reason}", android.widget.Toast.LENGTH_SHORT).show()
+                            activeDecoderMode = 1
+                            return
+                        }
+                    }
+                    is com.codesrahul.streamplus.data.network.HealingAction.RestartLiveWindow -> {
+                        android.widget.Toast.makeText(context, "AI Self-Healing: Aligning live stream edge", android.widget.Toast.LENGTH_SHORT).show()
+                        player.seekToDefaultPosition()
+                        player.prepare()
+                        player.play()
+                        return
+                    }
+                    else -> {}
+                }
+
+                // For Live Streams: NEVER permanently stop! Keep reconnecting with exponential backoff!
+                if (!isLikelyVod) {
+                    consecutiveLiveErrors++
+                    val delayMs = (1500L * consecutiveLiveErrors).coerceIn(1000L, 8000L)
+                    Log.d("PlayerScreen", "Live stream hiccup. Auto-reconnecting in ${delayMs}ms (attempt $consecutiveLiveErrors)...")
+                    scope.launch {
+                        kotlinx.coroutines.delay(delayMs)
+                        val currentItem = player.currentMediaItem
+                        if (currentItem != null) {
+                            player.setMediaItem(currentItem.buildUpon().build())
+                        } else {
+                            player.seekToDefaultPosition()
+                        }
+                        player.prepare()
+                        player.play()
+                    }
+                    return
+                }
+
+                // For VOD Streams: standard finite retry
                 if ((isNetworkError || isHttpError) && retryCount < maxRetries) {
                     retryCount++
-                    val delayMs = (2000L * retryCount).coerceAtMost(10000L) // Exponential backoff
+                    val delayMs = (2000L * retryCount).coerceAtMost(10000L)
                     Log.d("PlayerScreen", "Network error detected. Retrying ($retryCount/$maxRetries) in ${delayMs}ms...")
                     
                     scope.launch {
@@ -855,16 +1091,119 @@ fun PlayerScreen(
                         else -> "Playback Error: ${error.errorCodeName}"
                     }
                 } else {
-                    // Generic message for Release
-                    "Playback error. Please try again or check the source."
+                    "Playback error. Retrying..."
                 }
-                android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
+                android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+            }
+
+            override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
+                if (!timeline.isEmpty) {
+                    val isLive = player.isCurrentMediaItemLive || player.isCurrentMediaItemDynamic
+                    if (isLiveStreamState != isLive) {
+                        isLiveStreamState = isLive
+                    }
+                }
+            }
+
+            override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
+                val isLive = player.isCurrentMediaItemLive || player.isCurrentMediaItemDynamic
+                if (isLiveStreamState != isLive && !player.currentTimeline.isEmpty) {
+                    isLiveStreamState = isLive
+                }
+                for (trackGroup in tracks.groups) {
+                    if (trackGroup.type == C.TRACK_TYPE_VIDEO && trackGroup.isSelected) {
+                        for (i in 0 until trackGroup.length) {
+                            if (trackGroup.isTrackSelected(i)) {
+                                val format = trackGroup.getTrackFormat(i)
+                                val sampleMime = format.sampleMimeType ?: ""
+                                videoCodec = when {
+                                    sampleMime.contains("hevc") || sampleMime.contains("h265") -> "HEVC"
+                                    sampleMime.contains("avc") || sampleMime.contains("h264") -> "H.264"
+                                    sampleMime.contains("av01") || sampleMime.contains("av1") -> "AV1"
+                                    sampleMime.contains("vp9") -> "VP9"
+                                    sampleMime.contains("vp8") -> "VP8"
+                                    else -> sampleMime.substringAfterLast("/").uppercase()
+                                }
+                                if (format.frameRate > 0) {
+                                    videoFps = "${format.frameRate.toInt()}fps"
+                                }
+                                if (format.width > 0 && format.height > 0) {
+                                    videoResolution = when {
+                                        format.width >= 3840 || format.height >= 2160 -> "4K"
+                                        format.width >= 1920 || format.height >= 1080 -> "1080p"
+                                        format.width >= 1280 || format.height >= 720 -> "720p"
+                                        else -> "${format.height}p"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (trackGroup.type == C.TRACK_TYPE_AUDIO && trackGroup.isSelected) {
+                        for (i in 0 until trackGroup.length) {
+                            if (trackGroup.isTrackSelected(i)) {
+                                val format = trackGroup.getTrackFormat(i)
+                                audioChannels = when (format.channelCount) {
+                                    6 -> "5.1"
+                                    8 -> "7.1"
+                                    2 -> "Stereo"
+                                    else -> ""
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                when (playbackState) {
+                    androidx.media3.common.Player.STATE_READY -> {
+                        liveBufferingWatchdogJob?.cancel()
+                        liveBufferingWatchdogJob = null
+                        retryCount = 0
+                        consecutiveLiveErrors = 0
+                    }
+                    androidx.media3.common.Player.STATE_BUFFERING -> {
+                        if (!isLikelyVod) {
+                            liveBufferingWatchdogJob?.cancel()
+                            liveBufferingWatchdogJob = scope.launch {
+                                kotlinx.coroutines.delay(3500L)
+                                Log.w("PlayerScreen", "Live stream buffering stalled for >3.5s. Resyncing to live edge...")
+                                player.seekToDefaultPosition()
+                                player.prepare()
+                                player.play()
+                            }
+                        }
+                    }
+                    androidx.media3.common.Player.STATE_ENDED -> {
+                        liveBufferingWatchdogJob?.cancel()
+                        liveBufferingWatchdogJob = null
+                        if (!isLikelyVod) {
+                            Log.d("PlayerScreen", "Live stream reached unexpected end. Auto-reconnecting to live edge...")
+                            scope.launch {
+                                kotlinx.coroutines.delay(1000L)
+                                val currentItem = player.currentMediaItem
+                                if (currentItem != null) {
+                                    player.setMediaItem(currentItem.buildUpon().build())
+                                } else {
+                                    player.seekToDefaultPosition()
+                                }
+                                player.prepare()
+                                player.play()
+                            }
+                        }
+                    }
+                    androidx.media3.common.Player.STATE_IDLE -> {
+                        liveBufferingWatchdogJob?.cancel()
+                        liveBufferingWatchdogJob = null
+                    }
+                }
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 if (isPlaying) {
                     Log.d("PlayerScreen", "Playback successful. Resetting retry count.")
                     retryCount = 0
+                    consecutiveLiveErrors = 0
                 }
             }
 
@@ -895,16 +1234,36 @@ fun PlayerScreen(
         player
     }
 
-    // Ticker for Time and Progress
-    LaunchedEffect(exoPlayer, isControlsVisible) {
-        if (isControlsVisible) {
-            while (true) {
+    // Unified Timer & Ticker for Time, Progress, and Live Status
+    LaunchedEffect(exoPlayer, currentStreamUrl, isLikelyVod) {
+        liveWatchTimeSeconds = 0L
+        while (true) {
+            if (!isLikelyVod) {
+                if (exoPlayer.isPlaying) {
+                    liveWatchTimeSeconds++
+                }
+                val liveTimeStr = formatElapsedTime(liveWatchTimeSeconds * 1000L)
+                playerViewRef?.let { pv ->
+                    pv.findViewById<android.widget.TextView>(com.codesrahul.streamplus.R.id.tv_live_badge)?.visibility = android.view.View.VISIBLE
+                    pv.findViewById<android.widget.TextView>(com.codesrahul.streamplus.R.id.tv_time_combined)?.text = "🔴 LIVE • $liveTimeStr"
+                    pv.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_progress)?.visibility = android.view.View.GONE
+                    pv.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_rew)?.visibility = android.view.View.GONE
+                    pv.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_ffwd)?.visibility = android.view.View.GONE
+                }
+            } else {
                 val pos = exoPlayer.currentPosition
                 val dur = exoPlayer.duration
                 currentTimeFormatted = formatElapsedTime(pos)
                 durationFormatted = if (dur == C.TIME_UNSET || dur <= 0) "00:00" else formatElapsedTime(dur)
-                kotlinx.coroutines.delay(500)
+                playerViewRef?.let { pv ->
+                    pv.findViewById<android.widget.TextView>(com.codesrahul.streamplus.R.id.tv_live_badge)?.visibility = android.view.View.GONE
+                    pv.findViewById<android.widget.TextView>(com.codesrahul.streamplus.R.id.tv_time_combined)?.text = "$currentTimeFormatted / $durationFormatted"
+                    pv.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_progress)?.visibility = android.view.View.VISIBLE
+                    pv.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_rew)?.visibility = android.view.View.VISIBLE
+                    pv.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_ffwd)?.visibility = android.view.View.VISIBLE
+                }
             }
+            kotlinx.coroutines.delay(1000L)
         }
     }
 
@@ -1118,10 +1477,14 @@ fun PlayerScreen(
         }
     }
 
-    LaunchedEffect(resolvedItem, exoPlayer) {
+    LaunchedEffect(resolvedItem, exoPlayer, forceRefreshToken) {
         if (resolvedItem.url.isNotBlank()) {
             val lowerUrl = resolvedItem.url.lowercase()
+            val manifestType = resolvedItem.headers["X-Manifest-Type"]?.lowercase() ?: ""
             val inferredMimeType = when {
+                manifestType == "mpd" || manifestType == "dash" -> androidx.media3.common.MimeTypes.APPLICATION_MPD
+                manifestType == "hls" || manifestType == "m3u8" -> androidx.media3.common.MimeTypes.APPLICATION_M3U8
+                manifestType == "ism" || manifestType == "smoothstreaming" -> androidx.media3.common.MimeTypes.APPLICATION_SS
                 lowerUrl.contains(".m3u8") || lowerUrl.contains("type=hls") || lowerUrl.contains("/hls/") || lowerUrl.contains(".php?m3u=1") -> androidx.media3.common.MimeTypes.APPLICATION_M3U8
                 lowerUrl.contains(".mpd") || lowerUrl.contains("/mpd/") || lowerUrl.contains("type=dash") || lowerUrl.contains("/dash/") || lowerUrl.contains("manifest.mpd") || lowerUrl.contains("index.mpd") -> androidx.media3.common.MimeTypes.APPLICATION_MPD
                 lowerUrl.contains(".ism") || lowerUrl.contains("/manifest") -> androidx.media3.common.MimeTypes.APPLICATION_SS
@@ -1132,6 +1495,17 @@ fun PlayerScreen(
                 .setUri(Uri.parse(resolvedItem.url))
                 .setMediaId(resolvedItem.url)
                 .apply { inferredMimeType?.let { setMimeType(it) } }
+                .apply {
+                    if (!isLikelyVod) {
+                        setLiveConfiguration(
+                            MediaItem.LiveConfiguration.Builder()
+                                .setTargetOffsetMs(4000L) // 4s target offset gives enough buffer cushion to avoid stalling at live edge
+                                .setMinPlaybackSpeed(0.98f)
+                                .setMaxPlaybackSpeed(1.02f)
+                                .build()
+                        )
+                    }
+                }
                 .setMediaMetadata(
                     androidx.media3.common.MediaMetadata.Builder()
                         .setTitle(resolvedItem.name)
@@ -1181,30 +1555,42 @@ fun PlayerScreen(
                     if (!effectiveLicenseUrl.isNullOrBlank()) {
                         Log.d("PlayerScreen", "License URL is not blank: $effectiveLicenseUrl")
                         
-                        // Handle ClearKey Key Pairs (KID:KEY)
-                        if (uuid == C.CLEARKEY_UUID && effectiveLicenseUrl.contains(":") && !effectiveLicenseUrl.contains("://")) {
+                        // Handle ClearKey Key Pairs (KID:KEY), direct JSON, clearkey.direct URLs, or raw pairs
+                        val isDirectClearKeyJson = effectiveLicenseUrl.trim().startsWith("{") && effectiveLicenseUrl.contains("\"keys\"")
+                        val isClearKeyPair = uuid == C.CLEARKEY_UUID && (
+                            isDirectClearKeyJson ||
+                            effectiveLicenseUrl.contains("clearkey.direct", ignoreCase = true) ||
+                            (effectiveLicenseUrl.contains(":") && !effectiveLicenseUrl.contains("?") && !effectiveLicenseUrl.contains("&") &&
+                                (Regex("([0-9a-zA-Z_\\-]{22,32}):([0-9a-zA-Z_\\-]{22,32})").containsMatchIn(effectiveLicenseUrl) || !effectiveLicenseUrl.contains("://")))
+                        )
+                        if (isClearKeyPair) {
                             try {
-                                Log.d("PlayerScreen", "Processing ClearKey hex pair: $effectiveLicenseUrl")
-                                val pairs = effectiveLicenseUrl.split(",").map { it.trim() }
-                                val keysJson = pairs.mapNotNull { pair ->
-                                    val parts = pair.split(":")
-                                    if (parts.size == 2) {
-                                        val kid = parts[0].trim()
-                                        val key = parts[1].trim()
-                                        
-                                        // Detect if Hex or Base64
-                                        val kidBytes = if (kid.length == 32 && kid.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) hexToByteArray(kid) else Base64.decode(kid, Base64.DEFAULT)
-                                        val keyBytes = if (key.length == 32 && key.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) hexToByteArray(key) else Base64.decode(key, Base64.DEFAULT)
+                                val ckJson = if (isDirectClearKeyJson) {
+                                    effectiveLicenseUrl.trim()
+                                } else {
+                                    val cleanPairStr = effectiveLicenseUrl.substringAfter("clearkey.direct/").removePrefix("http://").removePrefix("https://").trim('/')
+                                    Log.d("PlayerScreen", "Processing ClearKey hex pair: $cleanPairStr")
+                                    val pairs = cleanPairStr.split(",").map { it.trim() }
+                                    val keysJson = pairs.mapNotNull { pair ->
+                                        val parts = pair.split(":")
+                                        if (parts.size == 2) {
+                                            val kid = parts[0].trim()
+                                            val key = parts[1].trim()
+                                            
+                                            // Detect if Hex or Base64
+                                            val kidBytes = if (kid.length == 32 && kid.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) hexToByteArray(kid) else Base64.decode(kid, Base64.DEFAULT)
+                                            val keyBytes = if (key.length == 32 && key.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) hexToByteArray(key) else Base64.decode(key, Base64.DEFAULT)
 
-                                        val kidB64 = Base64.encodeToString(kidBytes, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
-                                        val keyB64 = Base64.encodeToString(keyBytes, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
-                                        
-                                        Log.d("PlayerScreen", "Converted to Base64 - KID: $kidB64, KEY: $keyB64")
-                                        "{\"kty\":\"oct\",\"k\":\"$keyB64\",\"kid\":\"$kidB64\"}"
-                                    } else null
-                                }.joinToString(",")
-                                
-                                val ckJson = "{\"keys\":[$keysJson],\"type\":\"temporary\"}"
+                                            val kidB64 = Base64.encodeToString(kidBytes, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
+                                            val keyB64 = Base64.encodeToString(keyBytes, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
+                                            
+                                            Log.d("PlayerScreen", "Converted to Base64 - KID: $kidB64, KEY: $keyB64")
+                                            "{\"kty\":\"oct\",\"k\":\"$keyB64\",\"kid\":\"$kidB64\"}"
+                                        } else null
+                                    }.joinToString(",")
+                                    
+                                    "{\"keys\":[$keysJson],\"type\":\"temporary\"}"
+                                }
                                 Log.d("PlayerScreen", "Generated ClearKey JSON: $ckJson")
                                 
                                 // Store the ClearKey JSON in a special header so UnifiedMediaDrmCallback can use it
@@ -1228,6 +1614,11 @@ fun PlayerScreen(
                         }
                     } else {
                         Log.d("PlayerScreen", "No License URL, using headers only")
+                        val ckJson = resolvedItem.drmHeaders.entries.find { it.key.equals("X-ClearKey-Data", ignoreCase = true) }?.value
+                        if (uuid == C.CLEARKEY_UUID && !ckJson.isNullOrBlank()) {
+                            val dUri = "data:application/json;base64," + Base64.encodeToString(ckJson.toByteArray(), Base64.NO_WRAP)
+                            drmBuilder.setLicenseUri(Uri.parse(dUri))
+                        }
                         drmBuilder.setLicenseRequestHeaders(resolvedItem.drmHeaders)
                     }
 
@@ -1240,8 +1631,9 @@ fun PlayerScreen(
                     Log.d("PlayerScreen", "Applied DRM Config: UUID=$uuid, Scheme=$effectiveScheme, License=$effectiveLicenseUrl")
                 }
             }
-            if (playlistUris != null && playlistUris.isNotEmpty()) {
-                val mediaItems = playlistUris.mapIndexed { idx, url ->
+            if (currentPlaylistUris != null && currentPlaylistUris!!.isNotEmpty()) {
+                val pUris = currentPlaylistUris!!
+                val mediaItems = pUris.mapIndexed { idx, url ->
                     val title = playlistTitles?.getOrNull(idx) ?: "Track ${idx + 1}"
                     val itemMimeType = when {
                         url.lowercase().contains(".m3u8") || url.lowercase().contains("type=hls") -> androidx.media3.common.MimeTypes.APPLICATION_M3U8
@@ -1267,6 +1659,7 @@ fun PlayerScreen(
                 exoPlayer.setMediaItem(mediaItemBuilder.build())
             }
             exoPlayer.prepare()
+            exoPlayer.play()
         }
     }
 
@@ -1316,7 +1709,7 @@ fun PlayerScreen(
                 val contextThemeWrapper = android.view.ContextThemeWrapper(activityContext, com.codesrahul.streamplus.R.style.Theme_M3UValidator)
                 val view = android.view.LayoutInflater.from(contextThemeWrapper).inflate(com.codesrahul.streamplus.R.layout.player_view_wrapper, null)
                 val playerView = view.findViewById<androidx.media3.ui.PlayerView>(com.codesrahul.streamplus.R.id.player_view)
-                playerView.player = exoPlayer
+                playerView.player = activePlayer
                 playerView.keepScreenOn = true
 
                 // Add a listener to sync our Compose state with the actual ExoPlayer controller visibility
@@ -1324,6 +1717,14 @@ fun PlayerScreen(
                     android.util.Log.d("PlayerScreen", "ControllerVisibilityListener: visibility = $visibility, isLocked = $isLocked")
                     if (!isLocked) {
                         isControlsVisible = (visibility == android.view.View.VISIBLE)
+                    }
+                    if (visibility == android.view.View.VISIBLE && !isLikelyVod) {
+                        playerView.findViewById<android.widget.TextView>(com.codesrahul.streamplus.R.id.tv_live_badge)?.visibility = android.view.View.VISIBLE
+                        val liveTimeStr = formatElapsedTime(liveWatchTimeSeconds * 1000L)
+                        playerView.findViewById<android.widget.TextView>(com.codesrahul.streamplus.R.id.tv_time_combined)?.text = "🔴 LIVE • $liveTimeStr"
+                        playerView.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_progress)?.visibility = android.view.View.GONE
+                        playerView.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_rew)?.visibility = android.view.View.GONE
+                        playerView.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_ffwd)?.visibility = android.view.View.GONE
                     }
                 })
 
@@ -1430,33 +1831,67 @@ fun PlayerScreen(
                     detector.onTouchEvent(event)
                     true 
                 }
+                playerViewRef = playerView
                 view
             },
             modifier = Modifier.fillMaxSize(),
             update = { view ->
                 val playerView = view.findViewById<androidx.media3.ui.PlayerView>(com.codesrahul.streamplus.R.id.player_view)
+                playerViewRef = playerView
                 if (playerView.player != activePlayer) playerView.player = activePlayer
                 
-                // Bind the stream title to the custom TextView in the controller layout
-                playerView.findViewById<android.widget.TextView>(com.codesrahul.streamplus.R.id.tv_player_title)?.text = streamTitle
+                // Bind the stream title & format quality badge
+                playerView.findViewById<android.widget.TextView>(com.codesrahul.streamplus.R.id.tv_player_title)?.text = currentStreamTitle
                 
-                // Combined Time Update
-                playerView.findViewById<android.widget.TextView>(com.codesrahul.streamplus.R.id.tv_time_combined)?.text = 
-                    "$currentTimeFormatted / $durationFormatted"
+                val badgeView = playerView.findViewById<android.widget.TextView>(com.codesrahul.streamplus.R.id.tv_stream_quality_badge)
+                val badgeTokens = listOfNotNull(
+                    videoResolution.takeIf { it.isNotBlank() },
+                    videoFps.takeIf { it.isNotBlank() },
+                    videoCodec.takeIf { it.isNotBlank() },
+                    audioChannels.takeIf { it.isNotBlank() }
+                )
+                if (badgeTokens.isNotEmpty()) {
+                    badgeView?.text = badgeTokens.joinToString(" • ")
+                    badgeView?.visibility = android.view.View.VISIBLE
+                } else {
+                    badgeView?.text = "AUTO HD"
+                    badgeView?.visibility = android.view.View.VISIBLE
+                }
+
+                // Live Badge in Top Bar
+                val liveBadgeView = playerView.findViewById<android.widget.TextView>(com.codesrahul.streamplus.R.id.tv_live_badge)
+                liveBadgeView?.visibility = if (!isLikelyVod) android.view.View.VISIBLE else android.view.View.GONE
+
+                // Combined Time and Live UI Presentation
+                val timeCombinedView = playerView.findViewById<android.widget.TextView>(com.codesrahul.streamplus.R.id.tv_time_combined)
+                val progressBarView = playerView.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_progress)
+                val rewBtnView = playerView.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_rew)
+                val ffwdBtnView = playerView.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_ffwd)
+
+                if (!isLikelyVod) {
+                    val liveTimeStr = formatElapsedTime(liveWatchTimeSeconds * 1000L)
+                    timeCombinedView?.text = "🔴 LIVE • $liveTimeStr"
+                    progressBarView?.visibility = android.view.View.GONE
+                    rewBtnView?.visibility = android.view.View.GONE
+                    ffwdBtnView?.visibility = android.view.View.GONE
+                } else {
+                    timeCombinedView?.text = "$currentTimeFormatted / $durationFormatted"
+                    progressBarView?.visibility = android.view.View.VISIBLE
+                    rewBtnView?.visibility = android.view.View.VISIBLE
+                    ffwdBtnView?.visibility = android.view.View.VISIBLE
+                }
 
                 playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.btn_close)?.setOnClickListener { activityContext?.finish() }
                 
                 playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.exo_speed_top)?.setOnClickListener { 
-                    val speeds = arrayOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
-                    android.app.AlertDialog.Builder(context, android.R.style.Theme_DeviceDefault_Light_Dialog_Alert)
-                        .setTitle("Select Speed")
-                        .setItems(speeds.map { "${it}x" }.toTypedArray()) { _, idx ->
-                            playbackSpeed = speeds[idx]
-                        }.show()
+                    showSpeedSheet = true
                 }
 
-                playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.exo_playlist_top)?.setOnClickListener { 
-                    android.widget.Toast.makeText(context, "Channel List coming soon", android.widget.Toast.LENGTH_SHORT).show()
+                val playlistBtn = playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.exo_playlist_top)
+                val hasPlaylistContent = (!isLocalOrDirectPlay && drawerChannels.isNotEmpty()) || (currentPlaylistUris != null && currentPlaylistUris!!.size > 1)
+                playlistBtn?.visibility = if (hasPlaylistContent) android.view.View.VISIBLE else android.view.View.GONE
+                playlistBtn?.setOnClickListener { 
+                    showChannelDrawer = !showChannelDrawer
                 }
 
                 playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.exo_settings)?.setOnClickListener { 
@@ -1570,84 +2005,103 @@ fun PlayerScreen(
         // Seek Animation Overlay
         AnimatedVisibility(
             visible = showSeekOverlay && !isInPip,
-            enter = fadeIn() + expandHorizontally(),
-            exit = fadeOut() + shrinkHorizontally(),
-            modifier = Modifier.align(if (seekDirection == "Rewind") Alignment.CenterStart else Alignment.CenterEnd)
+            enter = fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) + scaleIn(initialScale = 0.85f),
+            exit = fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) + scaleOut(targetScale = 0.85f),
+            modifier = Modifier.align(if (seekDirection == "Rewind") Alignment.CenterStart else Alignment.CenterEnd).padding(horizontal = 48.dp)
         ) {
             Surface(
-                color = Color.Black.copy(alpha = 0.6f),
-                shape = RoundedCornerShape(topStart = if (seekDirection == "Rewind") 0.dp else 40.dp, bottomStart = if (seekDirection == "Rewind") 0.dp else 40.dp, topEnd = if (seekDirection == "Rewind") 40.dp else 0.dp, bottomEnd = if (seekDirection == "Rewind") 40.dp else 0.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
-                modifier = Modifier.padding(vertical = 48.dp)
+                color = Color(0xD90A0A14),
+                shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(1.dp, Color(0xFF06B6D4).copy(alpha = 0.35f))
             ) {
                 Column(
-                    modifier = Modifier.padding(horizontal = 32.dp, vertical = 24.dp),
+                    modifier = Modifier.padding(horizontal = 28.dp, vertical = 20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        imageVector = if (seekDirection == "Rewind") Icons.Default.FastRewind else Icons.Default.FastForward,
-                        contentDescription = seekDirection,
-                        tint = Color.White,
-                        modifier = Modifier.size(56.dp)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .background(Color(0xFF06B6D4).copy(alpha = 0.15f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (seekDirection == "Rewind") Icons.Default.FastRewind else Icons.Default.FastForward,
+                            contentDescription = seekDirection,
+                            tint = Color(0xFF06B6D4),
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        if (seekDirection == "Rewind") "RETRY -10s" else "SKIP +10s",
+                        if (seekDirection == "Rewind") "-10 SEC" else "+10 SEC",
                         color = Color.White,
-                        fontWeight = FontWeight.ExtraBold,
-                        style = MaterialTheme.typography.labelLarge
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelMedium,
+                        letterSpacing = 1.sp
                     )
                 }
             }
         }
 
     // Indication Overlay (Gestures)
+    val animatedGestureLevel by animateFloatAsState(
+        targetValue = gestureLevel,
+        animationSpec = spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioNoBouncy),
+        label = "gestureLevel"
+    )
     AnimatedVisibility(
         visible = showGestureOverlay && !isInPip,
-        enter = fadeIn() + scaleIn(),
-        exit = fadeOut() + scaleOut(),
+        enter = fadeIn() + scaleIn(initialScale = 0.9f),
+        exit = fadeOut() + scaleOut(targetScale = 0.9f),
         modifier = Modifier.align(Alignment.Center)
     ) {
         Surface(
-            color = Color.Black.copy(alpha = 0.75f),
+            color = Color(0xCC0E0E16),
             shape = RoundedCornerShape(24.dp),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+            border = BorderStroke(1.dp, Color(0xFF06B6D4).copy(alpha = 0.25f))
         ) {
             Column(
-                modifier = Modifier.padding(horizontal = 40.dp, vertical = 28.dp),
+                modifier = Modifier.padding(horizontal = 36.dp, vertical = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 gestureIcon?.let {
-                    Icon(
-                        imageVector = it,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(48.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(Color(0xFF06B6D4).copy(alpha = 0.12f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = it,
+                            contentDescription = null,
+                            tint = Color(0xFF06B6D4),
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = gestureText,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     color = Color.White,
-                    fontWeight = FontWeight.ExtraBold
+                    fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 // Glassy Progress Bar
                 Box(
                     modifier = Modifier
                         .width(140.dp)
                         .height(6.dp)
-                        .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(3.dp))
+                        .background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(3.dp))
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxHeight()
-                            .fillMaxWidth(gestureLevel)
+                            .fillMaxWidth(animatedGestureLevel)
                             .background(
                                 brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                    colors = listOf(Color(0xFF64B5F6), Color.White)
+                                    colors = listOf(Color(0xFF06B6D4), Color(0xFF38BDF8))
                                 ),
                                 shape = RoundedCornerShape(3.dp)
                             )
@@ -1656,7 +2110,232 @@ fun PlayerScreen(
             }
         }
     }
-}
+
+        // Quick Channels Drawer (Slide-in Frosted Glass Sheet)
+        val isLocalQueue = currentPlaylistUris != null && currentPlaylistUris!!.isNotEmpty()
+        val canShowDrawer = if (isLocalOrDirectPlay) isLocalQueue else drawerChannels.isNotEmpty()
+        AnimatedVisibility(
+            visible = showChannelDrawer && !isInPip && canShowDrawer,
+            enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
+            exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
+            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(320.dp)
+        ) {
+            Surface(
+                color = Color(0xF20E0E14),
+                shape = RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                ) {
+                    val drawerTitle = if (isLocalQueue) "Videos (${currentPlaylistUris!!.size})" else "Channels"
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            drawerTitle,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        IconButton(onClick = { showChannelDrawer = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    if (!isLocalQueue) {
+                        // Search input for IPTV channels
+                        OutlinedTextField(
+                            value = drawerSearchQuery,
+                            onValueChange = { drawerSearchQuery = it },
+                            placeholder = { Text("Filter channels...", color = Color.Gray, fontSize = 13.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                                focusedContainerColor = Color.White.copy(alpha = 0.05f),
+                                unfocusedContainerColor = Color.White.copy(alpha = 0.05f)
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+
+                    if (isLocalQueue) {
+                        val pUris = currentPlaylistUris!!
+                        val currentMediaIdx = activePlayer.currentMediaItemIndex
+                        androidx.compose.foundation.lazy.LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(
+                                count = pUris.size,
+                                key = { idx -> "local_${pUris[idx]}_$idx" }
+                            ) { idx ->
+                                val vUri = pUris[idx]
+                                val vTitle = playlistTitles?.getOrNull(idx) ?: "Video ${idx + 1}"
+                                val isCurrent = idx == currentMediaIdx || vUri == currentStreamUrl
+
+                                Surface(
+                                    onClick = {
+                                        if (activePlayer.mediaItemCount > idx) {
+                                            activePlayer.seekTo(idx, 0L)
+                                            activePlayer.play()
+                                        }
+                                        currentStreamUrl = vUri
+                                        currentStreamTitle = vTitle
+                                        showChannelDrawer = false
+                                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                    },
+                                    color = if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.04f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.08f)
+                                    ),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Movie,
+                                            contentDescription = null,
+                                            tint = if (isCurrent) MaterialTheme.colorScheme.primary else Color.Gray,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(
+                                            vTitle,
+                                            color = Color.White,
+                                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                            fontSize = 14.sp,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        if (isCurrent) {
+                                            Icon(
+                                                Icons.Default.PlayArrow,
+                                                contentDescription = "Playing",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        val filteredChannels = remember(drawerChannels, drawerSearchQuery) {
+                            if (drawerSearchQuery.isBlank()) drawerChannels
+                            else drawerChannels.filter { it.name.contains(drawerSearchQuery, ignoreCase = true) }
+                        }
+
+                        if (filteredChannels.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("No channels found", color = Color.Gray, fontSize = 14.sp)
+                            }
+                        } else {
+                            androidx.compose.foundation.lazy.LazyColumn(
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(
+                                    count = filteredChannels.size,
+                                    key = { idx ->
+                                        val ch = filteredChannels[idx]
+                                        if (ch.id != 0) "ch_${ch.id}" else "${ch.name}_${ch.url}_$idx"
+                                    }
+                                ) { idx ->
+                                    val ch = filteredChannels[idx]
+                                    val isCurrent = ch.url == currentStreamUrl
+                                    Surface(
+                                        onClick = {
+                                            currentPlaylistUris = null
+                                            currentStreamUrl = ch.url
+                                            currentStreamTitle = ch.name
+                                            currentChannelLogo = ch.logoUrl
+                                            currentUserAgent = ch.userAgent.takeIf { it.isNotBlank() } ?: userAgent
+                                            currentHeaders = if (ch.headers.isNotEmpty()) ch.headers else headers
+                                            currentDrmLicenseUrl = ch.licenseUrl
+                                            currentDrmScheme = ch.drmScheme
+                                            currentDrmHeaders = ch.drmHeaders
+                                            currentIsVod = ch.isVod
+                                            currentStreamType = ch.streamType
+                                            consecutiveLiveErrors = 0
+                                            retryCount = 0
+                                            showChannelDrawer = false
+                                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                        },
+                                        color = if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.04f),
+                                        shape = RoundedCornerShape(12.dp),
+                                        border = BorderStroke(
+                                            1.dp,
+                                            if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.08f)
+                                        ),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            if (ch.logoUrl.isNotBlank()) {
+                                                coil.compose.AsyncImage(
+                                                    model = ch.logoUrl,
+                                                    contentDescription = ch.name,
+                                                    modifier = Modifier.size(32.dp).clip(CircleShape)
+                                                )
+                                                Spacer(modifier = Modifier.width(10.dp))
+                                            }
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    ch.name,
+                                                    color = Color.White,
+                                                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    fontSize = 14.sp
+                                                )
+                                                if (ch.group.isNotBlank()) {
+                                                    Text(
+                                                        ch.group,
+                                                        color = Color.Gray,
+                                                        fontSize = 11.sp,
+                                                        maxLines = 1
+                                                    )
+                                                }
+                                            }
+                                            if (isCurrent) {
+                                                Icon(
+                                                    Icons.Default.PlayArrow,
+                                                    contentDescription = "Playing",
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     // --- Modern Settings Bottom Sheet ---
     if (showSettingsSheet) {
@@ -1686,28 +2365,23 @@ fun PlayerScreen(
                 // Track Sections
                 SettingsItem(Icons.Default.HighQuality, "Video Quality") {
                     showSettingsSheet = false
-                    showTrackSelectionDialog(context, exoPlayer, C.TRACK_TYPE_VIDEO)
+                    showQualitySheet = true
                 }
                 SettingsItem(Icons.Default.AudioFile, "Audio Tracks") {
                     showSettingsSheet = false
-                    showTrackSelectionDialog(context, exoPlayer, C.TRACK_TYPE_AUDIO)
+                    showAudioSheet = true
                 }
                 SettingsItem(Icons.Default.Subtitles, "Subtitles") {
                     showSettingsSheet = false
-                    showTrackSelectionDialog(context, exoPlayer, C.TRACK_TYPE_TEXT)
+                    showSubtitleSheet = true
                 }
                 
                 HorizontalDivider(color = Color.White.copy(alpha = 0.05f), modifier = Modifier.padding(vertical = 8.dp))
 
                 // Advanced Controls
                 SettingsItem(Icons.Default.Speed, "Playback Speed (${playbackSpeed}x)") {
-                    val speeds = arrayOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
-                    android.app.AlertDialog.Builder(context, android.R.style.Theme_DeviceDefault_Light_Dialog_Alert)
-                        .setTitle("Select Speed")
-                        .setItems(speeds.map { "${it}x" }.toTypedArray()) { _, idx ->
-                            playbackSpeed = speeds[idx]
-                            showSettingsSheet = false
-                        }.show()
+                    showSettingsSheet = false
+                    showSpeedSheet = true
                 }
 
                 SettingsSliderItem(Icons.Default.VolumeUp, "Audio Boost", audioBoost) {
@@ -1715,24 +2389,413 @@ fun PlayerScreen(
                 }
 
                 SettingsItem(Icons.Default.Timer, "Sleep Timer ${if (sleepTimerActive) "(Active)" else ""}") {
-                    val times = arrayOf(5, 15, 30, 60, 0)
-                    android.app.AlertDialog.Builder(context, android.R.style.Theme_DeviceDefault_Light_Dialog_Alert)
-                        .setTitle("Set Sleep Timer")
-                        .setItems(times.map { if (it == 0) "Off" else "$it Minutes" }.toTypedArray()) { _, idx ->
-                            val mins = times[idx]
+                    showSettingsSheet = false
+                    showSleepTimerSheet = true
+                }
+
+                SettingsItem(Icons.Default.FileOpen, "Load External Subtitle") {
+                    showSettingsSheet = false
+                    subtitlePickerLauncher?.invoke()
+                }
+            }
+        }
+    }
+
+    // --- Modern Video Quality Bottom Sheet ---
+    if (showQualitySheet) {
+        val videoTrackGroups = remember(exoPlayer.currentTracks) {
+            exoPlayer.currentTracks.groups.filter { it.type == C.TRACK_TYPE_VIDEO }
+        }
+        val currentOverrides = exoPlayer.trackSelectionParameters.overrides
+        val isAuto = currentOverrides.none { it.value.type == C.TRACK_TYPE_VIDEO }
+
+        ModalBottomSheet(
+            onDismissRequest = { showQualitySheet = false },
+            containerColor = Color(0xFF14141E),
+            contentColor = Color.White,
+            dragHandle = { BottomSheetDefaults.DragHandle(color = Color.Gray) }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+                    .navigationBarsPadding()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.HighQuality, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Video Quality",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                    IconButton(onClick = { showQualitySheet = false }) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray)
+                    }
+                }
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(bottom = 8.dp))
+
+                PlayerOptionItem(
+                    title = "Auto (Recommended)",
+                    subtitle = "Adaptive stream quality based on network speed",
+                    isSelected = isAuto,
+                    onClick = {
+                        exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
+                            .buildUpon()
+                            .clearOverridesOfType(C.TRACK_TYPE_VIDEO)
+                            .build()
+                        showQualitySheet = false
+                    }
+                )
+
+                videoTrackGroups.forEach { group ->
+                    for (i in 0 until group.length) {
+                        val format = group.getTrackFormat(i)
+                        val isSelected = currentOverrides[group.mediaTrackGroup]?.trackIndices?.contains(i) == true
+                        val height = format.height
+                        val width = format.width
+                        val bitrate = format.bitrate
+                        val fps = format.frameRate
+
+                        val title = if (height > 0) "${height}p" else if (width > 0) "${width}x${height}" else format.label ?: "Quality ${i + 1}"
+                        val details = buildList {
+                            if (bitrate > 0) add("${bitrate / 1000} kbps")
+                            if (fps > 0) add("${fps.toInt()} fps")
+                            if (format.codecs != null) add(format.codecs)
+                        }.joinToString(" • ")
+
+                        PlayerOptionItem(
+                            title = title,
+                            subtitle = details.ifBlank { null },
+                            isSelected = isSelected,
+                            onClick = {
+                                exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
+                                    .buildUpon()
+                                    .setOverrideForType(androidx.media3.common.TrackSelectionOverride(group.mediaTrackGroup, i))
+                                    .build()
+                                showQualitySheet = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // --- Modern Audio Track Bottom Sheet ---
+    if (showAudioSheet) {
+        val audioTrackGroups = remember(exoPlayer.currentTracks) {
+            exoPlayer.currentTracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
+        }
+        val currentOverrides = exoPlayer.trackSelectionParameters.overrides
+        val isAuto = currentOverrides.none { it.value.type == C.TRACK_TYPE_AUDIO }
+
+        ModalBottomSheet(
+            onDismissRequest = { showAudioSheet = false },
+            containerColor = Color(0xFF14141E),
+            contentColor = Color.White,
+            dragHandle = { BottomSheetDefaults.DragHandle(color = Color.Gray) }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+                    .navigationBarsPadding()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.AudioFile, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Audio Tracks",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                    IconButton(onClick = { showAudioSheet = false }) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray)
+                    }
+                }
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(bottom = 8.dp))
+
+                PlayerOptionItem(
+                    title = "Auto (Default)",
+                    subtitle = "System default track",
+                    isSelected = isAuto,
+                    onClick = {
+                        exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
+                            .buildUpon()
+                            .clearOverridesOfType(C.TRACK_TYPE_AUDIO)
+                            .build()
+                        showAudioSheet = false
+                    }
+                )
+
+                audioTrackGroups.forEach { group ->
+                    for (i in 0 until group.length) {
+                        val format = group.getTrackFormat(i)
+                        val isSelected = currentOverrides[group.mediaTrackGroup]?.trackIndices?.contains(i) == true
+                        val friendlyLang = getFriendlyLanguageName(format.language)
+                        val title = format.label ?: friendlyLang
+                        val details = buildList {
+                            if (format.label != null && friendlyLang != format.label) add(friendlyLang)
+                            if (format.channelCount > 0) {
+                                add(if (format.channelCount == 6) "5.1 Surround" else if (format.channelCount == 2) "Stereo" else "${format.channelCount} ch")
+                            }
+                            if (format.bitrate > 0) add("${format.bitrate / 1000} kbps")
+                        }.joinToString(" • ")
+
+                        PlayerOptionItem(
+                            title = title,
+                            subtitle = details.ifBlank { null },
+                            isSelected = isSelected,
+                            onClick = {
+                                exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
+                                    .buildUpon()
+                                    .setOverrideForType(androidx.media3.common.TrackSelectionOverride(group.mediaTrackGroup, i))
+                                    .build()
+                                showAudioSheet = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // --- Modern Subtitles Bottom Sheet ---
+    if (showSubtitleSheet) {
+        val textTrackGroups = remember(exoPlayer.currentTracks) {
+            exoPlayer.currentTracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
+        }
+        val isTextDisabled = exoPlayer.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)
+        val currentOverrides = exoPlayer.trackSelectionParameters.overrides
+
+        ModalBottomSheet(
+            onDismissRequest = { showSubtitleSheet = false },
+            containerColor = Color(0xFF14141E),
+            contentColor = Color.White,
+            dragHandle = { BottomSheetDefaults.DragHandle(color = Color.Gray) }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+                    .navigationBarsPadding()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Subtitles, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Subtitles",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                    IconButton(onClick = { showSubtitleSheet = false }) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray)
+                    }
+                }
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(bottom = 8.dp))
+
+                PlayerOptionItem(
+                    title = "Off",
+                    subtitle = "Disable subtitles",
+                    isSelected = isTextDisabled,
+                    onClick = {
+                        exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
+                            .buildUpon()
+                            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                            .clearOverridesOfType(C.TRACK_TYPE_TEXT)
+                            .build()
+                        showSubtitleSheet = false
+                    }
+                )
+
+                textTrackGroups.forEach { group ->
+                    for (i in 0 until group.length) {
+                        val format = group.getTrackFormat(i)
+                        val isSelected = !isTextDisabled && currentOverrides[group.mediaTrackGroup]?.trackIndices?.contains(i) == true
+                        val friendlyLang = getFriendlyLanguageName(format.language)
+                        val title = format.label ?: friendlyLang
+
+                        PlayerOptionItem(
+                            title = title,
+                            subtitle = if (format.label != null && friendlyLang != format.label) friendlyLang else null,
+                            isSelected = isSelected,
+                            onClick = {
+                                exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
+                                    .buildUpon()
+                                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                                    .setOverrideForType(androidx.media3.common.TrackSelectionOverride(group.mediaTrackGroup, i))
+                                    .build()
+                                showSubtitleSheet = false
+                            }
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 8.dp))
+
+                PlayerOptionItem(
+                    title = "Load External Subtitle",
+                    subtitle = "Import .srt or .vtt file from device storage",
+                    isSelected = false,
+                    onClick = {
+                        showSubtitleSheet = false
+                        subtitlePickerLauncher?.invoke()
+                    }
+                )
+            }
+        }
+    }
+
+    // --- Modern Playback Speed Bottom Sheet ---
+    if (showSpeedSheet) {
+        val speeds = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
+        ModalBottomSheet(
+            onDismissRequest = { showSpeedSheet = false },
+            containerColor = Color(0xFF14141E),
+            contentColor = Color.White,
+            dragHandle = { BottomSheetDefaults.DragHandle(color = Color.Gray) }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+                    .navigationBarsPadding()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Speed, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Playback Speed",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                    IconButton(onClick = { showSpeedSheet = false }) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray)
+                    }
+                }
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(bottom = 8.dp))
+
+                speeds.forEach { spd ->
+                    val isSelected = kotlin.math.abs(playbackSpeed - spd) < 0.01f
+                    val label = if (spd == 1.0f) "1.0x (Normal)" else "${spd}x"
+                    PlayerOptionItem(
+                        title = label,
+                        subtitle = null,
+                        isSelected = isSelected,
+                        onClick = {
+                            playbackSpeed = spd
+                            exoPlayer.setPlaybackSpeed(spd)
+                            showSpeedSheet = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    // --- Modern Sleep Timer Bottom Sheet ---
+    if (showSleepTimerSheet) {
+        val sleepOptions = listOf(
+            0 to "Off",
+            15 to "15 Minutes",
+            30 to "30 Minutes",
+            45 to "45 Minutes",
+            60 to "60 Minutes",
+            90 to "90 Minutes"
+        )
+        ModalBottomSheet(
+            onDismissRequest = { showSleepTimerSheet = false },
+            containerColor = Color(0xFF14141E),
+            contentColor = Color.White,
+            dragHandle = { BottomSheetDefaults.DragHandle(color = Color.Gray) }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+                    .navigationBarsPadding()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Timer, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Sleep Timer",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                    IconButton(onClick = { showSleepTimerSheet = false }) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.Gray)
+                    }
+                }
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(bottom = 8.dp))
+
+                sleepOptions.forEach { (mins, title) ->
+                    val isSelected = if (mins == 0) !sleepTimerActive else (sleepTimerActive && sleepTimerMillis == mins * 60 * 1000L)
+                    PlayerOptionItem(
+                        title = title,
+                        subtitle = if (mins > 0 && isSelected) "Timer active" else null,
+                        isSelected = isSelected,
+                        onClick = {
                             if (mins == 0) {
                                 sleepTimerActive = false
                             } else {
                                 sleepTimerMillis = mins * 60 * 1000L
                                 sleepTimerActive = true
                             }
-                            showSettingsSheet = false
-                        }.show()
-                }
-
-                SettingsItem(Icons.Default.FileOpen, "Load External Subtitle") {
-                    showSettingsSheet = false
-                    subtitlePickerLauncher?.invoke()
+                            showSleepTimerSheet = false
+                        }
+                    )
                 }
             }
         }
@@ -1915,6 +2978,55 @@ fun SettingsSwitchItem(icon: ImageVector, title: String, checked: Boolean, onChe
     }
 }
 
+@Composable
+private fun PlayerOptionItem(
+    title: String,
+    subtitle: String?,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent,
+        shape = RoundedCornerShape(12.dp),
+        border = if (isSelected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)) else null,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .tvFocusable(cornerRadius = 12.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    title,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    fontSize = 15.sp
+                )
+                if (subtitle != null) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        subtitle,
+                        color = Color.Gray,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+            if (isSelected) {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = "Selected",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
 private fun formatElapsedTime(timeMs: Long): String {
     if (timeMs < 0) return "00:00"
     val totalSeconds = timeMs / 1000
@@ -1999,7 +3111,10 @@ private class PlayerHolder(
         val newPlayer = androidx.media3.exoplayer.ExoPlayer.Builder(context, renderersFactory)
             .setMediaSourceFactory(mediaSourceFactory)
             .setLoadControl(loadControl)
+            .setWakeMode(C.WAKE_MODE_NETWORK)
+            .setHandleAudioBecomingNoisy(true)
             .build()
+        newPlayer.playWhenReady = true
             
         player = newPlayer
         return newPlayer

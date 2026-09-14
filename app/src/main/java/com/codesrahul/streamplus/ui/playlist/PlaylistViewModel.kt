@@ -58,7 +58,10 @@ class PlaylistViewModel @Inject constructor(
                     headers = entry.headers,
                     licenseUrl = entry.licenseUrl,
                     drmHeaders = entry.drmHeaders,
-                    streamType = entry.streamType
+                    streamType = entry.streamType,
+                    isVod = entry.streamType.equals("vod", ignoreCase = true) ||
+                            entry.streamType.equals("movie", ignoreCase = true) ||
+                            entry.streamType.equals("series", ignoreCase = true)
                 )
             }
         }

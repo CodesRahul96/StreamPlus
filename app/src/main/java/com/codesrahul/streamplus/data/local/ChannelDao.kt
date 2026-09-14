@@ -17,6 +17,9 @@ interface ChannelDao {
     @Query("DELETE FROM channels WHERE playlistId = :playlistId")
     suspend fun deleteChannelsByPlaylist(playlistId: Int)
 
+    @Query("SELECT * FROM channels WHERE url = :url LIMIT 1")
+    suspend fun getChannelByUrl(url: String): ChannelEntity?
+
     @Query("SELECT * FROM channels WHERE name = :name AND `group` = :group AND playlistId = :playlistId LIMIT 1")
     suspend fun getChannelByIdentity(name: String, group: String, playlistId: Int): ChannelEntity?
 
