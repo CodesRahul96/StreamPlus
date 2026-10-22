@@ -139,7 +139,10 @@ class M3UStreamParser : StreamParser {
                     currentGroup = trimmed.substringAfter("#EXTGRP:").trim()
                 } else if (trimmed.startsWith("#EXTVLCOPT:") || trimmed.startsWith("# EXTVLCOPT:")) {
                     val opt = trimmed.substringAfter("VLCOPT:")
-                    parseOption(opt, currentHeaders)
+                    parseOption(opt, currentHeaders, currentDrmHeaders) { scheme, license ->
+                        if (scheme != null) currentDrmScheme = scheme
+                        if (license != null) currentDrmLicense = license
+                    }
                 } else if (trimmed.startsWith("#EXT-X-KEY:") || trimmed.startsWith("# EXT-X-KEY:")) {
                      val info = trimmed.substringAfter("KEY:")
                      parseProps(info) { k, v ->
@@ -153,7 +156,7 @@ class M3UStreamParser : StreamParser {
                      }
                 } else if (trimmed.startsWith("#KODIPROP:") || trimmed.startsWith("# KODIPROP:")) {
                     val prop = trimmed.substringAfter("PROP:")
-                    parseKodiProp(prop, currentHeaders, currentDrmHeaders) { scheme, license ->
+                    parseKodiProp(prop, currentHeaders, currentDrmHeaders, currentDrmScheme) { scheme, license ->
                         if (scheme != null) currentDrmScheme = scheme
                         if (license != null) currentDrmLicense = license
                     }
@@ -317,14 +320,18 @@ class M3UStreamParser : StreamParser {
         }
     }
 
-    private fun parseOption(opt: String, headers: MutableMap<String, String>) {
+    private fun parseOption(
+        opt: String,
+        headers: MutableMap<String, String>,
+        drmHeaders: MutableMap<String, String>,
+        onDrm: (String?, String?) -> Unit
+    ) {
         val parts = opt.split("=", limit = 2)
         if (parts.size == 2) {
             val rawKey = parts[0].trim()
             val key = rawKey.lowercase()
             var value = parts[1].trim()
             
-            // Try to URL decode the value if it looks encoded (contains % and likely hex)
             if (value.contains("%")) {
                 try {
                     value = java.net.URLDecoder.decode(value, "UTF-8")
@@ -333,18 +340,21 @@ class M3UStreamParser : StreamParser {
                 }
             }
             
-            // Generic Header Parsing: "http-User-Agent", "Header-Name", etc.
             when {
-                // Known mappings
+                key == "clearkey" || key == "http-clearkey" -> {
+                    headers["clearkey"] = value
+                    drmHeaders["clearkey"] = value
+                    drmHeaders["X-ClearKey-Data"] = value
+                    onDrm("clearkey", value)
+                }
                 key == "http-user-agent" || key == "user-agent" -> {
                     headers["User-Agent"] = value
                 }
                 key == "http-referrer" || key == "referrer" -> headers["Referer"] = value
                 key == "http-origin" || key == "origin" -> headers["Origin"] = value
-                // Generic http- prefix removal
+                key == "http-cookie" || key == "cookie" -> headers["Cookie"] = value
                 key.startsWith("http-") -> {
-                    // Convert "http-x-custom-header" -> "X-Custom-Header"
-                     headers[rawKey.substring(5)] = value
+                    headers[rawKey.substring(5)] = value
                 }
                 else -> headers[rawKey] = value
             }
@@ -355,6 +365,7 @@ class M3UStreamParser : StreamParser {
         prop: String,
         headers: MutableMap<String, String>,
         drmHeaders: MutableMap<String, String>,
+        currentDrmScheme: String?,
         onDrm: (String?, String?) -> Unit
     ) {
         val parts = prop.split("=", limit = 2)
@@ -368,17 +379,24 @@ class M3UStreamParser : StreamParser {
             when(key) {
                 "license_type", "license_scheme" -> {
                     val scheme = when {
+                        value.lowercase().contains("clearkey") -> "clearkey"
                         value.lowercase().contains("widevine") -> "widevine"
                         value.lowercase().contains("playready") -> "playready"
-                        value.lowercase().contains("clearkey") -> "clearkey"
                         else -> value
                     }
                     onDrm(scheme, null)
                 }
                 "license_key" -> {
                     val isUrl = value.startsWith("http://", ignoreCase = true) || value.startsWith("https://", ignoreCase = true)
+                    val urlLower = value.lowercase()
+                    val inferredScheme = when {
+                        urlLower.contains("clearkey") || currentDrmScheme?.equals("clearkey", true) == true -> "clearkey"
+                        urlLower.contains("widevine") || urlLower.contains("lic/wv") || urlLower.contains("proxy/lic") -> "widevine"
+                        urlLower.contains("playready") -> "playready"
+                        else -> currentDrmScheme
+                    }
+
                     if (isUrl && value.contains("|")) {
-                        // URL with pipe-separated license headers e.g. https://license.example.com|Header=Value
                         val licUrl = value.substringBefore("|").trim()
                         val licHeaders = value.substringAfter("|").trim()
                         licHeaders.split("&").forEach { param ->
@@ -391,18 +409,17 @@ class M3UStreamParser : StreamParser {
                                 }
                             }
                         }
-                        // URL license key always means Widevine (or PlayReady), not ClearKey
-                        onDrm("widevine", licUrl)
+                        onDrm(inferredScheme ?: "widevine", licUrl)
                     } else if (isUrl) {
-                        // Plain URL license server — Widevine
-                        onDrm("widevine", value)
+                        onDrm(inferredScheme ?: "widevine", value)
                     } else if (value.startsWith("{") && value.contains("\"keys\"")) {
-                        // Direct ClearKey JSON format
+                        drmHeaders["clearkey"] = value
                         drmHeaders["X-ClearKey-Data"] = value
                         onDrm("clearkey", value)
                     } else {
-                        // Hex KID:KEY pair or other clearkey format — pass through as-is
-                        onDrm(null, value)
+                        drmHeaders["clearkey"] = value
+                        drmHeaders["X-ClearKey-Data"] = value
+                        onDrm("clearkey", value)
                     }
                 }
                 "manifest_type" -> {
@@ -413,27 +430,25 @@ class M3UStreamParser : StreamParser {
                 }
                 "manifest_headers", 
                 "stream_headers" -> {
-                    // key=value&key2=value2
                     value.split("&").forEach { 
                         val kv = it.split("=", limit = 2)
                         if (kv.size == 2) {
                             try {
                                 headers[kv[0]] = java.net.URLDecoder.decode(kv[1], "UTF-8")
                             } catch (e: Exception) {
-                                headers[kv[0]] = kv[1] // Fallback to raw value
+                                headers[kv[0]] = kv[1]
                             }
                         }
                     }
                 }
                 "license_headers" -> {
-                    // key=value&key2=value2
                     value.split("&").forEach { 
                         val kv = it.split("=", limit = 2)
                         if (kv.size == 2) {
                             try {
                                 drmHeaders[kv[0]] = java.net.URLDecoder.decode(kv[1], "UTF-8")
                             } catch (e: Exception) {
-                                drmHeaders[kv[0]] = kv[1] // Fallback to raw value
+                                drmHeaders[kv[0]] = kv[1]
                             }
                         }
                     }
@@ -457,21 +472,18 @@ class M3UStreamParser : StreamParser {
         val s = explicitScheme?.lowercase() ?: ""
         val l = explicitLicense?.lowercase() ?: ""
         
-        // If license is a URL (http/https), it's always a remote license server → Widevine or PlayReady, never ClearKey
-        // ClearKey uses embedded key data (hex KID:KEY pairs or JSON), never a remote URL
-        val licenseIsUrl = l.startsWith("http://") || l.startsWith("https://")
-        
+        if (s.contains("clearkey") || s.contains("org.w3.clearkey") || l.contains("clearkey")) return "clearkey"
         if (s.contains("widevine") || s.contains("com.widevine.alpha")) return "widevine"
         if (s.contains("playready") || s.contains("com.microsoft.playready")) return "playready"
-        if (s.contains("clearkey") && !licenseIsUrl) return "clearkey"  // Only if license is NOT a URL
         
-        // Infer from license URL
+        val licenseIsUrl = l.startsWith("http://") || l.startsWith("https://")
         if (licenseIsUrl) {
-            if (l.contains("widevine") || l.endsWith("/wv") || l.contains("/widevine")) return "widevine"
+            if (l.contains("widevine") || l.endsWith("/wv") || l.contains("/widevine") || l.contains("proxy/lic")) return "widevine"
             if (l.contains("playready")) return "playready"
-            // Any unrecognized URL license server → assume Widevine (most common)
             return "widevine"
         }
+        
+        if (l.contains(":") && !l.startsWith("http")) return "clearkey"
         
         return null
     }

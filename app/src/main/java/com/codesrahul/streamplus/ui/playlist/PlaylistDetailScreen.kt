@@ -142,9 +142,15 @@ fun PlaylistDetailScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(20.dp))
+                                    .tvFocusable(cornerRadius = 20.dp)
                                     .background(
                                         if (isSelected) MaterialTheme.colorScheme.primary 
                                         else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                    )
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.08f),
+                                        shape = RoundedCornerShape(20.dp)
                                     )
                                     .clickable { viewModel.setSelectedGroup(group) }
                                     .padding(horizontal = 16.dp, vertical = 8.dp),

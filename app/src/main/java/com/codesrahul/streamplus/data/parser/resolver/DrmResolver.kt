@@ -6,27 +6,26 @@ class DrmResolver : StreamResolver {
 
     override fun resolve(item: M3UItem): M3UItem {
         val originalScheme = item.drmScheme
-
         var scheme = originalScheme
         
-        // 1. Auto-detect scheme from URL/License if not set
-        if (scheme.isNullOrBlank()) {
+        val hasClearKeyHeader = item.headers.keys.any { it.equals("clearkey", ignoreCase = true) } ||
+                item.drmHeaders.keys.any { it.equals("clearkey", ignoreCase = true) || it.equals("X-ClearKey-Data", ignoreCase = true) }
+        val licenseUrlLower = item.licenseUrl?.lowercase() ?: ""
+        val isClearKeyUrl = licenseUrlLower.contains("clearkey")
+
+        // 1. ClearKey takes priority if key or clearkey URL is explicitly present
+        if (hasClearKeyHeader || isClearKeyUrl) {
+            scheme = "clearkey"
+        } else if (scheme.isNullOrBlank()) {
             scheme = when {
-                // ClearKey Header format (KID:KEY) - hex or base64 without http
                 item.licenseUrl?.contains(":") == true && !item.licenseUrl.startsWith("http") -> "clearkey"
 
-                // HLS or others with a License URL
-                // NOTE: Do NOT auto-assign widevine for .mpd URLs without a license server.
-                // Jio/Hotstar DASH streams use CDN cookie auth, not Widevine — assigning widevine
-                // here causes ExoPlayer to fail with "No license URL" on those channels.
                 item.licenseUrl?.isNotEmpty() == true -> {
-                    val lUrl = item.licenseUrl.lowercase()
                     when {
-                        lUrl.contains("widevine") || lUrl.contains("lic/wv") || lUrl.contains("proxy/lic") -> "widevine"
-                        lUrl.contains("playready") -> "playready"
-                        lUrl.contains("clearkey") -> "clearkey"
-                        // If it's a standard URL, default to Widevine as it's the most common
-                        lUrl.startsWith("http") -> "widevine"
+                        licenseUrlLower.contains("widevine") || licenseUrlLower.contains("lic/wv") || licenseUrlLower.contains("proxy/lic") -> "widevine"
+                        licenseUrlLower.contains("playready") -> "playready"
+                        licenseUrlLower.contains("clearkey") -> "clearkey"
+                        licenseUrlLower.startsWith("http") -> "widevine"
                         else -> null
                     }
                 }

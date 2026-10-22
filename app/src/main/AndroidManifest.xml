@@ -72,6 +72,12 @@
             android:launchMode="singleTask"
             android:theme="@style/Theme.M3UValidator" />
 
+        <activity
+            android:name=".ui.multiview.MultiViewActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:exported="false"
+            android:theme="@style/Theme.M3UValidator" />
+
 
 
         <provider

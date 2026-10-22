@@ -1,6 +1,8 @@
 package com.codesrahul.streamplus.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,10 +13,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.codesrahul.streamplus.ui.util.tvFocusable
 
 /**
  * A premium looking button with a 2-stop gradient and subtle shadow.
@@ -80,32 +84,58 @@ fun StatCard(
     color: Color,
     modifier: Modifier = Modifier
 ) {
-    val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+    val isPitchBlack = !isLight && (MaterialTheme.colorScheme.surface == Color(0xFF000000) || MaterialTheme.colorScheme.background == Color(0xFF000000))
+    val cardBg = when {
+        isLight -> Color(0xF5FFFFFF)
+        isPitchBlack -> Color(0xF508080C)
+        else -> Color(0xF0121624)
+    }
+    val borderBrush = if (isLight) {
+        Brush.verticalGradient(
+            listOf(
+                color.copy(alpha = 0.35f),
+                Color.Black.copy(alpha = 0.06f)
+            )
+        )
+    } else {
+        Brush.verticalGradient(
+            listOf(
+                color.copy(alpha = 0.40f),
+                Color.White.copy(alpha = 0.03f)
+            )
+        )
+    }
+
     Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isPitchBlack) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
-        ),
+        modifier = modifier.tvFocusable(cornerRadius = 20.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        border = BorderStroke(1.dp, borderBrush),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = color.copy(alpha = 0.15f),
-                modifier = Modifier.size(48.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = color,
-                        modifier = Modifier.size(24.dp)
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        Brush.linearGradient(
+                            listOf(color.copy(alpha = 0.25f), color.copy(alpha = 0.08f))
+                        )
                     )
-                }
+                    .border(1.dp, color.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(24.dp)
+                )
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column {

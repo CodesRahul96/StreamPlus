@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
@@ -825,15 +826,38 @@ fun SectionCard(
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+    val isPitchBlack = !isLight && (MaterialTheme.colorScheme.surface == Color(0xFF000000) || MaterialTheme.colorScheme.background == Color(0xFF000000))
+    val cardBg = when {
+        isLight -> Color(0xF5FFFFFF)
+        isPitchBlack -> Color(0xF508080C)
+        else -> Color(0xF0121624)
+    }
+    val borderBrush = if (isLight) {
+        Brush.verticalGradient(
+            listOf(
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.30f),
+                Color.Black.copy(alpha = 0.06f)
+            )
+        )
+    } else {
+        Brush.verticalGradient(
+            listOf(
+                Color.White.copy(alpha = 0.14f),
+                Color.White.copy(alpha = 0.03f)
+            )
+        )
+    }
+
     Card(
-        modifier = Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        modifier = Modifier
+            .fillMaxWidth()
+            .tvFocusable(cornerRadius = 24.dp)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         shape    = RoundedCornerShape(24.dp),
-        colors   = CardDefaults.cardColors(
-            containerColor = if (isPitchBlack) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)
-        ),
+        colors   = CardDefaults.cardColors(containerColor = cardBg),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = borderStroke()
+        border   = BorderStroke(1.dp, borderBrush)
     ) {
         Column(modifier = Modifier.padding(20.dp), content = content)
     }

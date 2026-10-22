@@ -77,6 +77,7 @@ fun MainScreen(initialTab: String? = null) {
 
     val items = listOf(
         NavigationItem(com.codesrahul.streamplus.R.string.nav_playlist, "playlist",    Icons.Default.List,          Icons.Outlined.List),
+        NavigationItem(com.codesrahul.streamplus.R.string.nav_epg,      "epg",         Icons.Default.Tv,            Icons.Outlined.Tv),
         NavigationItem(com.codesrahul.streamplus.R.string.nav_gallery,  "local",        Icons.Default.VideoLibrary,   Icons.Outlined.VideoLibrary),
         NavigationItem(com.codesrahul.streamplus.R.string.nav_stream,   "direct_play",  Icons.Default.Podcasts,       Icons.Outlined.Podcasts),
         NavigationItem(com.codesrahul.streamplus.R.string.nav_settings, "settings",     Icons.Default.Settings,       Icons.Outlined.Settings)
@@ -210,7 +211,7 @@ fun MainScreen(initialTab: String? = null) {
     ) { innerPadding ->
         @OptIn(ExperimentalSharedTransitionApi::class)
         SharedTransitionLayout {
-            val topLevelRoutes = remember { setOf("playlist", "local", "direct_play", "settings") }
+            val topLevelRoutes = remember { setOf("playlist", "epg", "local", "direct_play", "settings") }
             NavHost(
                 navController = navController,
                 startDestination = initialTab ?: when (settingsState.defaultTab) {
@@ -330,6 +331,9 @@ fun MainScreen(initialTab: String? = null) {
                         sharedTransitionScope = this@SharedTransitionLayout,
                         animatedVisibilityScope = this@composable
                     )
+                }
+                composable("epg") {
+                    com.codesrahul.streamplus.ui.epg.EPGGridScreen(onBackPressed = { navController.popBackStack() })
                 }
                 composable("settings") {
                     SettingsScreen(onBack = { navController.popBackStack() })

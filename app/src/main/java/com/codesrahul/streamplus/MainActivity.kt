@@ -20,6 +20,7 @@ import com.codesrahul.streamplus.ui.settings.SettingsViewModel
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.codesrahul.streamplus.data.epg.EPGSyncWorker.schedulePeriodicSync(this)
         com.codesrahul.streamplus.util.RefreshRateHelper.enableHighRefreshRate(this)
         setContent {
                  val viewModel: SettingsViewModel = hiltViewModel()

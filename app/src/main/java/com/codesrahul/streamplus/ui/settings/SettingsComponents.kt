@@ -187,6 +187,7 @@ fun SettingsSwitchItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .tvFocusable(cornerRadius = 14.dp)
                 .clickable { onCheckedChange(!checked) }
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -264,6 +265,7 @@ fun SettingsClickableItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .tvFocusable(cornerRadius = 14.dp)
                 .clickable(onClick = onClick)
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically

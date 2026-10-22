@@ -45,9 +45,9 @@ class NetworkModule {
                                   urlString.contains("/stalker", ignoreCase = true)
                 
                 val currentUa = original.header("User-Agent")
-                val isDefaultOrExo = currentUa == null || 
-                                     currentUa.isEmpty() || 
-                                     currentUa.contains("ExoPlayer", ignoreCase = true) || 
+                val isDefaultOrExo = currentUa.isNullOrBlank() || 
+                                     currentUa.startsWith("ExoPlayerLib/", ignoreCase = true) || 
+                                     currentUa.startsWith("AndroidXMedia3/", ignoreCase = true) || 
                                      currentUa == "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
                 
                 if (isMagStream) {
@@ -73,8 +73,8 @@ class NetworkModule {
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
-            .followRedirects(false)
-            .followSslRedirects(false)
+            .followRedirects(true)
+            .followSslRedirects(true)
 
         // Always enable for now to simplify troubleshooting
         try {

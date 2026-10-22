@@ -129,6 +129,12 @@ class PlayerActivity : AppCompatActivity() {
     @Inject
     lateinit var streamIntelligenceEngine: com.codesrahul.streamplus.data.network.StreamIntelligenceEngine
 
+    @Inject
+    lateinit var epgManager: com.codesrahul.streamplus.data.epg.EPGManager
+
+    @Inject
+    lateinit var streamRecorder: com.codesrahul.streamplus.ui.player.StreamRecorder
+
     private var castContext: CastContext? = null
     private var castPlayer: CastPlayer? = null
     private var sessionManager: SessionManager? = null
@@ -236,22 +242,27 @@ class PlayerActivity : AppCompatActivity() {
             window.attributes.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
 
-        var streamUrl = intent.getStringExtra(EXTRA_STREAM_URL) ?: ""
-        val streamTitle = intent.getStringExtra(EXTRA_STREAM_TITLE) ?: "Unknown Stream"
+        var streamUrl = intent.getStringExtra(EXTRA_STREAM_URL)
+            ?: intent.getStringExtra("STREAM_URL") ?: ""
+        val streamTitle = intent.getStringExtra(EXTRA_STREAM_TITLE)
+            ?: intent.getStringExtra("TITLE") ?: "Unknown Stream"
         val channelLogo = intent.getStringExtra(EXTRA_CHANNEL_LOGO)
-        var userAgent = intent.getStringExtra(EXTRA_USER_AGENT) ?: "ExoPlayerLib/2.19.1"
+            ?: intent.getStringExtra("LOGO_URL")
+        var userAgent = intent.getStringExtra(EXTRA_USER_AGENT)
+            ?: intent.getStringExtra("USER_AGENT") ?: "ExoPlayerLib/2.19.1"
         var referer = intent.getStringExtra(EXTRA_REFERER)
         var cookie = intent.getStringExtra(EXTRA_COOKIE)
         var origin = intent.getStringExtra(EXTRA_ORIGIN)
-        @Suppress("UNCHECKED_CAST")
-        val headers = intent.getSerializableExtra(EXTRA_HEADERS) as? Map<String, String> ?: emptyMap()
+        val headers = extractMapExtra(intent, EXTRA_HEADERS).ifEmpty { extractMapExtra(intent, "HEADERS") }
         var drmLicenseUrl = intent.getStringExtra(EXTRA_DRM_LICENSE_URL)
+            ?: intent.getStringExtra("LICENSE_URL")
         var drmScheme = intent.getStringExtra(EXTRA_DRM_SCHEME)
-        @Suppress("UNCHECKED_CAST")
-        val drmHeaders = intent.getSerializableExtra(EXTRA_DRM_HEADERS) as? Map<String, String> ?: emptyMap()
-        val playlistId = intent.getIntExtra(EXTRA_PLAYLIST_ID, -1)
-        val groupTitle = intent.getStringExtra(EXTRA_STREAM_GROUP) ?: "Default"
-        var isVodExtra = intent.getBooleanExtra(EXTRA_IS_VOD, false)
+            ?: intent.getStringExtra("DRM_SCHEME")
+        val drmHeaders = extractMapExtra(intent, EXTRA_DRM_HEADERS).ifEmpty { extractMapExtra(intent, "DRM_HEADERS") }
+        val playlistId = intent.getIntExtra(EXTRA_PLAYLIST_ID, intent.getIntExtra("PLAYLIST_ID", -1))
+        val groupTitle = intent.getStringExtra(EXTRA_STREAM_GROUP)
+            ?: intent.getStringExtra("GROUP_TITLE") ?: "Default"
+        var isVodExtra = intent.getBooleanExtra(EXTRA_IS_VOD, intent.getBooleanExtra("IS_VOD", false))
         var streamTypeExtra = intent.getStringExtra(EXTRA_STREAM_TYPE) ?: ""
         
         val isAudioExtra = intent.getBooleanExtra("EXTRA_IS_AUDIO", false)
@@ -265,20 +276,29 @@ class PlayerActivity : AppCompatActivity() {
         updatePipParams()
 
         lifecycleScope.launch {
-            if (playlistId != -1 && streamTitle != "Unknown Stream") {
-                withContext(Dispatchers.IO) {
-                    val fresh = channelDao.getChannelByIdentity(streamTitle, groupTitle, playlistId)
-                    if (fresh != null) {
-                        streamUrl = fresh.url
-                        userAgent = fresh.userAgent
-                        referer = fresh.headers["Referer"] ?: referer
-                        cookie = fresh.headers["Cookie"] ?: cookie
-                        origin = fresh.headers["Origin"] ?: origin
-                        drmLicenseUrl = fresh.licenseUrl ?: drmLicenseUrl
-                        drmScheme = fresh.drmScheme ?: drmScheme
-                        isVodExtra = fresh.isVod
-                        streamTypeExtra = fresh.streamType
-                    }
+            val resolvedHeaders = headers.toMutableMap()
+            val resolvedDrmHeaders = drmHeaders.toMutableMap()
+
+            withContext(Dispatchers.IO) {
+                val fresh = if (playlistId != -1 && streamTitle != "Unknown Stream") {
+                    channelDao.getChannelByIdentity(streamTitle, groupTitle, playlistId)
+                        ?: channelDao.getChannelByUrl(streamUrl)
+                } else if (streamUrl.isNotBlank()) {
+                    channelDao.getChannelByUrl(streamUrl)
+                } else null
+
+                if (fresh != null) {
+                    if (streamUrl.isBlank()) streamUrl = fresh.url
+                    if (userAgent.isBlank() || userAgent.startsWith("ExoPlayerLib/")) userAgent = fresh.userAgent
+                    referer = fresh.headers["Referer"] ?: fresh.headers["referer"] ?: referer
+                    cookie = fresh.headers["Cookie"] ?: fresh.headers["cookie"] ?: cookie
+                    origin = fresh.headers["Origin"] ?: fresh.headers["origin"] ?: origin
+                    drmLicenseUrl = fresh.licenseUrl ?: drmLicenseUrl
+                    drmScheme = fresh.drmScheme ?: drmScheme
+                    isVodExtra = fresh.isVod
+                    streamTypeExtra = fresh.streamType
+                    resolvedHeaders.putAll(fresh.headers)
+                    resolvedDrmHeaders.putAll(fresh.drmHeaders)
                 }
             }
 
@@ -307,10 +327,10 @@ class PlayerActivity : AppCompatActivity() {
                             referer = referer,
                             cookie = cookie,
                             origin = origin,
-                            headers = headers,
+                            headers = resolvedHeaders,
                             drmLicenseUrl = drmLicenseUrl,
                             drmScheme = drmScheme,
-                            drmHeaders = drmHeaders,
+                            drmHeaders = resolvedDrmHeaders,
                             okHttpClientProvider = okHttpClientProvider,
                             settingsRepository = settingsRepository,
                             historyRepository = historyRepository,
@@ -320,6 +340,8 @@ class PlayerActivity : AppCompatActivity() {
                             streamIntelligenceEngine = streamIntelligenceEngine,
                             playlistId = playlistId,
                             groupTitle = groupTitle,
+                            epgManager = epgManager,
+                            streamRecorder = streamRecorder,
                             castPlayer = castPlayer,
                             onEnterPip = { enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().build()) },
                             isInPip = isInPip,
@@ -393,6 +415,35 @@ class PlayerActivity : AppCompatActivity() {
 
 
 
+private fun extractMapExtra(intent: android.content.Intent, key: String): Map<String, String> {
+    val serializable: Any? = try { intent.getSerializableExtra(key) } catch (e: Exception) { null }
+    if (serializable is Map<*, *>) {
+        val result = mutableMapOf<String, String>()
+        for ((k, v) in serializable) {
+            if (k != null && v != null) {
+                result[k.toString()] = v.toString()
+            }
+        }
+        return result
+    }
+    val stringExtra = intent.getStringExtra(key)
+    if (!stringExtra.isNullOrBlank() && stringExtra.trim().startsWith("{")) {
+        try {
+            val json = org.json.JSONObject(stringExtra.trim())
+            val keysIter = json.keys()
+            val map = mutableMapOf<String, String>()
+            while (keysIter.hasNext()) {
+                val k = keysIter.next()
+                map[k] = json.optString(k, "")
+            }
+            return map
+        } catch (e: Exception) {
+            // Ignore
+        }
+    }
+    return emptyMap()
+}
+
 private fun hexToByteArray(hex: String): ByteArray {
     val s = hex.replace(" ", "").replace(":", "")
     if (s.length % 2 != 0) return ByteArray(0)
@@ -404,6 +455,31 @@ private fun hexToByteArray(hex: String): ByteArray {
         i += 2
     }
     return data
+}
+
+private fun generateClearKeyJson(raw: String): String? {
+    val trimmed = raw.trim()
+    if (trimmed.startsWith("{") && trimmed.contains("\"keys\"")) {
+        return trimmed
+    }
+    val cleanPairStr = trimmed.substringAfter("clearkey.direct/").removePrefix("http://").removePrefix("https://").trim('/')
+    val pairs = cleanPairStr.split(",", ";").map { it.trim() }
+    val keysJson = pairs.mapNotNull { pair ->
+        val parts = pair.split(":")
+        if (parts.size == 2) {
+            val kid = parts[0].trim()
+            val key = parts[1].trim()
+            val kidBytes = if (kid.length == 32 && kid.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) hexToByteArray(kid) else try { Base64.decode(kid, Base64.DEFAULT) } catch (e: Exception) { null }
+            val keyBytes = if (key.length == 32 && key.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) hexToByteArray(key) else try { Base64.decode(key, Base64.DEFAULT) } catch (e: Exception) { null }
+            if (kidBytes != null && keyBytes != null && kidBytes.isNotEmpty() && keyBytes.isNotEmpty()) {
+                val kidB64 = Base64.encodeToString(kidBytes, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
+                val keyB64 = Base64.encodeToString(keyBytes, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
+                "{\"kty\":\"oct\",\"k\":\"$keyB64\",\"kid\":\"$kidB64\"}"
+            } else null
+        } else null
+    }.joinToString(",")
+
+    return if (keysJson.isNotBlank()) "{\"keys\":[$keysJson],\"type\":\"temporary\"}" else null
 }
 
 @Composable
@@ -428,6 +504,8 @@ fun PlayerScreen(
     streamIntelligenceEngine: com.codesrahul.streamplus.data.network.StreamIntelligenceEngine,
     playlistId: Int,
     groupTitle: String,
+    epgManager: com.codesrahul.streamplus.data.epg.EPGManager,
+    streamRecorder: com.codesrahul.streamplus.ui.player.StreamRecorder,
     castPlayer: androidx.media3.cast.CastPlayer? = null,
     onEnterPip: () -> Unit,
     isInPip: Boolean = false,
@@ -540,12 +618,32 @@ fun PlayerScreen(
 
     val isLocalOrDirectPlay = playlistId <= 0 || currentStreamUrl.startsWith("content://") || 
             currentStreamUrl.startsWith("file://") || currentStreamUrl.startsWith("/storage/") || currentStreamUrl.startsWith("/data/")
+    val isLocalQueue = currentPlaylistUris != null && currentPlaylistUris!!.isNotEmpty()
+    val canShowDrawer = if (isLocalOrDirectPlay) isLocalQueue else drawerChannels.isNotEmpty()
+
+    // Quick Channel Banner State
+    var showChannelBanner by remember { mutableStateOf(false) }
+
+    LaunchedEffect(currentStreamUrl) {
+        if (!isLocalOrDirectPlay) {
+            showChannelBanner = true
+            kotlinx.coroutines.delay(3500)
+            showChannelBanner = false
+        }
+    }
 
     LaunchedEffect(playlistId, currentStreamUrl) {
         withContext(Dispatchers.IO) {
             // Local gallery media or direct play without a playlist must NOT load all IPTV channels from the database
             val list = if (playlistId > 0 && !isLocalOrDirectPlay) {
                 channelDao.getChannelsByPlaylist(playlistId)
+            } else if (!isLocalOrDirectPlay) {
+                val found = channelDao.getChannelByUrl(currentStreamUrl)
+                if (found != null && found.playlistId > 0) {
+                    channelDao.getChannelsByPlaylist(found.playlistId)
+                } else {
+                    emptyList()
+                }
             } else {
                 emptyList()
             }
@@ -580,6 +678,24 @@ fun PlayerScreen(
     // Auto-Retry State
     var retryCount by remember { mutableIntStateOf(0) }
     val maxRetries = 5
+
+    val switchChannel: (com.codesrahul.streamplus.data.local.ChannelEntity) -> Unit = { ch ->
+        currentPlaylistUris = null
+        currentStreamUrl = ch.url
+        currentStreamTitle = ch.name
+        currentChannelLogo = ch.logoUrl
+        currentUserAgent = ch.userAgent.takeIf { it.isNotBlank() } ?: userAgent
+        currentHeaders = if (ch.headers.isNotEmpty()) ch.headers else headers
+        currentDrmLicenseUrl = ch.licenseUrl
+        currentDrmScheme = ch.drmScheme
+        currentDrmHeaders = ch.drmHeaders
+        currentIsVod = ch.isVod
+        currentStreamType = ch.streamType
+        consecutiveLiveErrors = 0
+        retryCount = 0
+        showChannelDrawer = false
+        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+    }
 
     // Resume Logic
     // Using a separate LaunchedEffect for resume so it doesn't re-trigger on other changes
@@ -1518,26 +1634,27 @@ fun PlayerScreen(
             val effectiveLicenseUrl = resolvedItem.licenseUrl
             val hasDrmHeaders = resolvedItem.drmHeaders.isNotEmpty()
 
+            val isExplicitClearKey = effectiveScheme.contains("clearkey") ||
+                effectiveLicenseUrl?.lowercase()?.contains("clearkey") == true ||
+                resolvedItem.drmHeaders.keys.any { it.contains("clearkey", ignoreCase = true) || it.equals("X-ClearKey-Data", ignoreCase = true) } ||
+                resolvedItem.headers.keys.any { it.contains("clearkey", ignoreCase = true) || it.contains("http-clearkey", ignoreCase = true) } ||
+                (!effectiveLicenseUrl.isNullOrBlank() && effectiveLicenseUrl.contains(":") && !effectiveLicenseUrl.startsWith("http"))
+
             // Only enter DRM mode when we have something actionable:
             //  - an explicit DRM scheme, OR
             //  - an explicit license URL, OR
-            //  - non-empty DRM headers (e.g. X-ClearKey-Data)
-            val shouldConfigureDrm = effectiveScheme.isNotEmpty() || !effectiveLicenseUrl.isNullOrBlank() || hasDrmHeaders
+            //  - non-empty DRM headers, OR
+            //  - isExplicitClearKey
+            val shouldConfigureDrm = isExplicitClearKey || effectiveScheme.isNotEmpty() || !effectiveLicenseUrl.isNullOrBlank() || hasDrmHeaders
             
             if (shouldConfigureDrm) {
                 val uuid = when {
+                    isExplicitClearKey -> C.CLEARKEY_UUID
                     effectiveScheme.contains("widevine") -> C.WIDEVINE_UUID
                     effectiveScheme.contains("playready") -> C.PLAYREADY_UUID
-                    effectiveScheme.contains("clearkey") -> C.CLEARKEY_UUID
-                    resolvedItem.drmHeaders.keys.any { it.equals("X-ClearKey-Data", ignoreCase = true) } -> C.CLEARKEY_UUID
                     else -> {
                         val licenseUrlLower = effectiveLicenseUrl?.lowercase() ?: ""
                         when {
-                            // ClearKey Header format (KID:KEY) or URL containing "clearkey"
-                            !effectiveLicenseUrl.isNullOrBlank() && (effectiveLicenseUrl.contains(":") && !effectiveLicenseUrl.startsWith("http")) -> C.CLEARKEY_UUID
-                            licenseUrlLower.contains("clearkey") -> C.CLEARKEY_UUID
-                            
-                            // Widevine
                             licenseUrlLower.contains("widevine") || licenseUrlLower.contains("proxy/lic/widevine") || licenseUrlLower.contains("lic/wv") || licenseUrlLower.contains("proxy/lic") -> C.WIDEVINE_UUID
                             !effectiveLicenseUrl.isNullOrBlank() -> C.WIDEVINE_UUID // Has a license URL, default to Widevine
                             else -> null
@@ -1552,74 +1669,53 @@ fun PlayerScreen(
                     
                     val drmBuilder = DrmConfiguration.Builder(uuid)
                     
-                    if (!effectiveLicenseUrl.isNullOrBlank()) {
-                        Log.d("PlayerScreen", "License URL is not blank: $effectiveLicenseUrl")
-                        
-                        // Handle ClearKey Key Pairs (KID:KEY), direct JSON, clearkey.direct URLs, or raw pairs
-                        val isDirectClearKeyJson = effectiveLicenseUrl.trim().startsWith("{") && effectiveLicenseUrl.contains("\"keys\"")
-                        val isClearKeyPair = uuid == C.CLEARKEY_UUID && (
-                            isDirectClearKeyJson ||
-                            effectiveLicenseUrl.contains("clearkey.direct", ignoreCase = true) ||
-                            (effectiveLicenseUrl.contains(":") && !effectiveLicenseUrl.contains("?") && !effectiveLicenseUrl.contains("&") &&
-                                (Regex("([0-9a-zA-Z_\\-]{22,32}):([0-9a-zA-Z_\\-]{22,32})").containsMatchIn(effectiveLicenseUrl) || !effectiveLicenseUrl.contains("://")))
-                        )
-                        if (isClearKeyPair) {
-                            try {
-                                val ckJson = if (isDirectClearKeyJson) {
-                                    effectiveLicenseUrl.trim()
-                                } else {
-                                    val cleanPairStr = effectiveLicenseUrl.substringAfter("clearkey.direct/").removePrefix("http://").removePrefix("https://").trim('/')
-                                    Log.d("PlayerScreen", "Processing ClearKey hex pair: $cleanPairStr")
-                                    val pairs = cleanPairStr.split(",").map { it.trim() }
-                                    val keysJson = pairs.mapNotNull { pair ->
-                                        val parts = pair.split(":")
-                                        if (parts.size == 2) {
-                                            val kid = parts[0].trim()
-                                            val key = parts[1].trim()
-                                            
-                                            // Detect if Hex or Base64
-                                            val kidBytes = if (kid.length == 32 && kid.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) hexToByteArray(kid) else Base64.decode(kid, Base64.DEFAULT)
-                                            val keyBytes = if (key.length == 32 && key.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) hexToByteArray(key) else Base64.decode(key, Base64.DEFAULT)
+                    if (uuid == C.CLEARKEY_UUID) {
+                        // Check if we have embedded key pair or JSON
+                        val rawKey = when {
+                            !effectiveLicenseUrl.isNullOrBlank() && (
+                                (effectiveLicenseUrl.trim().startsWith("{") && effectiveLicenseUrl.contains("\"keys\"")) ||
+                                effectiveLicenseUrl.contains("clearkey.direct", ignoreCase = true) ||
+                                (effectiveLicenseUrl.contains(":") && !effectiveLicenseUrl.startsWith("http")) ||
+                                (effectiveLicenseUrl.contains(":") && !effectiveLicenseUrl.contains("?") && !effectiveLicenseUrl.contains("&") && Regex("([0-9a-zA-Z_\\-]{22,32}):([0-9a-zA-Z_\\-]{22,32})").containsMatchIn(effectiveLicenseUrl))
+                            ) -> effectiveLicenseUrl
+                            resolvedItem.drmHeaders.containsKey("X-ClearKey-Data") -> resolvedItem.drmHeaders["X-ClearKey-Data"]
+                            resolvedItem.drmHeaders.containsKey("clearkey") -> resolvedItem.drmHeaders["clearkey"]
+                            resolvedItem.headers.containsKey("clearkey") -> resolvedItem.headers["clearkey"]
+                            resolvedItem.headers.containsKey("http-clearkey") -> resolvedItem.headers["http-clearkey"]
+                            else -> null
+                        }
 
-                                            val kidB64 = Base64.encodeToString(kidBytes, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
-                                            val keyB64 = Base64.encodeToString(keyBytes, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
-                                            
-                                            Log.d("PlayerScreen", "Converted to Base64 - KID: $kidB64, KEY: $keyB64")
-                                            "{\"kty\":\"oct\",\"k\":\"$keyB64\",\"kid\":\"$kidB64\"}"
-                                        } else null
-                                    }.joinToString(",")
-                                    
-                                    "{\"keys\":[$keysJson],\"type\":\"temporary\"}"
-                                }
-                                Log.d("PlayerScreen", "Generated ClearKey JSON: $ckJson")
-                                
-                                // Store the ClearKey JSON in a special header so UnifiedMediaDrmCallback can use it
-                                val updatedDrmHeaders = resolvedItem.drmHeaders.toMutableMap()
-                                updatedDrmHeaders["X-ClearKey-Data"] = ckJson
-                                
-                                // Create a data URI
-                                val dUri = "data:application/json;base64," + Base64.encodeToString(ckJson.toByteArray(), Base64.NO_WRAP)
-                                Log.d("PlayerScreen", "Final data URI: $dUri")
-                                drmBuilder.setLicenseUri(Uri.parse(dUri))
-                                drmBuilder.setLicenseRequestHeaders(updatedDrmHeaders)
-                            } catch (e: Exception) { 
-                                Log.e("PlayerScreen", "Failed to parse ClearKey string: $effectiveLicenseUrl", e)
-                                drmBuilder.setLicenseUri(Uri.parse(effectiveLicenseUrl))
-                                drmBuilder.setLicenseRequestHeaders(resolvedItem.drmHeaders)
-                            }
-                        } else {
-                            Log.d("PlayerScreen", "Standard License URL configuration")
+                        val synthesizedJson = rawKey?.let { generateClearKeyJson(it) }
+                        if (!synthesizedJson.isNullOrBlank()) {
+                            Log.d("PlayerScreen", "Using synthesized ClearKey JSON: $synthesizedJson")
+                            val updatedDrmHeaders = resolvedItem.drmHeaders.toMutableMap()
+                            updatedDrmHeaders["X-ClearKey-Data"] = synthesizedJson
+                            val dUri = "data:application/json;base64," + Base64.encodeToString(synthesizedJson.toByteArray(), Base64.NO_WRAP)
+                            drmBuilder.setLicenseUri(Uri.parse(dUri))
+                            drmBuilder.setLicenseRequestHeaders(updatedDrmHeaders)
+                        } else if (!effectiveLicenseUrl.isNullOrBlank()) {
+                            Log.d("PlayerScreen", "Using remote ClearKey License URL: $effectiveLicenseUrl")
                             drmBuilder.setLicenseUri(Uri.parse(effectiveLicenseUrl))
-                            drmBuilder.setLicenseRequestHeaders(resolvedItem.drmHeaders)
+                            val reqHeaders = resolvedItem.drmHeaders.toMutableMap()
+                            if (resolvedItem.userAgent.isNotBlank() && !reqHeaders.containsKey("User-Agent")) {
+                                reqHeaders["User-Agent"] = resolvedItem.userAgent
+                            }
+                            drmBuilder.setLicenseRequestHeaders(reqHeaders)
+                        } else {
+                            val reqHeaders = resolvedItem.drmHeaders.toMutableMap()
+                            drmBuilder.setLicenseRequestHeaders(reqHeaders)
                         }
                     } else {
-                        Log.d("PlayerScreen", "No License URL, using headers only")
-                        val ckJson = resolvedItem.drmHeaders.entries.find { it.key.equals("X-ClearKey-Data", ignoreCase = true) }?.value
-                        if (uuid == C.CLEARKEY_UUID && !ckJson.isNullOrBlank()) {
-                            val dUri = "data:application/json;base64," + Base64.encodeToString(ckJson.toByteArray(), Base64.NO_WRAP)
-                            drmBuilder.setLicenseUri(Uri.parse(dUri))
+                        // Widevine or PlayReady
+                        if (!effectiveLicenseUrl.isNullOrBlank()) {
+                            Log.d("PlayerScreen", "Standard License URL configuration: $effectiveLicenseUrl")
+                            drmBuilder.setLicenseUri(Uri.parse(effectiveLicenseUrl))
                         }
-                        drmBuilder.setLicenseRequestHeaders(resolvedItem.drmHeaders)
+                        val reqHeaders = resolvedItem.drmHeaders.toMutableMap()
+                        if (resolvedItem.userAgent.isNotBlank() && !reqHeaders.containsKey("User-Agent")) {
+                            reqHeaders["User-Agent"] = resolvedItem.userAgent
+                        }
+                        drmBuilder.setLicenseRequestHeaders(reqHeaders)
                     }
 
                     drmBuilder.setMultiSession(true)
@@ -1683,20 +1779,61 @@ fun PlayerScreen(
             .focusable()
             .onPreviewKeyEvent { event: KeyEvent ->
                 if (event.type == KeyEventType.KeyDown) {
-                    when (event.key) {
-                        Key.DirectionUp -> {
-                            if (activePlayer.hasPreviousMediaItem()) {
+                    val keyCode = event.nativeKeyEvent.keyCode
+                    when {
+                        // Dismiss channel drawer if open
+                        showChannelDrawer -> {
+                            if (keyCode == android.view.KeyEvent.KEYCODE_BACK ||
+                                keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT ||
+                                event.key == Key.Back || event.key == Key.DirectionRight) {
+                                showChannelDrawer = false
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                        // Open channel drawer via D-pad Left, Guide, or Menu
+                        keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT ||
+                        keyCode == android.view.KeyEvent.KEYCODE_GUIDE ||
+                        keyCode == android.view.KeyEvent.KEYCODE_MENU ||
+                        event.key == Key.DirectionLeft || event.key == Key.Menu -> {
+                            if (canShowDrawer) {
+                                showChannelDrawer = true
+                                true
+                            } else false
+                        }
+                        // Channel Up (Remote Channel Up or D-pad Up when controls hidden)
+                        keyCode == android.view.KeyEvent.KEYCODE_CHANNEL_UP ||
+                        (!isControlsVisible && (keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP || event.key == Key.DirectionUp)) -> {
+                            if (!isLocalOrDirectPlay && drawerChannels.isNotEmpty()) {
+                                val currIdx = drawerChannels.indexOfFirst { it.url == currentStreamUrl }
+                                val prevIdx = if (currIdx > 0) currIdx - 1 else drawerChannels.size - 1
+                                switchChannel(drawerChannels[prevIdx])
+                                true
+                            } else if (activePlayer.hasPreviousMediaItem()) {
                                 activePlayer.seekToPreviousMediaItem()
                                 activePlayer.play()
                                 true
                             } else false
                         }
-                        Key.DirectionDown -> {
-                            if (activePlayer.hasNextMediaItem()) {
+                        // Channel Down (Remote Channel Down or D-pad Down when controls hidden)
+                        keyCode == android.view.KeyEvent.KEYCODE_CHANNEL_DOWN ||
+                        (!isControlsVisible && (keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN || event.key == Key.DirectionDown)) -> {
+                            if (!isLocalOrDirectPlay && drawerChannels.isNotEmpty()) {
+                                val currIdx = drawerChannels.indexOfFirst { it.url == currentStreamUrl }
+                                val nextIdx = if (currIdx >= 0 && currIdx < drawerChannels.size - 1) currIdx + 1 else 0
+                                switchChannel(drawerChannels[nextIdx])
+                                true
+                            } else if (activePlayer.hasNextMediaItem()) {
                                 activePlayer.seekToNextMediaItem()
                                 activePlayer.play()
                                 true
                             } else false
+                        }
+                        // Center / Enter toggles controls if not visible
+                        !isControlsVisible && (keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER || event.key == Key.DirectionCenter) -> {
+                            isControlsVisible = true
+                            false
                         }
                         else -> false
                     }
@@ -2111,19 +2248,238 @@ fun PlayerScreen(
         }
     }
 
+        // DVR Stream Recording State
+        val recordingState by streamRecorder.recordingState.collectAsState()
+
+        // Active Recording HUD Pill (Always visible while recording)
+        AnimatedVisibility(
+            visible = recordingState.isRecording && !isInPip,
+            enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
+            exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 28.dp, end = 32.dp)
+        ) {
+            val mins = recordingState.durationSeconds / 60
+            val secs = recordingState.durationSeconds % 60
+            val mb = String.format(java.util.Locale.US, "%.1f MB", recordingState.bytesWritten / (1024f * 1024f))
+            Surface(
+                color = Color(0xE67F1D1D),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, Color(0xFFEF4444)),
+                shadowElevation = 8.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFEF4444))
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = String.format(java.util.Locale.US, "REC  %02d:%02d  (%s)", mins, secs, mb),
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 11.sp,
+                        letterSpacing = 0.5.sp
+                    )
+                }
+            }
+        }
+
+        // Quick Controls Floating Action Bar (DVR Record + Multi-View)
+        AnimatedVisibility(
+            visible = isControlsVisible && !isInPip && !showChannelDrawer,
+            enter = fadeIn() + slideInHorizontally(initialOffsetX = { it }),
+            exit = fadeOut() + slideOutHorizontally(targetOffsetX = { it }),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 70.dp, end = 24.dp)
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // DVR Record Button
+                Surface(
+                    onClick = {
+                        if (recordingState.isRecording) {
+                            streamRecorder.stopRecording(context)
+                            android.widget.Toast.makeText(context, "Recording saved to Movies/StreamPlus_Recordings", android.widget.Toast.LENGTH_LONG).show()
+                        } else {
+                            streamRecorder.startRecording(
+                                context = context,
+                                streamUrl = currentStreamUrl,
+                                channelName = currentStreamTitle,
+                                headers = currentHeaders,
+                                userAgent = currentUserAgent
+                            )
+                            android.widget.Toast.makeText(context, "Started recording: $currentStreamTitle", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    color = if (recordingState.isRecording) Color(0xFFEF4444) else Color(0xCC101726),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, if (recordingState.isRecording) Color.White else Color(0xFF2E3852)),
+                    modifier = Modifier.height(36.dp).tvFocusable(cornerRadius = 10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.FiberManualRecord,
+                            contentDescription = "DVR Record",
+                            tint = if (recordingState.isRecording) Color.White else Color(0xFFEF4444),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (recordingState.isRecording) "Stop REC" else "Record",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                // Multi-View Grid Button
+                Surface(
+                    onClick = {
+                        val intent = android.content.Intent(context, com.codesrahul.streamplus.ui.multiview.MultiViewActivity::class.java).apply {
+                            putExtra(PlayerActivity.EXTRA_STREAM_URL, currentStreamUrl)
+                            putExtra(PlayerActivity.EXTRA_STREAM_TITLE, currentStreamTitle)
+                            putExtra(PlayerActivity.EXTRA_PLAYLIST_ID, playlistId)
+                        }
+                        context.startActivity(intent)
+                    },
+                    color = Color(0xCC101726),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, Color(0xFF2E3852)),
+                    modifier = Modifier.height(36.dp).tvFocusable(cornerRadius = 10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.GridView,
+                            contentDescription = "Multi-View",
+                            tint = Color(0xFF00E5FF),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Multi-View",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+
+        // Top Sleek Channel Info Banner (TiviMate style)
+        AnimatedVisibility(
+            visible = showChannelBanner && !isInPip && !isControlsVisible && !showChannelDrawer,
+            enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
+            exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 28.dp, start = 32.dp, end = 32.dp)
+                .fillMaxWidth()
+        ) {
+            Surface(
+                color = Color(0xE60D111A),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, Color(0xFF2E3852)),
+                shadowElevation = 12.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (!currentChannelLogo.isNullOrBlank()) {
+                        coil.compose.AsyncImage(
+                            model = currentChannelLogo,
+                            contentDescription = currentStreamTitle,
+                            modifier = Modifier.size(48.dp).clip(CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF1E293B)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Tv, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                    }
+                    
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                currentStreamTitle,
+                                color = Color.White,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(Color(0xFFFF1744))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    if (currentIsVod) "CATCH-UP" else "LIVE",
+                                    color = Color.White,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        
+                        val activeEpg = remember(currentStreamTitle, currentStreamUrl) {
+                            val ch = drawerChannels.find { it.url == currentStreamUrl }
+                            ch?.epgId?.let { epgManager.getCurrentProgram(it) }
+                        }
+                        if (activeEpg != null) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "Now: ${activeEpg.title}",
+                                color = Color(0xFF64B5F6),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // Quick Channels Drawer (Slide-in Frosted Glass Sheet)
-        val isLocalQueue = currentPlaylistUris != null && currentPlaylistUris!!.isNotEmpty()
-        val canShowDrawer = if (isLocalOrDirectPlay) isLocalQueue else drawerChannels.isNotEmpty()
         AnimatedVisibility(
             visible = showChannelDrawer && !isInPip && canShowDrawer,
             enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
             exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
-            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(320.dp)
+            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(360.dp)
         ) {
             Surface(
-                color = Color(0xF20E0E14),
-                shape = RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
+                color = Color(0xF50A0E18),
+                shape = RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp),
+                border = BorderStroke(1.dp, Color(0xFF1E283D)),
                 modifier = Modifier.fillMaxSize()
             ) {
                 Column(
@@ -2204,7 +2560,7 @@ fun PlayerScreen(
                                         1.dp,
                                         if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.08f)
                                     ),
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier.fillMaxWidth().tvFocusable()
                                 ) {
                                     Row(
                                         modifier = Modifier.padding(12.dp),
@@ -2262,59 +2618,77 @@ fun PlayerScreen(
                                 ) { idx ->
                                     val ch = filteredChannels[idx]
                                     val isCurrent = ch.url == currentStreamUrl
+                                    val currentProg = remember(ch.epgId) { ch.epgId?.let { epgManager.getCurrentProgram(it) } }
                                     Surface(
-                                        onClick = {
-                                            currentPlaylistUris = null
-                                            currentStreamUrl = ch.url
-                                            currentStreamTitle = ch.name
-                                            currentChannelLogo = ch.logoUrl
-                                            currentUserAgent = ch.userAgent.takeIf { it.isNotBlank() } ?: userAgent
-                                            currentHeaders = if (ch.headers.isNotEmpty()) ch.headers else headers
-                                            currentDrmLicenseUrl = ch.licenseUrl
-                                            currentDrmScheme = ch.drmScheme
-                                            currentDrmHeaders = ch.drmHeaders
-                                            currentIsVod = ch.isVod
-                                            currentStreamType = ch.streamType
-                                            consecutiveLiveErrors = 0
-                                            retryCount = 0
-                                            showChannelDrawer = false
-                                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                                        },
-                                        color = if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.04f),
-                                        shape = RoundedCornerShape(12.dp),
+                                        onClick = { switchChannel(ch) },
+                                        color = if (isCurrent) Color(0xFF14243D) else Color(0xFF101624),
+                                        shape = RoundedCornerShape(10.dp),
                                         border = BorderStroke(
-                                            1.dp,
-                                            if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.08f)
+                                            width = if (isCurrent) 1.5.dp else 0.5.dp,
+                                            color = if (isCurrent) Color(0xFF00E5FF) else Color(0xFF1E283D)
                                         ),
-                                        modifier = Modifier.fillMaxWidth()
+                                        modifier = Modifier.fillMaxWidth().tvFocusable(cornerRadius = 10.dp)
                                     ) {
                                         Row(
-                                            modifier = Modifier.padding(12.dp),
+                                            modifier = Modifier.padding(10.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             if (ch.logoUrl.isNotBlank()) {
                                                 coil.compose.AsyncImage(
                                                     model = ch.logoUrl,
                                                     contentDescription = ch.name,
-                                                    modifier = Modifier.size(32.dp).clip(CircleShape)
+                                                    modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF161E2E))
                                                 )
+                                                Spacer(modifier = Modifier.width(10.dp))
+                                            } else {
+                                                Box(
+                                                    modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF161E2E)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(Icons.Default.Tv, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(18.dp))
+                                                }
                                                 Spacer(modifier = Modifier.width(10.dp))
                                             }
                                             Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    ch.name,
-                                                    color = Color.White,
-                                                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis,
-                                                    fontSize = 14.sp
-                                                )
-                                                if (ch.group.isNotBlank()) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Text(
+                                                        ch.name,
+                                                        color = if (isCurrent) Color(0xFF00E5FF) else Color.White,
+                                                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.SemiBold,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                        fontSize = 13.sp,
+                                                        modifier = Modifier.weight(1f, fill = false)
+                                                    )
+                                                    if (isCurrent) {
+                                                        Spacer(modifier = Modifier.width(6.dp))
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .clip(RoundedCornerShape(3.dp))
+                                                                .background(Color(0xFFFF1744))
+                                                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                                                        ) {
+                                                            Text("LIVE", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold)
+                                                        }
+                                                    }
+                                                }
+                                                if (currentProg != null) {
+                                                    Spacer(modifier = Modifier.height(2.dp))
+                                                    Text(
+                                                        text = "Now: ${currentProg.title}",
+                                                        color = Color(0xFF38BDF8),
+                                                        fontSize = 11.sp,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                } else if (ch.group.isNotBlank()) {
+                                                    Spacer(modifier = Modifier.height(2.dp))
                                                     Text(
                                                         ch.group,
-                                                        color = Color.Gray,
+                                                        color = Color(0xFF64748B),
                                                         fontSize = 11.sp,
-                                                        maxLines = 1
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
                                                     )
                                                 }
                                             }

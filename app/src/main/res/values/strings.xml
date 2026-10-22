@@ -9,6 +9,7 @@
     <string name="nav_playlist">Playlist</string>
     <string name="nav_gallery">Gallery</string>
     <string name="nav_stream">Stream</string>
+    <string name="nav_epg">TV Guide</string>
     <string name="nav_settings">Settings</string>
 
     <!-- Main Settings Titles -->

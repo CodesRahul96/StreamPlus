@@ -9,6 +9,7 @@
     <string name="nav_playlist">प्लेलिस्ट</string>
     <string name="nav_gallery">गैलरी</string>
     <string name="nav_stream">स्ट्रीम</string>
+    <string name="nav_epg">टीवी गाइड</string>
     <string name="nav_settings">सेटिंग्स</string>
 
     <!-- Main Settings Titles -->
