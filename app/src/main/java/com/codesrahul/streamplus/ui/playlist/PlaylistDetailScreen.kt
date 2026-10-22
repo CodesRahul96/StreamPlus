@@ -24,6 +24,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -138,6 +139,7 @@ fun PlaylistDetailScreen(
                         ) { index ->
                             val group = groups[index]
                             val isSelected = selectedGroup == group
+                            val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
                             
                             Box(
                                 modifier = Modifier
@@ -145,11 +147,14 @@ fun PlaylistDetailScreen(
                                     .tvFocusable(cornerRadius = 20.dp)
                                     .background(
                                         if (isSelected) MaterialTheme.colorScheme.primary 
+                                        else if (isLight) Color(0xFFE2E8F0)
                                         else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                                     )
                                     .border(
                                         width = 1.dp,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.08f),
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary
+                                                else if (isLight) Color.Black.copy(alpha = 0.08f)
+                                                else Color.White.copy(alpha = 0.08f),
                                         shape = RoundedCornerShape(20.dp)
                                     )
                                     .clickable { viewModel.setSelectedGroup(group) }
@@ -689,6 +694,7 @@ fun VodPosterItem(
 ) {
     val isSeries = channel.streamType == "series"
     val seriesId = if (isSeries) channel.url.split("/").last().toIntOrNull() ?: channel.id else channel.id
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
 
     Card(
         modifier = modifier
@@ -698,14 +704,14 @@ fun VodPosterItem(
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF141724)
+            containerColor = if (isLight) Color(0xFFFFFFFF) else Color(0xFF141724)
         ),
         border = BorderStroke(
             1.dp,
             Brush.verticalGradient(
                 listOf(
-                    Color.White.copy(alpha = 0.16f),
-                    Color.White.copy(alpha = 0.03f)
+                    if (isLight) Color.Black.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.16f),
+                    if (isLight) Color.Black.copy(alpha = 0.02f) else Color.White.copy(alpha = 0.03f)
                 )
             )
         ),
@@ -801,8 +807,8 @@ fun VodPosterItem(
             if (onToggleFavorite != null) {
                 Surface(
                     shape = CircleShape,
-                    color = Color(0x80000000),
-                    border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.2f)),
+                    color = if (isLight) Color(0xCCFFFFFF) else Color(0x80000000),
+                    border = BorderStroke(0.5.dp, if (isLight) Color.Black.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.2f)),
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(8.dp)
@@ -815,7 +821,7 @@ fun VodPosterItem(
                         Icon(
                             imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = if (isFavorite) "Favorited" else "Favorite",
-                            tint = if (isFavorite) Color(0xFFFF2D55) else Color.White,
+                            tint = if (isFavorite) Color(0xFFFF2D55) else if (isLight) Color.Black.copy(alpha = 0.7f) else Color.White,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -825,8 +831,8 @@ fun VodPosterItem(
             // 5. Floating Play Accent (Bottom Right)
             Surface(
                 shape = CircleShape,
-                color = Color(0xCC0F172A),
-                border = BorderStroke(1.dp, Color(0xFF06B6D4).copy(alpha = 0.6f)),
+                color = if (isLight) Color(0xF0FFFFFF) else Color(0xCC0F172A),
+                border = BorderStroke(1.dp, if (isLight) Color(0xFF0284C7).copy(alpha = 0.4f) else Color(0xFF06B6D4).copy(alpha = 0.6f)),
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = 10.dp, bottom = 10.dp)
@@ -836,7 +842,7 @@ fun VodPosterItem(
                     Icon(
                         Icons.Default.PlayArrow,
                         contentDescription = "Play",
-                        tint = Color(0xFF38BDF8),
+                        tint = if (isLight) Color(0xFF0284C7) else Color(0xFF38BDF8),
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -885,6 +891,7 @@ fun LiveChannelItem(
     aspectRatio: Float = 0.92f,
     modifier: Modifier = Modifier
 ) {
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
     val infiniteTransition = rememberInfiniteTransition(label = "live_pulse")
     val pulseAlpha by infiniteTransition.animateFloat(
         initialValue = 0.4f,
@@ -904,14 +911,14 @@ fun LiveChannelItem(
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF131522)
+            containerColor = if (isLight) Color(0xFFFFFFFF) else Color(0xFF131522)
         ),
         border = BorderStroke(
             1.dp,
             Brush.verticalGradient(
                 listOf(
-                    Color.White.copy(alpha = 0.12f),
-                    Color.White.copy(alpha = 0.03f)
+                    if (isLight) Color.Black.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.12f),
+                    if (isLight) Color.Black.copy(alpha = 0.02f) else Color.White.copy(alpha = 0.03f)
                 )
             )
         ),
@@ -930,7 +937,10 @@ fun LiveChannelItem(
                     .clip(RoundedCornerShape(14.dp))
                     .background(
                         Brush.radialGradient(
-                            colors = listOf(
+                            colors = if (isLight) listOf(
+                                Color(0xFFF8FAFC),
+                                Color(0xFFEDF2F7)
+                            ) else listOf(
                                 Color(0xFF222638),
                                 Color(0xFF131622)
                             )
@@ -944,7 +954,7 @@ fun LiveChannelItem(
                         .fillMaxSize()
                         .border(
                             1.dp,
-                            Color.White.copy(alpha = 0.05f),
+                            if (isLight) Color.Black.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.05f),
                             RoundedCornerShape(14.dp)
                         )
                 )
@@ -1036,8 +1046,8 @@ fun LiveChannelItem(
                     if (!channel.drmScheme.isNullOrBlank()) {
                         Surface(
                             shape = RoundedCornerShape(6.dp),
-                            color = Color(0xCC1E293B),
-                            border = BorderStroke(0.5.dp, Color(0xFFF59E0B).copy(alpha = 0.5f))
+                            color = if (isLight) Color(0xEEFEF3C7) else Color(0xCC1E293B),
+                            border = BorderStroke(0.5.dp, Color(0xFFF59E0B).copy(alpha = if (isLight) 0.6f else 0.5f))
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
@@ -1047,7 +1057,7 @@ fun LiveChannelItem(
                                 Icon(
                                     Icons.Default.Lock,
                                     contentDescription = null,
-                                    tint = Color(0xFFF59E0B),
+                                    tint = if (isLight) Color(0xFFD97706) else Color(0xFFF59E0B),
                                     modifier = Modifier.size(10.dp)
                                 )
                                 Text(
@@ -1055,7 +1065,7 @@ fun LiveChannelItem(
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 9.sp,
-                                    color = Color(0xFFF59E0B)
+                                    color = if (isLight) Color(0xFFD97706) else Color(0xFFF59E0B)
                                 )
                             }
                         }
@@ -1066,8 +1076,8 @@ fun LiveChannelItem(
                 if (onToggleFavorite != null) {
                     Surface(
                         shape = CircleShape,
-                        color = Color(0x80000000),
-                        border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.15f)),
+                        color = if (isLight) Color(0xD9FFFFFF) else Color(0x80000000),
+                        border = BorderStroke(0.5.dp, if (isLight) Color.Black.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.15f)),
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(6.dp)
@@ -1080,7 +1090,7 @@ fun LiveChannelItem(
                             Icon(
                                 imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                 contentDescription = if (isFavorite) "Favorited" else "Favorite",
-                                tint = if (isFavorite) Color(0xFFFF2D55) else Color.White.copy(alpha = 0.8f),
+                                tint = if (isFavorite) Color(0xFFFF2D55) else if (isLight) Color.Black.copy(alpha = 0.65f) else Color.White.copy(alpha = 0.8f),
                                 modifier = Modifier.size(15.dp)
                             )
                         }
@@ -1103,7 +1113,7 @@ fun LiveChannelItem(
                     text = channel.name,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = if (isLight) MaterialTheme.colorScheme.onSurface else Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     fontSize = 13.5.sp
@@ -1121,12 +1131,12 @@ fun LiveChannelItem(
                             modifier = Modifier
                                 .size(5.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF38BDF8))
+                                .background(if (isLight) Color(0xFF0284C7) else Color(0xFF38BDF8))
                         )
                         Text(
                             text = currentProgram,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF38BDF8),
+                            color = if (isLight) Color(0xFF0284C7) else Color(0xFF38BDF8),
                             fontWeight = FontWeight.Medium,
                             fontSize = 11.sp,
                             maxLines = 1,
@@ -1139,7 +1149,7 @@ fun LiveChannelItem(
                     Text(
                         text = groupText,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF94A3B8),
+                        color = if (isLight) Color(0xFF64748B) else Color(0xFF94A3B8),
                         fontSize = 11.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -1160,6 +1170,7 @@ fun ChannelListItem(
     onClick: () -> Unit,
     isVodView: Boolean = false
 ) {
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
     val lowerUrl = channel.url.lowercase()
     val isExplicitLiveStream = lowerUrl.contains(".m3u8") || lowerUrl.contains("/live/") ||
             lowerUrl.contains("play/live.php") || lowerUrl.substringBefore("?").endsWith(".ts") ||
@@ -1178,14 +1189,14 @@ fun ChannelListItem(
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF131522)
+            containerColor = if (isLight) Color(0xFFFFFFFF) else Color(0xFF131522)
         ),
         border = BorderStroke(
             1.dp,
             Brush.verticalGradient(
                 listOf(
-                    Color.White.copy(alpha = 0.12f),
-                    Color.White.copy(alpha = 0.03f)
+                    if (isLight) Color.Black.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.12f),
+                    if (isLight) Color.Black.copy(alpha = 0.02f) else Color.White.copy(alpha = 0.03f)
                 )
             )
         ),
@@ -1204,13 +1215,16 @@ fun ChannelListItem(
                     .clip(RoundedCornerShape(12.dp))
                     .background(
                         Brush.radialGradient(
-                            listOf(
+                            if (isLight) listOf(
+                                Color(0xFFF8FAFC),
+                                Color(0xFFEDF2F7)
+                            ) else listOf(
                                 Color(0xFF222638),
                                 Color(0xFF131622)
                             )
                         )
                     )
-                    .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(12.dp)),
+                    .border(1.dp, if (isLight) Color.Black.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.06f), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 if (channel.logoUrl.isNotBlank() && !hideImage) {
@@ -1260,7 +1274,7 @@ fun ChannelListItem(
                         text = channel.name,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                        color = if (isLight) MaterialTheme.colorScheme.onSurface else Color.White,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
@@ -1301,7 +1315,7 @@ fun ChannelListItem(
                         Icon(
                             Icons.Default.Lock,
                             contentDescription = "DRM",
-                            tint = Color(0xFFF59E0B),
+                            tint = if (isLight) Color(0xFFD97706) else Color(0xFFF59E0B),
                             modifier = Modifier.size(12.dp)
                         )
                     }
@@ -1318,7 +1332,7 @@ fun ChannelListItem(
                     Text(
                         text = subText,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF94A3B8),
+                        color = if (isLight) Color(0xFF64748B) else Color(0xFF94A3B8),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1327,7 +1341,7 @@ fun ChannelListItem(
                     Text(
                         text = programText,
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (currentProgram != null) Color(0xFF38BDF8) else Color(0xFF94A3B8),
+                        color = if (currentProgram != null) (if (isLight) Color(0xFF0284C7) else Color(0xFF38BDF8)) else (if (isLight) Color(0xFF64748B) else Color(0xFF94A3B8)),
                         fontWeight = if (currentProgram != null) FontWeight.Medium else FontWeight.Normal,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -1349,7 +1363,7 @@ fun ChannelListItem(
                         Icon(
                             imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = "Favorite",
-                            tint = if (isFavorite) Color(0xFFFF2D55) else Color.White.copy(alpha = 0.6f),
+                            tint = if (isFavorite) Color(0xFFFF2D55) else if (isLight) Color.Black.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.6f),
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -1357,14 +1371,14 @@ fun ChannelListItem(
 
                 Surface(
                     shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.08f),
+                    color = if (isLight) Color.Black.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.08f),
                     modifier = Modifier.size(32.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                         Icon(
                             Icons.Default.PlayArrow,
                             contentDescription = "Play",
-                            tint = Color(0xFF38BDF8),
+                            tint = if (isLight) Color(0xFF0284C7) else Color(0xFF38BDF8),
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -1376,6 +1390,7 @@ fun ChannelListItem(
 
 @Composable
 fun ShimmerChannelListItem() {
+    val shimmerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1387,7 +1402,7 @@ fun ShimmerChannelListItem() {
             modifier = Modifier
                 .size(68.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(Color.White.copy(alpha = 0.08f))
+                .background(shimmerColor)
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -1396,7 +1411,7 @@ fun ShimmerChannelListItem() {
                     .fillMaxWidth(0.6f)
                     .height(18.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(Color.White.copy(alpha = 0.08f))
+                    .background(shimmerColor)
             )
             Spacer(modifier = Modifier.height(8.dp))
             Box(
@@ -1404,7 +1419,7 @@ fun ShimmerChannelListItem() {
                     .fillMaxWidth(0.4f)
                     .height(14.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(Color.White.copy(alpha = 0.08f))
+                    .background(shimmerColor)
             )
         }
     }
