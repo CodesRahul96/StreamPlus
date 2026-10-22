@@ -66,12 +66,12 @@ class PlaylistDetailViewModel @Inject constructor(
     // Favorite Identity set for fast O(1) lookup in the UI (Format: "name|group|playlistId")
     val favoriteIdentities = repository.getAllFavorites()
         .map { list -> list.map { "${it.name}|${it.groupTitle}|${it.playlistId}" }.toSet() }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptySet())
 
     @OptIn(kotlinx.coroutines.FlowPreview::class)
     private val _debouncedSearchQuery = _searchQuery
         .debounce(300)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+        .stateIn(viewModelScope, SharingStarted.Lazily, "")
 
     @OptIn(kotlinx.coroutines.FlowPreview::class)
     val filteredChannels = combine(_channels, _debouncedSearchQuery, _selectedGroup, _selectedStreamType, _isXtreamPlaylist) { channels, query, group, streamType, isXtream ->
@@ -88,7 +88,7 @@ class PlaylistDetailViewModel @Inject constructor(
         }
     }
         .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val groups = combine(_channels, _selectedStreamType, _isXtreamPlaylist) { channels, streamType, isXtream ->
         kotlinx.coroutines.withContext(Dispatchers.Default) {
@@ -100,7 +100,7 @@ class PlaylistDetailViewModel @Inject constructor(
         }
     }
         .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), listOf("All"))
+        .stateIn(viewModelScope, SharingStarted.Lazily, listOf("All"))
 
     init {
         viewModelScope.launch {

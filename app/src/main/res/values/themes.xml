@@ -8,6 +8,7 @@
         <item name="mediaRouteButtonStyle">@style/Widget.MediaRouter.MediaRouteButton</item>
         <item name="mediaRouteTheme">@style/ThemeOverlay.MediaRouter.Dark</item>
         <item name="android:colorBackground">@android:color/black</item>
+        <item name="android:windowBackground">#0B0E14</item>
     </style>
 
     <style name="Theme.AppSplash" parent="Theme.SplashScreen">

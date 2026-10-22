@@ -13,6 +13,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.codesrahul.streamplus.ui.settings.SettingsViewModel
 
@@ -45,12 +46,18 @@ class MainActivity : ComponentActivity() {
                      com.codesrahul.streamplus.ui.theme.StreamPlusTheme(
                          themeMode = settingsState.themeMode
                      ) {
-                         // A surface container using the 'background' color from the theme
                          Surface(
                              modifier = Modifier.fillMaxSize(),
                              color = MaterialTheme.colorScheme.background
                          ) {
-                             if (!settingsState.isLoaded || playlistsState == null) {
+                             var hasLoadedOnce by androidx.compose.runtime.saveable.rememberSaveable {
+                                 androidx.compose.runtime.mutableStateOf(false)
+                             }
+                             if (settingsState.isLoaded && playlistsState != null) {
+                                 hasLoadedOnce = true
+                             }
+
+                             if (!hasLoadedOnce) {
                                  // Render empty box to prevent MainScreen NavHost flash
                                  androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize())
                              } else {

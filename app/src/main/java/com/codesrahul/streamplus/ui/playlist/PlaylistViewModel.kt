@@ -24,7 +24,7 @@ class PlaylistViewModel @Inject constructor(
 ) : ViewModel() {
 
     val playlists: StateFlow<List<PlaylistEntity>?> = repository.getAllPlaylists()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+        .stateIn(viewModelScope, SharingStarted.Lazily, null)
 
     val favorites = repository.getAllFavorites()
         .map { list -> 
@@ -43,7 +43,7 @@ class PlaylistViewModel @Inject constructor(
                 )
             }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val recentlyWatched = historyRepository.getAllHistory()
         .map { entries -> 
@@ -65,7 +65,7 @@ class PlaylistViewModel @Inject constructor(
                 )
             }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
