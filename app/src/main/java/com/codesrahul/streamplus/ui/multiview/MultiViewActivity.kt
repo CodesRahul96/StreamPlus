@@ -71,6 +71,13 @@ class MultiViewActivity : ComponentActivity() {
         val initialUrl = intent.getStringExtra(PlayerActivity.EXTRA_STREAM_URL) ?: ""
         val initialTitle = intent.getStringExtra(PlayerActivity.EXTRA_STREAM_TITLE) ?: "Main Stream"
         val playlistId = intent.getIntExtra(PlayerActivity.EXTRA_PLAYLIST_ID, -1)
+        val initialUa = intent.getStringExtra(PlayerActivity.EXTRA_USER_AGENT) ?: ""
+        @Suppress("UNCHECKED_CAST")
+        val initialHeaders = (intent.getSerializableExtra(PlayerActivity.EXTRA_HEADERS) as? HashMap<String, String>) ?: hashMapOf()
+        val initialDrmScheme = intent.getStringExtra(PlayerActivity.EXTRA_DRM_SCHEME)
+        val initialDrmLicense = intent.getStringExtra(PlayerActivity.EXTRA_DRM_LICENSE_URL)
+        @Suppress("UNCHECKED_CAST")
+        val initialDrmHeaders = (intent.getSerializableExtra(PlayerActivity.EXTRA_DRM_HEADERS) as? HashMap<String, String>) ?: hashMapOf()
 
         setContent {
             StreamPlusTheme {
@@ -78,6 +85,11 @@ class MultiViewActivity : ComponentActivity() {
                     initialUrl = initialUrl,
                     initialTitle = initialTitle,
                     playlistId = playlistId,
+                    initialUa = initialUa,
+                    initialHeaders = initialHeaders,
+                    initialDrmScheme = initialDrmScheme,
+                    initialDrmLicense = initialDrmLicense,
+                    initialDrmHeaders = initialDrmHeaders,
                     channelDao = channelDao,
                     okHttpClient = okHttpClient,
                     onBack = { finish() }
@@ -87,11 +99,26 @@ class MultiViewActivity : ComponentActivity() {
     }
 }
 
+fun ChannelEntity.isLiveChannel(): Boolean {
+    if (isVod) return false
+    val st = streamType.lowercase().trim()
+    if (st == "vod" || st == "series" || st == "movie") return false
+    val u = url.lowercase().trim()
+    if (u.contains("/movie/") || u.contains("/series/")) return false
+    if (u.endsWith(".mp4") || u.endsWith(".mkv") || u.endsWith(".avi") || u.endsWith(".mov") || u.endsWith(".webm") || u.endsWith(".mp3") || u.endsWith(".m4a")) return false
+    return true
+}
+
 @Composable
 fun MultiViewScreen(
     initialUrl: String,
     initialTitle: String,
     playlistId: Int,
+    initialUa: String,
+    initialHeaders: Map<String, String>,
+    initialDrmScheme: String?,
+    initialDrmLicense: String?,
+    initialDrmHeaders: Map<String, String>,
     channelDao: ChannelDao,
     okHttpClient: okhttp3.OkHttpClient,
     onBack: () -> Unit
@@ -100,24 +127,48 @@ fun MultiViewScreen(
     var isQuadMode by remember { mutableStateOf(false) }
     var activeTileIndex by remember { mutableIntStateOf(0) }
     var availableChannels by remember { mutableStateOf<List<ChannelEntity>>(emptyList()) }
+    var isLoadingChannels by remember { mutableStateOf(true) }
     var channelPickerTileIndex by remember { mutableStateOf<Int?>(null) }
 
-    // Channels loader
-    LaunchedEffect(playlistId) {
+    // Channels loader - strictly Live TV channels only
+    LaunchedEffect(playlistId, initialUrl) {
         withContext(Dispatchers.IO) {
-            val list = if (playlistId > 0) {
+            isLoadingChannels = true
+            var list = if (playlistId > 0) {
                 channelDao.getChannelsByPlaylist(playlistId)
             } else {
                 emptyList()
             }
-            availableChannels = list
+            if (list.isEmpty() && initialUrl.isNotBlank()) {
+                val matched = channelDao.getChannelByUrl(initialUrl)
+                if (matched != null && matched.playlistId > 0) {
+                    list = channelDao.getChannelsByPlaylist(matched.playlistId)
+                }
+            }
+            if (list.isEmpty()) {
+                list = channelDao.searchChannels("")
+            }
+            availableChannels = list.filter { it.isLiveChannel() }
+            isLoadingChannels = false
         }
     }
 
     // Tiles state (up to 4 streams)
     val tiles = remember {
         mutableStateListOf(
-            TileStream(0, ChannelEntity(playlistId = playlistId, name = initialTitle, url = initialUrl)),
+            TileStream(
+                0,
+                ChannelEntity(
+                    playlistId = playlistId,
+                    name = initialTitle,
+                    url = initialUrl,
+                    userAgent = initialUa,
+                    headers = initialHeaders,
+                    licenseUrl = initialDrmLicense,
+                    drmScheme = initialDrmScheme,
+                    drmHeaders = initialDrmHeaders
+                )
+            ),
             TileStream(1, null),
             TileStream(2, null),
             TileStream(3, null)
@@ -128,7 +179,15 @@ fun MultiViewScreen(
         if (availableChannels.isNotEmpty() && tiles[0].channel != null) {
             val matched = availableChannels.find { it.url == initialUrl || it.name == initialTitle }
             if (matched != null) {
-                tiles[0] = tiles[0].copy(channel = matched)
+                tiles[0] = tiles[0].copy(
+                    channel = matched.copy(
+                        userAgent = if (matched.userAgent.isNotBlank()) matched.userAgent else initialUa,
+                        headers = if (matched.headers.isNotEmpty()) matched.headers else initialHeaders,
+                        drmScheme = matched.drmScheme ?: initialDrmScheme,
+                        licenseUrl = matched.licenseUrl ?: initialDrmLicense,
+                        drmHeaders = if (matched.drmHeaders.isNotEmpty()) matched.drmHeaders else initialDrmHeaders
+                    )
+                )
             }
         }
     }
@@ -278,6 +337,7 @@ fun MultiViewScreen(
                 val targetIndex = channelPickerTileIndex!!
                 ChannelPickerModal(
                     channels = availableChannels,
+                    isLoading = isLoadingChannels,
                     onDismiss = { channelPickerTileIndex = null },
                     onChannelSelected = { selected ->
                         tiles[targetIndex] = tiles[targetIndex].copy(channel = selected)
@@ -357,9 +417,12 @@ fun TilePlayerView(
 ) {
     val context = LocalContext.current
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
+    var playbackError by remember { mutableStateOf<String?>(null) }
+    var retryTrigger by remember { mutableIntStateOf(0) }
 
-    DisposableEffect(tile.channel?.url) {
+    DisposableEffect(tile.channel?.url, retryTrigger) {
         val ch = tile.channel
+        playbackError = null
         if (ch != null && ch.url.isNotBlank()) {
             val lowerUrl = ch.url.lowercase()
             val manifestType = ch.headers["X-Manifest-Type"]?.lowercase() ?: ""
@@ -452,12 +515,28 @@ fun TilePlayerView(
                     playWhenReady = true
                     volume = if (isActive) 1f else 0f
                 }
-            exoPlayer = player
-        }
 
-        onDispose {
-            exoPlayer?.release()
-            exoPlayer = null
+            val listener = object : androidx.media3.common.Player.Listener {
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    playbackError = error.localizedMessage ?: "Playback error"
+                }
+                override fun onPlaybackStateChanged(state: Int) {
+                    if (state == androidx.media3.common.Player.STATE_READY) {
+                        playbackError = null
+                    }
+                }
+            }
+            player.addListener(listener)
+
+            exoPlayer = player
+
+            onDispose {
+                player.removeListener(listener)
+                player.release()
+                exoPlayer = null
+            }
+        } else {
+            onDispose { }
         }
     }
 
@@ -475,6 +554,7 @@ fun TilePlayerView(
                 color = if (isActive) Color(0xFF00E5FF) else Color(0xFF1E283D),
                 shape = RoundedCornerShape(8.dp)
             )
+            .clickable { onTileFocused() }
             .onFocusChanged { if (it.isFocused) onTileFocused() }
             .tvFocusable(cornerRadius = 8.dp)
     ) {
@@ -492,7 +572,49 @@ fun TilePlayerView(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Overlay Badges
+            // Playback error overlay with Retry button
+            if (playbackError != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xCC080B12))
+                        .padding(12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = Color(0xFFEF4444),
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Stream Offline / Error",
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = { retryTrigger++ },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E283D)),
+                            shape = RoundedCornerShape(6.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            modifier = Modifier.height(28.dp)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, tint = Color(0xFF00E5FF), modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Retry", color = Color.White, fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+
+            // Overlay Badges & Controls
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -501,20 +623,48 @@ fun TilePlayerView(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(Color(0xE60A0E18))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                ) {
-                    Text(
-                        text = "${tileIndex + 1} • ${tile.channel?.name}",
-                        color = Color.White,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xE60A0E18))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = "${tileIndex + 1} • ${tile.channel?.name}",
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    if (isActive) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(Color(0x3300E5FF))
+                                .border(1.dp, Color(0xFF00E5FF), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.VolumeUp,
+                                    contentDescription = "Active Audio",
+                                    tint = Color(0xFF00E5FF),
+                                    modifier = Modifier.size(11.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "AUDIO",
+                                    color = Color(0xFF00E5FF),
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                            }
+                        }
+                    }
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -535,14 +685,16 @@ fun TilePlayerView(
         } else {
             // Empty Tile placeholder
             Column(
-                modifier = Modifier.fillMaxSize().clickable { onSelectChannel() },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable { onSelectChannel() },
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, tint = Color(0xFF00E5FF), modifier = Modifier.size(36.dp))
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Assign Channel ${tileIndex + 1}",
+                    text = "Assign Live Channel ${tileIndex + 1}",
                     color = Color(0xFF8E9BAE),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium
@@ -555,32 +707,126 @@ fun TilePlayerView(
 @Composable
 fun ChannelPickerModal(
     channels: List<ChannelEntity>,
+    isLoading: Boolean,
     onDismiss: () -> Unit,
     onChannelSelected: (ChannelEntity) -> Unit
 ) {
+    var searchQuery by remember { mutableStateOf("") }
+    val filtered = remember(channels, searchQuery) {
+        if (searchQuery.isBlank()) channels
+        else {
+            val q = searchQuery.trim().lowercase()
+            channels.filter {
+                it.name.lowercase().contains(q) || it.group.lowercase().contains(q)
+            }
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Choose Channel for Multi-View", color = Color.White, fontWeight = FontWeight.Bold) },
+        title = {
+            Column {
+                Text(
+                    text = "Choose Live Channel for Multi-View",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = if (isLoading) "Loading live channels..." else "${filtered.size} live channels available",
+                    color = Color(0xFF8E9BAE),
+                    fontSize = 12.sp
+                )
+            }
+        },
         text = {
-            if (channels.isEmpty()) {
-                Text("No channels found in current playlist.", color = Color.Gray)
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth().height(360.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    items(channels) { ch ->
-                        Surface(
-                            onClick = { onChannelSelected(ch) },
-                            color = Color(0xFF101726),
-                            shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, Color(0xFF1E283D)),
-                            modifier = Modifier.fillMaxWidth().tvFocusable(cornerRadius = 8.dp)
-                        ) {
-                            Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Tv, contentDescription = null, tint = Color(0xFF00E5FF), modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(ch.name, color = Color.White, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Column(modifier = Modifier.fillMaxWidth().height(400.dp)) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search live channels or groups...", color = Color(0xFF6B7280), fontSize = 13.sp) },
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, contentDescription = "Search", tint = Color(0xFF00E5FF), modifier = Modifier.size(18.dp))
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear", tint = Color.Gray, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color(0xFF00E5FF),
+                        unfocusedBorderColor = Color(0xFF1E283D),
+                        focusedContainerColor = Color(0xFF090D16),
+                        unfocusedContainerColor = Color(0xFF090D16)
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                if (isLoading) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Color(0xFF00E5FF), modifier = Modifier.size(32.dp))
+                    }
+                } else if (filtered.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = if (searchQuery.isBlank()) "No live TV channels found in playlist." else "No matching live channels found.",
+                            color = Color.Gray,
+                            fontSize = 13.sp
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        items(filtered, key = { "${it.id}_${it.url}" }) { ch ->
+                            Surface(
+                                onClick = { onChannelSelected(ch) },
+                                color = Color(0xFF101726),
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(1.dp, Color(0xFF1E283D)),
+                                modifier = Modifier.fillMaxWidth().tvFocusable(cornerRadius = 8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.Tv,
+                                        contentDescription = null,
+                                        tint = Color(0xFF00E5FF),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = ch.name,
+                                            color = Color.White,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        if (ch.group.isNotBlank()) {
+                                            Text(
+                                                text = ch.group,
+                                                color = Color(0xFF8E9BAE),
+                                                fontSize = 11.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

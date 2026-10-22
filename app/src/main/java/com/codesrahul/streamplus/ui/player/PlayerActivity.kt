@@ -391,6 +391,9 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        if (::streamRecorder.isInitialized && streamRecorder.recordingState.value.isRecording) {
+            streamRecorder.stopRecording(this)
+        }
         castPlayer?.release()
         super.onDestroy()
     }
@@ -717,6 +720,8 @@ fun PlayerScreen(
     
     // Aspect Ratio State Tracking
     var sessionResizeMode by remember { mutableStateOf<Int?>(null) }
+    var currentVideoWidth by remember { mutableStateOf(0) }
+    var currentVideoHeight by remember { mutableStateOf(0) }
     
     // Reset session override if default setting changes or finally loads from DataStore
     LaunchedEffect(settingsState.defaultAspectRatio) {
@@ -1324,6 +1329,8 @@ fun PlayerScreen(
             }
 
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                currentVideoWidth = videoSize.width
+                currentVideoHeight = videoSize.height
                 activityContext?.setLastVideoRatio(videoSize.width, videoSize.height)
                 
                 // Auto-detect orientation if set to AUTO
@@ -1840,6 +1847,35 @@ fun PlayerScreen(
                 } else false
             }
     ) {
+        val autoResolvedMode = remember(currentVideoWidth, currentVideoHeight, activityContext) {
+            val displayMetrics = activityContext?.resources?.displayMetrics
+            if (currentVideoWidth <= 0 || currentVideoHeight <= 0 || displayMetrics == null) {
+                androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+            } else {
+                val screenW = displayMetrics.widthPixels.toFloat()
+                val screenH = displayMetrics.heightPixels.toFloat()
+                val screenRatio = if (screenW > screenH) screenW / screenH else screenH / screenW
+                val videoRatio = if (currentVideoWidth > currentVideoHeight) {
+                    currentVideoWidth.toFloat() / currentVideoHeight.toFloat()
+                } else {
+                    currentVideoHeight.toFloat() / currentVideoWidth.toFloat()
+                }
+                val diff = kotlin.math.abs((screenRatio - videoRatio).toDouble()).toFloat() / screenRatio
+                if (diff < 0.12f) {
+                    androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                } else {
+                    androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+                }
+            }
+        }
+
+        val defaultExoMode = when (settingsState.defaultAspectRatio) {
+            1 -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+            2 -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL
+            3 -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+            else -> autoResolvedMode // 0 = Auto
+        }
+
         AndroidView(
             factory = { _ -> // Ignore the view creation context, use the captured activity context
                 // Explicitly wrap the context with the theme to ensure MediaRouteButton works
@@ -2035,30 +2071,26 @@ fun PlayerScreen(
                     showSettingsSheet = true
                 }
                 
-                val defaultExoMode = when (settingsState.defaultAspectRatio) {
-                    1 -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL
-                    2 -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                    else -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+                val targetMode = if (sessionResizeMode != null) {
+                    if (sessionResizeMode == -1) autoResolvedMode else sessionResizeMode!!
+                } else {
+                    defaultExoMode
                 }
-                
-                val targetMode = sessionResizeMode ?: defaultExoMode
                 if (playerView.resizeMode != targetMode) {
                     playerView.resizeMode = targetMode
                 }
 
                 playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.exo_resize_mode_button)?.setOnClickListener {
-                    val newMode = when (playerView.resizeMode) {
-                        androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL
-                        androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                        else -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    val currentMode = sessionResizeMode ?: if (settingsState.defaultAspectRatio == 0) -1 else playerView.resizeMode
+                    val (newMode, msg) = when (currentMode) {
+                        -1 -> Pair(androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT, "Fit")
+                        androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT -> Pair(androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL, "Fill")
+                        androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL -> Pair(androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM, "Zoom")
+                        else -> Pair(-1, "Auto")
                     }
                     sessionResizeMode = newMode
-                    playerView.resizeMode = newMode
-                    val msg = when(newMode) {
-                        androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL -> "Fill"
-                        androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM -> "Zoom"
-                        else -> "Fit"
-                    }
+                    val resolvedMode = if (newMode == -1) autoResolvedMode else newMode
+                    playerView.resizeMode = resolvedMode
                     android.widget.Toast.makeText(playerView.context, "Resize Mode: $msg", android.widget.Toast.LENGTH_SHORT).show()
                 }
                 playerView.findViewById<android.view.View>(com.codesrahul.streamplus.R.id.btn_landscape)?.setOnClickListener {
@@ -2251,9 +2283,20 @@ fun PlayerScreen(
         // DVR Stream Recording State
         val recordingState by streamRecorder.recordingState.collectAsState()
 
-        // Active Recording HUD Pill (Always visible while recording)
+        val isLocalMedia = remember(currentStreamUrl, currentPlaylistUris) {
+            currentStreamUrl.startsWith("content://") ||
+                    currentStreamUrl.startsWith("file://") ||
+                    currentStreamUrl.startsWith("/storage/") ||
+                    currentStreamUrl.startsWith("/data/") ||
+                    (currentPlaylistUris?.firstOrNull()?.let {
+                        it.startsWith("content://") || it.startsWith("file://") || it.startsWith("/storage/") || it.startsWith("/data/")
+                    } ?: false)
+        }
+        val isLiveTv = !isLikelyVod && !isLocalMedia
+
+        // Active Recording HUD Pill (Always visible while recording Live TV)
         AnimatedVisibility(
-            visible = recordingState.isRecording && !isInPip,
+            visible = isLiveTv && recordingState.isRecording && !isInPip,
             enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
             exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
             modifier = Modifier
@@ -2291,9 +2334,9 @@ fun PlayerScreen(
             }
         }
 
-        // Quick Controls Floating Action Bar (DVR Record + Multi-View)
+        // Quick Controls Floating Action Bar (DVR Record + Multi-View: strictly Live TV channels only)
         AnimatedVisibility(
-            visible = isControlsVisible && !isInPip && !showChannelDrawer,
+            visible = isLiveTv && isControlsVisible && !isInPip && !showChannelDrawer,
             enter = fadeIn() + slideInHorizontally(initialOffsetX = { it }),
             exit = fadeOut() + slideOutHorizontally(targetOffsetX = { it }),
             modifier = Modifier
@@ -2309,8 +2352,11 @@ fun PlayerScreen(
                     onClick = {
                         if (recordingState.isRecording) {
                             streamRecorder.stopRecording(context)
-                            android.widget.Toast.makeText(context, "Recording saved to Movies/StreamPlus_Recordings", android.widget.Toast.LENGTH_LONG).show()
                         } else {
+                            if (!currentDrmScheme.isNullOrBlank()) {
+                                android.widget.Toast.makeText(context, "DRM-protected streams cannot be recorded", android.widget.Toast.LENGTH_LONG).show()
+                                return@Surface
+                            }
                             streamRecorder.startRecording(
                                 context = context,
                                 streamUrl = currentStreamUrl,
@@ -2318,7 +2364,6 @@ fun PlayerScreen(
                                 headers = currentHeaders,
                                 userAgent = currentUserAgent
                             )
-                            android.widget.Toast.makeText(context, "Started recording: $currentStreamTitle", android.widget.Toast.LENGTH_SHORT).show()
                         }
                     },
                     color = if (recordingState.isRecording) Color(0xFFEF4444) else Color(0xCC101726),
@@ -2353,6 +2398,13 @@ fun PlayerScreen(
                             putExtra(PlayerActivity.EXTRA_STREAM_URL, currentStreamUrl)
                             putExtra(PlayerActivity.EXTRA_STREAM_TITLE, currentStreamTitle)
                             putExtra(PlayerActivity.EXTRA_PLAYLIST_ID, playlistId)
+                            putExtra(PlayerActivity.EXTRA_USER_AGENT, currentUserAgent)
+                            putExtra(PlayerActivity.EXTRA_HEADERS, HashMap(currentHeaders))
+                            putExtra(PlayerActivity.EXTRA_DRM_SCHEME, currentDrmScheme)
+                            putExtra(PlayerActivity.EXTRA_DRM_LICENSE_URL, currentDrmLicenseUrl)
+                            if (currentDrmHeaders.isNotEmpty()) {
+                                putExtra(PlayerActivity.EXTRA_DRM_HEADERS, HashMap(currentDrmHeaders))
+                            }
                         }
                         context.startActivity(intent)
                     },

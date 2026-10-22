@@ -39,7 +39,7 @@ data class AppSettings(
     val brightnessGestures: Boolean = false,
     val resumePlaying: Boolean = false,
     val playlistCache: Boolean = true,
-    val defaultAspectRatio: Int = 0, // 0=Fit,1=Fill,2=Zoom
+    val defaultAspectRatio: Int = 0, // 0=Auto, 1=Fit, 2=Fill, 3=Zoom
     val decoderPriority: Int = 0, // 0=Device, 1=App, 2=DeviceOnly
     val dolbyVision: Boolean = false,
     val disableFrameRateCheck: Boolean = false,

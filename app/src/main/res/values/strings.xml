@@ -94,8 +94,8 @@
     <string name="default_audio_track_desc">Select default playback language when available</string>
     <string name="network_buffer">Network Buffer</string>
     <string name="network_buffer_desc">Set seconds of video pre-cached before playing</string>
-    <string name="default_aspect_ratio">Default Aspect Ratio</string>
-    <string name="default_aspect_ratio_desc">Default screen rendering dimension layout</string>
+    <string name="default_aspect_ratio">Default Video Resize Mode</string>
+    <string name="default_aspect_ratio_desc">Default screen rendering dimension layout (Auto, Fit, Fill, Zoom)</string>
     <string name="screen_rotation">Screen Rotation</string>
     <string name="screen_rotation_desc">Define full screen player rotation preference</string>
     <string name="frame_rate_matching">Frame Rate Matching</string>

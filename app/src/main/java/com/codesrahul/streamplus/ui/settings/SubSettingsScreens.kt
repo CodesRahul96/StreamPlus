@@ -1061,10 +1061,10 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         showDivider = true
                     )
                     
-                    val aspectOptions = listOf("Fit", "Fill", "Zoom")
+                    val aspectOptions = listOf("Auto", "Fit", "Fill", "Zoom")
                     SettingsClickableItem(
                         title = stringResource(com.codesrahul.streamplus.R.string.default_aspect_ratio),
-                        subtitle = aspectOptions.getOrElse(settingsState.defaultAspectRatio) { "Fit" },
+                        subtitle = aspectOptions.getOrElse(settingsState.defaultAspectRatio) { "Auto" },
                         icon = Icons.Default.AspectRatio,
                         iconColor = OrangeWarm,
                         onClick = { showAspectRatioDialog = true },
@@ -1234,20 +1234,21 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
     }
 
     if (showAspectRatioDialog) {
-        val aspectOptions = listOf("Fit", "Fill", "Zoom")
-        val selectedOption = aspectOptions.getOrNull(settingsState.defaultAspectRatio) ?: "Fit"
+        val aspectOptions = listOf("Auto", "Fit", "Fill", "Zoom")
+        val selectedOption = aspectOptions.getOrNull(settingsState.defaultAspectRatio) ?: "Auto"
         PremiumSelectionDialog(
             title = stringResource(com.codesrahul.streamplus.R.string.default_aspect_ratio),
             subtitle = stringResource(com.codesrahul.streamplus.R.string.default_aspect_ratio_desc),
             options = aspectOptions,
             selectedOption = selectedOption,
             onOptionSelected = { option ->
-                viewModel.setDefaultAspectRatio(aspectOptions.indexOf(option))
+                viewModel.setDefaultAspectRatio(aspectOptions.indexOf(option).coerceAtLeast(0))
             },
             onDismiss = { showAspectRatioDialog = false },
             labelProvider = { it },
             descriptionProvider = { option ->
                 when(option) {
+                    "Auto" -> "Smart detection — adapts dynamically to content and screen dimensions."
                     "Fit" -> "Preserve original aspect ratio. May show black bars."
                     "Fill" -> "Stretch video to cover full screen dimensions."
                     "Zoom" -> "Crop video slightly to fill screen without stretching."
@@ -1257,6 +1258,7 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
             iconProvider = { option ->
                 Icon(
                     imageVector = when(option) {
+                        "Auto" -> Icons.Default.AutoAwesome
                         "Fit" -> Icons.Default.CenterFocusStrong
                         "Fill" -> Icons.Default.AspectRatio
                         else -> Icons.Default.ZoomOutMap

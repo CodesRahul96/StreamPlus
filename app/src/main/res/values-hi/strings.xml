@@ -94,8 +94,8 @@
     <string name="default_audio_track_desc">उपलब्ध होने पर डिफ़ॉल्ट प्लेबैक भाषा चुनें</string>
     <string name="network_buffer">नेटवर्क बफर</string>
     <string name="network_buffer_desc">खेलने से पहले वीडियो प्री-कैश के सेकंड सेट करें</string>
-    <string name="default_aspect_ratio">डिफ़ॉल्ट पहलू अनुपात</string>
-    <string name="default_aspect_ratio_desc">डिफ़ॉल्ट स्क्रीन रेंडरिंग आयाम लेआउट</string>
+    <string name="default_aspect_ratio">डिफ़ॉल्ट वीडियो आकार मोड</string>
+    <string name="default_aspect_ratio_desc">डिफ़ॉल्ट स्क्रीन रेंडरिंग आयाम लेआउट (ऑटो, फिट, फिल, ज़ूम)</string>
     <string name="screen_rotation">स्क्रीन रोटेशन</string>
     <string name="screen_rotation_desc">पूर्ण स्क्रीन प्लेयर रोटेशन प्राथमिकता को परिभाषित करें</string>
     <string name="frame_rate_matching">फ्रेम दर मिलान</string>
