@@ -123,9 +123,6 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
             ) {
-                // Editorial Header Banner
-                SettingsHeaderBanner()
-
                 // ── Aesthetics ───────────────────────────────────────────
                 SettingsSectionHeader(stringResource(com.codesrahul.streamplus.R.string.sec_aesthetics))
                 SettingsCard {
@@ -290,125 +287,7 @@ fun SettingsMainList(onNavigate: (String) -> Unit, onBack: () -> Unit) {
     }
 }
 
-@Composable
-fun SettingsHeaderBanner() {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val version = remember {
-        try {
-            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.0"
-        } catch (e: Exception) { "1.0.0" }
-    }
-    
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Sleek 42dp Squircle Brand Icon
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(
-                        Brush.linearGradient(
-                            listOf(
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
-                            )
-                        )
-                    )
-                    .border(
-                        1.dp,
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
-                        RoundedCornerShape(12.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
 
-            Spacer(modifier = Modifier.width(14.dp))
-
-            // App Name & Version Info
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "StreamPlus",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        letterSpacing = 0.15.sp
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
-                    ) {
-                        Text(
-                            text = "PLUS",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontSize = 9.5.sp,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "v$version • Universal Stream Engine",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
-                    fontSize = 12.sp
-                )
-            }
-
-            // Minimal Live Engine Status Pill
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = Color(0xFF10B981).copy(alpha = 0.1f),
-                border = BorderStroke(0.5.dp, Color(0xFF10B981).copy(alpha = 0.25f))
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .background(Color(0xFF10B981), CircleShape)
-                    )
-                    Spacer(modifier = Modifier.width(5.dp))
-                    Text(
-                        text = "ACTIVE",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF10B981),
-                        fontSize = 10.sp,
-                        letterSpacing = 0.5.sp
-                    )
-                }
-            }
-        }
-    }
-}
 
 @Composable
 fun SettingsSectionHeader(title: String) {
