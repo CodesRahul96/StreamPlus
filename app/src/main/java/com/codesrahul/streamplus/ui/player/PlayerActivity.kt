@@ -317,8 +317,12 @@ class PlayerActivity : AppCompatActivity() {
             }
 
             setContent {
+                val settings by settingsRepository.settings.collectAsState(initial = com.codesrahul.streamplus.data.settings.AppSettings())
                 key(streamUrl, streamTitle) {
-                    StreamPlusTheme {
+                    StreamPlusTheme(
+                        themeMode = settings.themeMode,
+                        accentColor = settings.accentColor
+                    ) {
                         PlayerScreen(
                             streamUrl = streamUrl,
                             streamTitle = streamTitle,

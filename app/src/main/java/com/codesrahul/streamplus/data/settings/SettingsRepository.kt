@@ -26,6 +26,7 @@ enum class PlayerOrientation {
 
 data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val accentColor: String = "blue",
     val dynamicTheme: Boolean = false,
     val hidePlaylistUri: Boolean = false,
     val hideChannelImage: Boolean = false,
@@ -89,6 +90,7 @@ class SettingsRepository @Inject constructor(
 ) {
     private object Keys {
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val ACCENT_COLOR = stringPreferencesKey("accent_color")
         val DYNAMIC_THEME = booleanPreferencesKey("dynamic_theme")
         val HIDE_PLAYLIST_URI = booleanPreferencesKey("hide_playlist_uri")
         val HIDE_CHANNEL_IMAGE = booleanPreferencesKey("hide_channel_image")
@@ -146,6 +148,7 @@ class SettingsRepository @Inject constructor(
             themeMode = try {
                 ThemeMode.valueOf(prefs[Keys.THEME_MODE] ?: ThemeMode.SYSTEM.name)
             } catch (e: Exception) { ThemeMode.SYSTEM },
+            accentColor = prefs[Keys.ACCENT_COLOR] ?: "blue",
             dynamicTheme = prefs[Keys.DYNAMIC_THEME] ?: true,
             hidePlaylistUri = prefs[Keys.HIDE_PLAYLIST_URI] ?: false,
             hideChannelImage = prefs[Keys.HIDE_CHANNEL_IMAGE] ?: false,
@@ -204,6 +207,10 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { it[Keys.THEME_MODE] = mode.name }
+    }
+
+    suspend fun setAccentColor(accentColor: String) {
+        context.dataStore.edit { it[Keys.ACCENT_COLOR] = accentColor }
     }
 
     suspend fun setDynamicTheme(enabled: Boolean) {

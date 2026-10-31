@@ -12,15 +12,15 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
 import com.codesrahul.streamplus.data.settings.ThemeMode
-private val LightColorScheme = lightColorScheme(
-    primary = BrandPrimary,
+fun getLightColorScheme(accent: AccentColor = AccentColor.BLUE) = lightColorScheme(
+    primary = accent.lightPrimary,
     onPrimary = Color.White,
-    primaryContainer = BrandPrimary.copy(alpha = 0.15f),
-    onPrimaryContainer = BrandPrimaryDark,
-    secondary = BrandSecondary,
+    primaryContainer = accent.lightPrimary.copy(alpha = 0.15f),
+    onPrimaryContainer = accent.darkPrimary,
+    secondary = accent.secondary,
     onSecondary = Color.White,
-    secondaryContainer = BrandSecondary.copy(alpha = 0.15f),
-    onSecondaryContainer = BrandSecondary,
+    secondaryContainer = accent.secondary.copy(alpha = 0.15f),
+    onSecondaryContainer = accent.secondary,
     background = LightBackground,
     onBackground = LightOnSurface,
     surface = LightSurface,
@@ -33,15 +33,15 @@ private val LightColorScheme = lightColorScheme(
     onError = Color.White
 )
 
-private val DarkColorScheme = darkColorScheme(
-    primary = BrandPrimaryDark,
+fun getDarkColorScheme(accent: AccentColor = AccentColor.BLUE) = darkColorScheme(
+    primary = accent.darkPrimary,
     onPrimary = Color.White,
-    primaryContainer = BrandPrimaryDark.copy(alpha = 0.2f),
-    onPrimaryContainer = BrandPrimary,
-    secondary = BrandSecondary,
+    primaryContainer = accent.darkPrimary.copy(alpha = 0.2f),
+    onPrimaryContainer = accent.lightPrimary,
+    secondary = accent.secondary,
     onSecondary = Color.White,
-    secondaryContainer = BrandSecondary.copy(alpha = 0.2f),
-    onSecondaryContainer = BrandSecondary,
+    secondaryContainer = accent.secondary.copy(alpha = 0.2f),
+    onSecondaryContainer = accent.secondary,
     background = DarkBackground,
     onBackground = DarkOnSurface,
     surface = DarkSurface,
@@ -54,15 +54,15 @@ private val DarkColorScheme = darkColorScheme(
     onError = Color.White
 )
 
-private val PitchBlackColorScheme = darkColorScheme(
-    primary = BrandPrimaryDark,
+fun getPitchBlackColorScheme(accent: AccentColor = AccentColor.BLUE) = darkColorScheme(
+    primary = accent.darkPrimary,
     onPrimary = Color.White,
-    primaryContainer = BrandPrimaryDark.copy(alpha = 0.15f),
-    onPrimaryContainer = BrandPrimary,
-    secondary = BrandSecondary,
+    primaryContainer = accent.darkPrimary.copy(alpha = 0.15f),
+    onPrimaryContainer = accent.lightPrimary,
+    secondary = accent.secondary,
     onSecondary = Color.White,
-    secondaryContainer = BrandSecondary.copy(alpha = 0.15f),
-    onSecondaryContainer = BrandSecondary,
+    secondaryContainer = accent.secondary.copy(alpha = 0.15f),
+    onSecondaryContainer = accent.secondary,
     background = PitchBlackBackground,
     onBackground = PitchBlackOnSurface,
     surface = PitchBlackSurface,
@@ -78,6 +78,7 @@ private val PitchBlackColorScheme = darkColorScheme(
 @Composable
 fun StreamPlusTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
+    accentColor: String = "blue",
     content: @Composable () -> Unit
 ) {
     val darkTheme = when (themeMode) {
@@ -86,11 +87,12 @@ fun StreamPlusTheme(
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
 
+    val accent = AccentColor.fromId(accentColor)
     val colorScheme = when {
-        themeMode == ThemeMode.PITCH_BLACK -> PitchBlackColorScheme
-        themeMode == ThemeMode.DARK -> DarkColorScheme
-        themeMode == ThemeMode.LIGHT -> LightColorScheme
-        else -> if (isSystemInDarkTheme()) DarkColorScheme else LightColorScheme
+        themeMode == ThemeMode.PITCH_BLACK -> getPitchBlackColorScheme(accent)
+        themeMode == ThemeMode.DARK -> getDarkColorScheme(accent)
+        themeMode == ThemeMode.LIGHT -> getLightColorScheme(accent)
+        else -> if (isSystemInDarkTheme()) getDarkColorScheme(accent) else getLightColorScheme(accent)
     }
 
     val view = LocalView.current

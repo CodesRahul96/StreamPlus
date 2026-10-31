@@ -48,6 +48,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.setThemeMode(mode) }
     }
 
+    fun setAccentColor(color: String) {
+        viewModelScope.launch { settingsRepository.setAccentColor(color) }
+    }
+
     fun setDynamicTheme(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setDynamicTheme(enabled) }
     }

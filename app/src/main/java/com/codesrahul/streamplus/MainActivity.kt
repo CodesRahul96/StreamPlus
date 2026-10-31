@@ -53,7 +53,8 @@ class MainActivity : ComponentActivity() {
                      androidx.compose.ui.platform.LocalContext provides localContext
                  ) {
                      com.codesrahul.streamplus.ui.theme.StreamPlusTheme(
-                         themeMode = settingsState.themeMode
+                         themeMode = settingsState.themeMode,
+                         accentColor = settingsState.accentColor
                      ) {
                          Surface(
                              modifier = Modifier.fillMaxSize(),

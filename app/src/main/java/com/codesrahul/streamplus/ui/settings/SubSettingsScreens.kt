@@ -2,6 +2,9 @@ package com.codesrahul.streamplus.ui.settings
 
 import com.codesrahul.streamplus.data.settings.ThemeMode
 import com.codesrahul.streamplus.data.settings.PlayerOrientation
+import com.codesrahul.streamplus.ui.theme.AccentColor
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 
 import android.content.Intent
 import android.graphics.Bitmap
@@ -13,7 +16,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -152,6 +158,33 @@ fun AppearanceSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     }
                     
                     Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                // Accent Color Section
+                SettingsCard {
+                    SettingsItemHeader(
+                        title = "Accent Color",
+                        subtitle = "Personalize app highlights, badges, buttons, and controls",
+                        icon = Icons.Default.Palette,
+                        iconColor = MaterialTheme.colorScheme.primary
+                    )
+
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp)
+                    ) {
+                        items(AccentColor.entries) { accent ->
+                            val isSelected = accent.id.equals(settingsState.accentColor, ignoreCase = true)
+                            AccentColorCard(
+                                accent = accent,
+                                isSelected = isSelected,
+                                onClick = { viewModel.setAccentColor(accent.id) }
+                            )
+                        }
+                    }
                 }
 
                 // UI Customization Section
@@ -401,6 +434,63 @@ private fun ThemeCard(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun AccentColorCard(
+    accent: AccentColor,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+    val displayColor = if (isLight) accent.lightPrimary else accent.darkPrimary
+
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isSelected) 1.08f else 1.0f,
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy),
+        label = "accentScale"
+    )
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .graphicsLayer(scaleX = scale, scaleY = scale)
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp, horizontal = 2.dp)
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(displayColor)
+                .then(
+                    if (isSelected) {
+                        Modifier.border(3.dp, Color.White, CircleShape)
+                    } else {
+                        Modifier.border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape)
+                    }
+                )
+        ) {
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Selected",
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Text(
+            text = accent.title.substringBefore(" (").substringBefore(" "),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
