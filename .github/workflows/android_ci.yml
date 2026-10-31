@@ -1,0 +1,58 @@
+name: Android CI & 16KB Alignment Gate
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+        cache: 'gradle'
+
+    - name: Grant Execute Permission for Gradlew
+      run: chmod +x gradlew
+
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug --stacktrace
+
+    - name: Verify 16 KB ELF Page Alignment
+      run: |
+        APK_PATH=$(find app/ -name "*.apk" | head -n 1)
+        if [ -z "$APK_PATH" ]; then
+          echo "No APK found to verify."
+          exit 1
+        fi
+        echo "Found APK at $APK_PATH. Inspecting native libraries for 16KB boundary alignment..."
+        python3 -c "
+        import zipfile, sys
+        has_error = False
+        with zipfile.ZipFile('$APK_PATH') as z:
+            for info in z.infolist():
+                if info.filename.endswith('.so'):
+                    with open('$APK_PATH', 'rb') as f:
+                        f.seek(info.header_offset + 26)
+                        nlen = int.from_bytes(f.read(2), 'little')
+                        elen = int.from_bytes(f.read(2), 'little')
+                        data_offset = info.header_offset + 30 + nlen + elen
+                    is_16k = (data_offset % 16384 == 0) and (info.compress_type == 0)
+                    print(f'{info.filename}: uncompressed={info.compress_type == 0}, offset={data_offset}, 16kb_aligned={is_16k}')
+                    if not is_16k:
+                        has_error = True
+        if has_error:
+            print('ERROR: One or more native shared libraries are not 16KB aligned!')
+            sys.exit(1)
+        else:
+            print('SUCCESS: All native shared libraries are 100% 16KB page-aligned.')
+        "
