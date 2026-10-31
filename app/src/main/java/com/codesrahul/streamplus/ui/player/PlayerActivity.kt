@@ -279,7 +279,7 @@ class PlayerActivity : AppCompatActivity() {
             val resolvedHeaders = headers.toMutableMap()
             val resolvedDrmHeaders = drmHeaders.toMutableMap()
 
-            withContext(Dispatchers.IO) {
+            val (freshChannel, initialSettings) = withContext(Dispatchers.IO) {
                 val fresh = if (playlistId != -1 && streamTitle != "Unknown Stream") {
                     channelDao.getChannelByIdentity(streamTitle, groupTitle, playlistId)
                         ?: channelDao.getChannelByUrl(streamUrl)
@@ -287,19 +287,22 @@ class PlayerActivity : AppCompatActivity() {
                     channelDao.getChannelByUrl(streamUrl)
                 } else null
 
-                if (fresh != null) {
-                    if (streamUrl.isBlank()) streamUrl = fresh.url
-                    if (userAgent.isBlank() || userAgent.startsWith("ExoPlayerLib/")) userAgent = fresh.userAgent
-                    referer = fresh.headers["Referer"] ?: fresh.headers["referer"] ?: referer
-                    cookie = fresh.headers["Cookie"] ?: fresh.headers["cookie"] ?: cookie
-                    origin = fresh.headers["Origin"] ?: fresh.headers["origin"] ?: origin
-                    drmLicenseUrl = fresh.licenseUrl ?: drmLicenseUrl
-                    drmScheme = fresh.drmScheme ?: drmScheme
-                    isVodExtra = fresh.isVod
-                    streamTypeExtra = fresh.streamType
-                    resolvedHeaders.putAll(fresh.headers)
-                    resolvedDrmHeaders.putAll(fresh.drmHeaders)
-                }
+                val settings = settingsRepository.settings.first()
+                Pair(fresh, settings)
+            }
+
+            if (freshChannel != null) {
+                if (streamUrl.isBlank()) streamUrl = freshChannel.url
+                if (userAgent.isBlank() || userAgent.startsWith("ExoPlayerLib/")) userAgent = freshChannel.userAgent
+                referer = freshChannel.headers["Referer"] ?: freshChannel.headers["referer"] ?: referer
+                cookie = freshChannel.headers["Cookie"] ?: freshChannel.headers["cookie"] ?: cookie
+                origin = freshChannel.headers["Origin"] ?: freshChannel.headers["origin"] ?: origin
+                drmLicenseUrl = freshChannel.licenseUrl ?: drmLicenseUrl
+                drmScheme = freshChannel.drmScheme ?: drmScheme
+                isVodExtra = freshChannel.isVod
+                streamTypeExtra = freshChannel.streamType
+                resolvedHeaders.putAll(freshChannel.headers)
+                resolvedDrmHeaders.putAll(freshChannel.drmHeaders)
             }
 
             // Update App Shortcuts with the current channel info (only for valid IPTV channels, never local media)
@@ -317,7 +320,7 @@ class PlayerActivity : AppCompatActivity() {
             }
 
             setContent {
-                val settings by settingsRepository.settings.collectAsState(initial = com.codesrahul.streamplus.data.settings.AppSettings())
+                val settings by settingsRepository.settings.collectAsState(initial = initialSettings)
                 key(streamUrl, streamTitle) {
                     StreamPlusTheme(
                         themeMode = settings.themeMode,
@@ -355,7 +358,8 @@ class PlayerActivity : AppCompatActivity() {
                             playlistTitles = playlistTitles,
                             playlistIndex = playlistIndex,
                             isVod = isVodExtra,
-                            streamType = streamTypeExtra
+                            streamType = streamTypeExtra,
+                            initialSettings = initialSettings
                         )
                     }
                 }
@@ -493,6 +497,11 @@ private fun generateClearKeyJson(raw: String): String? {
     return if (keysJson.isNotBlank()) "{\"keys\":[$keysJson],\"type\":\"temporary\"}" else null
 }
 
+enum class GestureTarget {
+    BRIGHTNESS,
+    VOLUME
+}
+
 @Composable
 fun PlayerScreen(
     streamUrl: String,
@@ -526,7 +535,8 @@ fun PlayerScreen(
     playlistTitles: Array<String>? = null,
     playlistIndex: Int = -1,
     isVod: Boolean = false,
-    streamType: String = ""
+    streamType: String = "",
+    initialSettings: com.codesrahul.streamplus.data.settings.AppSettings = com.codesrahul.streamplus.data.settings.AppSettings()
 ) {
     val context = LocalContext.current
     val activityContext = remember(context) {
@@ -539,7 +549,7 @@ fun PlayerScreen(
     val scope = rememberCoroutineScope()
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     val playerHolder = remember { PlayerHolder(context, okHttpClientProvider) }
-    val settingsState by settingsRepository.settings.collectAsState(initial = com.codesrahul.streamplus.data.settings.AppSettings())
+    val settingsState by settingsRepository.settings.collectAsState(initial = initialSettings)
     
     // Dynamic Stream & DRM State for seamless in-player channel switching
     var currentStreamUrl by remember { mutableStateOf(streamUrl) }
@@ -620,7 +630,7 @@ fun PlayerScreen(
     var videoCodec by remember { mutableStateOf("") }
     var videoFps by remember { mutableStateOf("") }
     var audioChannels by remember { mutableStateOf("") }
-    var activeDecoderMode by remember { mutableIntStateOf(settingsState.decoderPriority) }
+    var activeDecoderMode by remember { mutableIntStateOf(initialSettings.decoderPriority) }
 
     // Quick Channel Drawer State
     var showChannelDrawer by remember { mutableStateOf(false) }
@@ -706,10 +716,22 @@ fun PlayerScreen(
     // We need to wait for player to be created, so we'll do this inside the player creation or a separate effect dependent on player
     
     // Gesture State
+    val initialBrightness = remember {
+        val lp = activityContext?.window?.attributes?.screenBrightness
+        if (lp != null && lp >= 0f) lp else 0.5f
+    }
+    val initialVolume = remember {
+        val am = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+        val max = am?.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC) ?: 15
+        val curr = am?.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) ?: 7
+        if (max > 0) curr.toFloat() / max else 0.5f
+    }
+    var brightnessLevel by remember { mutableFloatStateOf(initialBrightness) }
+    var volumeLevel by remember { mutableFloatStateOf(initialVolume) }
+    var activeGestureTarget by remember { mutableStateOf(GestureTarget.BRIGHTNESS) }
+
     var showGestureOverlay by remember { mutableStateOf(false) }
     var isGestureScrolling by remember { mutableStateOf(false) }
-    var gestureIcon by remember { mutableStateOf<ImageVector?>(null) }
-    var gestureText by remember { mutableStateOf("") }
     var gestureLevel by remember { mutableFloatStateOf(0f) }
     var gestureTrigger by remember { mutableLongStateOf(0L) }
     var isTouching by remember { mutableStateOf(false) }
@@ -735,7 +757,7 @@ fun PlayerScreen(
     // Debounced Auto-Hide for Gesture Overlay
     LaunchedEffect(gestureTrigger, isTouching) {
         if (showGestureOverlay && !isTouching && gestureTrigger > 0L) {
-            kotlinx.coroutines.delay(1200)
+            kotlinx.coroutines.delay(1000)
             showGestureOverlay = false
         }
     }
@@ -1949,8 +1971,8 @@ fun PlayerScreen(
                                     val newVal = (curr + delta).coerceIn(0f, 1f)
                                     lp.screenBrightness = newVal
                                     win.attributes = lp
-                                    gestureText = "Brightness: ${(newVal * 100).toInt()}%"
-                                    gestureIcon = Icons.Default.BrightnessMedium
+                                    activeGestureTarget = GestureTarget.BRIGHTNESS
+                                    brightnessLevel = newVal
                                     gestureLevel = newVal
                                     showGestureOverlay = true
                                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
@@ -1970,9 +1992,10 @@ fun PlayerScreen(
                                     volumeAccumulator -= (chg * step) // Reduce accumulator by one step
                                     
                                     audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, target, 0)
-                                    gestureText = "Volume: ${(target * 100 / max)}%"
-                                    gestureIcon = if (target == 0) Icons.Default.VolumeOff else Icons.Default.VolumeUp
-                                    gestureLevel = target.toFloat() / max
+                                    activeGestureTarget = GestureTarget.VOLUME
+                                    val newFraction = target.toFloat() / max
+                                    volumeLevel = newFraction
+                                    gestureLevel = newFraction
                                     showGestureOverlay = true
                                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                                 }
@@ -2028,7 +2051,7 @@ fun PlayerScreen(
                         android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
                             isTouching = false
                             volumeAccumulator = 0f
-                            if (isGestureScrolling) {
+                            if (isGestureScrolling || showGestureOverlay) {
                                 isGestureScrolling = false
                                 gestureTrigger = System.currentTimeMillis()
                             }
@@ -2176,7 +2199,7 @@ fun PlayerScreen(
 
         // Small Lock Toggle Overlay (Only visible when controls are visible AND unlocked)
         AnimatedVisibility(
-            visible = isControlsVisible && !isLocked && !isInPip,
+            visible = isControlsVisible && !isLocked && !isInPip && !showGestureOverlay,
             enter = fadeIn() + if (isLandscape) slideInHorizontally() else slideInVertically(initialOffsetY = { -it }),
             exit = fadeOut() + if (isLandscape) slideOutHorizontally() else slideOutVertically(targetOffsetY = { -it }),
             modifier = Modifier
@@ -2252,70 +2275,164 @@ fun PlayerScreen(
             }
         }
 
-    // Indication Overlay (Gestures)
-    val animatedGestureLevel by animateFloatAsState(
-        targetValue = gestureLevel,
-        animationSpec = spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioNoBouncy),
-        label = "gestureLevel"
+    // Animated gesture levels
+    val animatedBrightnessLevel by animateFloatAsState(
+        targetValue = brightnessLevel.coerceIn(0f, 1f),
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy),
+        label = "brightnessLevel"
     )
+    val animatedVolumeLevel by animateFloatAsState(
+        targetValue = volumeLevel.coerceIn(0f, 1f),
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy),
+        label = "volumeLevel"
+    )
+
+    // Brightness Indicator Bar: Triggered on LEFT side -> Displayed on RIGHT side
     AnimatedVisibility(
-        visible = showGestureOverlay && !isInPip,
-        enter = fadeIn() + scaleIn(initialScale = 0.9f),
-        exit = fadeOut() + scaleOut(targetScale = 0.9f),
-        modifier = Modifier.align(Alignment.Center)
+        visible = showGestureOverlay && !isInPip && activeGestureTarget == GestureTarget.BRIGHTNESS,
+        enter = fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) + slideInHorizontally(
+            initialOffsetX = { it },
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+        ),
+        exit = fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) + slideOutHorizontally(
+            targetOffsetX = { it },
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+        ),
+        modifier = Modifier
+            .align(Alignment.CenterEnd)
+            .padding(end = if (isLandscape) 36.dp else 20.dp)
     ) {
         Surface(
-            color = Color(0xCC0E0E16),
+            color = Color(0xD90E0E18),
             shape = RoundedCornerShape(24.dp),
-            border = BorderStroke(1.dp, Color(0xFF06B6D4).copy(alpha = 0.25f))
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)),
+            shadowElevation = 10.dp
         ) {
             Column(
-                modifier = Modifier.padding(horizontal = 36.dp, vertical = 24.dp),
+                modifier = Modifier
+                    .width(48.dp)
+                    .height(200.dp)
+                    .padding(vertical = 14.dp, horizontal = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                gestureIcon?.let {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(Color(0xFF06B6D4).copy(alpha = 0.12f), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = it,
-                            contentDescription = null,
-                            tint = Color(0xFF06B6D4),
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
+                val icon = when {
+                    animatedBrightnessLevel >= 0.7f -> Icons.Default.BrightnessHigh
+                    animatedBrightnessLevel >= 0.3f -> Icons.Default.BrightnessMedium
+                    else -> Icons.Default.BrightnessLow
                 }
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = gestureText,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
+                Icon(
+                    imageVector = icon,
+                    contentDescription = "Brightness",
+                    tint = Color(0xFF38BDF8),
+                    modifier = Modifier.size(24.dp)
                 )
-                Spacer(modifier = Modifier.height(16.dp))
-                // Glassy Progress Bar
+
                 Box(
                     modifier = Modifier
-                        .width(140.dp)
-                        .height(6.dp)
-                        .background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(3.dp))
+                        .width(8.dp)
+                        .weight(1f)
+                        .padding(vertical = 10.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color.White.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.BottomCenter
                 ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(animatedGestureLevel)
+                            .fillMaxWidth()
+                            .fillMaxHeight(animatedBrightnessLevel)
+                            .clip(RoundedCornerShape(4.dp))
                             .background(
-                                brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                    colors = listOf(Color(0xFF06B6D4), Color(0xFF38BDF8))
-                                ),
-                                shape = RoundedCornerShape(3.dp)
+                                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    colors = listOf(Color(0xFF38BDF8), Color(0xFF0284C7))
+                                )
                             )
                     )
                 }
+
+                Text(
+                    text = "${(animatedBrightnessLevel * 100).toInt()}%",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+
+    // Volume Indicator Bar: Triggered on RIGHT side -> Displayed on LEFT side
+    AnimatedVisibility(
+        visible = showGestureOverlay && !isInPip && activeGestureTarget == GestureTarget.VOLUME,
+        enter = fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) + slideInHorizontally(
+            initialOffsetX = { -it },
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+        ),
+        exit = fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) + slideOutHorizontally(
+            targetOffsetX = { -it },
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+        ),
+        modifier = Modifier
+            .align(Alignment.CenterStart)
+            .padding(start = if (isLandscape) 36.dp else 20.dp)
+    ) {
+        Surface(
+            color = Color(0xD90E0E18),
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)),
+            shadowElevation = 10.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .width(48.dp)
+                    .height(200.dp)
+                    .padding(vertical = 14.dp, horizontal = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                val icon = when {
+                    animatedVolumeLevel <= 0.001f -> Icons.Default.VolumeOff
+                    animatedVolumeLevel < 0.5f -> Icons.Default.VolumeDown
+                    else -> Icons.Default.VolumeUp
+                }
+                Icon(
+                    imageVector = icon,
+                    contentDescription = "Volume",
+                    tint = Color(0xFF38BDF8),
+                    modifier = Modifier.size(24.dp)
+                )
+
+                Box(
+                    modifier = Modifier
+                        .width(8.dp)
+                        .weight(1f)
+                        .padding(vertical = 10.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color.White.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(animatedVolumeLevel)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(
+                                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    colors = listOf(Color(0xFF38BDF8), Color(0xFF0284C7))
+                                )
+                            )
+                    )
+                }
+
+                Text(
+                    text = "${(animatedVolumeLevel * 100).toInt()}%",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp,
+                    maxLines = 1
+                )
             }
         }
     }
