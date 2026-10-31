@@ -46,6 +46,9 @@ import com.codesrahul.streamplus.util.UserAgentManager
 import com.codesrahul.streamplus.ui.util.tvFocusable
 import com.codesrahul.streamplus.ui.theme.NeonCyan
 import androidx.compose.ui.res.stringResource
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import com.codesrahul.streamplus.R
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -64,7 +67,7 @@ data class DirectPlayPreset(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DirectPlayScreen(
-    onBack: () -> Unit,
+    onBack: () -> Unit = {},
     onNavigateToHistory: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -618,7 +621,7 @@ fun DirectPlayScreen(
                             HorizontalDivider(modifier = Modifier.alpha(0.3f))
                             Spacer(modifier = Modifier.height(4.dp))
 
-                            AdvancedTextField(value = referer, onValueChange = { referer = it }, label = "Referer", icon = Icons.Default.OpenInNew)
+                            AdvancedTextField(value = referer, onValueChange = { referer = it }, label = "Referer", icon = Icons.AutoMirrored.Filled.OpenInNew)
                             AdvancedTextField(value = cookie, onValueChange = { cookie = it }, label = "Cookie", icon = Icons.Default.Cookie)
                             AdvancedTextField(value = origin, onValueChange = { origin = it }, label = "Origin", icon = Icons.Default.Public)
 
@@ -640,7 +643,7 @@ fun DirectPlayScreen(
                                     Text(stringResource(R.string.drm_protection_label), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                                     Text(drmScheme, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                                 }
-                                Icon(Icons.Default.ArrowForwardIos, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.4f))
+                                Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.4f))
                             }
 
                             AnimatedVisibility(visible = drmScheme != "None") {
