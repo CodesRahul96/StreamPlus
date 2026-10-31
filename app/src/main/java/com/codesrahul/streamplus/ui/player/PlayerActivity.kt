@@ -2177,9 +2177,14 @@ fun PlayerScreen(
         // Small Lock Toggle Overlay (Only visible when controls are visible AND unlocked)
         AnimatedVisibility(
             visible = isControlsVisible && !isLocked && !isInPip,
-            enter = fadeIn() + slideInHorizontally(),
-            exit = fadeOut() + slideOutHorizontally(),
-            modifier = Modifier.align(Alignment.CenterStart).padding(start = 24.dp)
+            enter = fadeIn() + if (isLandscape) slideInHorizontally() else slideInVertically(initialOffsetY = { -it }),
+            exit = fadeOut() + if (isLandscape) slideOutHorizontally() else slideOutVertically(targetOffsetY = { -it }),
+            modifier = Modifier
+                .align(if (isLandscape) Alignment.CenterStart else Alignment.TopStart)
+                .padding(
+                    start = if (isLandscape) 32.dp else 20.dp,
+                    top = if (isLandscape) 0.dp else 84.dp
+                )
         ) {
             Surface(
                 onClick = { 
@@ -2189,16 +2194,18 @@ fun PlayerScreen(
                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                     android.widget.Toast.makeText(context, "Controls Locked", android.widget.Toast.LENGTH_SHORT).show()
                 },
-                color = Color.Black.copy(alpha = 0.5f),
+                color = Color(0xD90E0E18),
                 shape = CircleShape,
-                modifier = Modifier.size(56.dp)
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
+                shadowElevation = 8.dp,
+                modifier = Modifier.size(46.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.LockOpen,
-                        contentDescription = "Lock",
+                        contentDescription = "Lock Controls",
                         tint = Color.White,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }

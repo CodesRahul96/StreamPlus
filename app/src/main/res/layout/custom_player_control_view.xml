@@ -181,8 +181,8 @@
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingStart="36dp"
-            android:paddingEnd="36dp"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
             android:paddingTop="8dp"
             android:paddingBottom="12dp">
 
