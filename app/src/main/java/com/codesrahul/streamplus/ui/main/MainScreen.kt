@@ -10,6 +10,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.automirrored.outlined.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -76,10 +78,10 @@ fun MainScreen(initialTab: String? = null) {
     }
 
     val items = listOf(
-        NavigationItem(com.codesrahul.streamplus.R.string.nav_playlist, "playlist",    Icons.Default.List,          Icons.Outlined.List),
-        NavigationItem(com.codesrahul.streamplus.R.string.nav_gallery,  "local",        Icons.Default.VideoLibrary,   Icons.Outlined.VideoLibrary),
-        NavigationItem(com.codesrahul.streamplus.R.string.nav_stream,   "direct_play",  Icons.Default.Podcasts,       Icons.Outlined.Podcasts),
-        NavigationItem(com.codesrahul.streamplus.R.string.nav_settings, "settings",     Icons.Default.Settings,       Icons.Outlined.Settings)
+        NavigationItem(com.codesrahul.streamplus.R.string.nav_playlist, "playlist",    Icons.AutoMirrored.Filled.List,      Icons.AutoMirrored.Outlined.List),
+        NavigationItem(com.codesrahul.streamplus.R.string.nav_gallery,  "local",        Icons.Default.VideoLibrary,          Icons.Outlined.VideoLibrary),
+        NavigationItem(com.codesrahul.streamplus.R.string.nav_stream,   "direct_play",  Icons.Default.Podcasts,              Icons.Outlined.Podcasts),
+        NavigationItem(com.codesrahul.streamplus.R.string.nav_settings, "settings",     Icons.Default.Settings,              Icons.Outlined.Settings)
     )
 
     Scaffold(

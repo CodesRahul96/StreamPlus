@@ -110,7 +110,10 @@ fun PlaylistScreen(
                         }
                     },
                     title = {
-                        Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             Text(
                                 text = when (selectedTab) {
                                     0 -> stringResource(com.codesrahul.streamplus.R.string.playlists_tab)
@@ -118,19 +121,28 @@ fun PlaylistScreen(
                                     else -> stringResource(com.codesrahul.streamplus.R.string.recent_tab)
                                 },
                                 style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
-                            val countText = when (selectedTab) {
-                                0 -> if (playlists.isNotEmpty()) "${playlists.size} sources" else ""
-                                1 -> "${favorites.size} channels"
-                                else -> "${recentlyWatched.size} channels"
+                            val count = when (selectedTab) {
+                                0 -> playlists.size
+                                1 -> favorites.size
+                                else -> recentlyWatched.size
                             }
-                            if (countText.isNotEmpty()) {
-                                Text(
-                                    text = countText,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                            if (count > 0) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.22f))
+                                ) {
+                                    Text(
+                                        text = "$count",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                                    )
+                                }
                             }
                         }
                     },
@@ -597,38 +609,7 @@ fun PlaylistScreen(
                                             }
                                         }
                                     } else {
-                                        item {
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(horizontal = 4.dp, vertical = 6.dp),
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Text(
-                                                        text = "Playlists",
-                                                        style = MaterialTheme.typography.titleMedium,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = MaterialTheme.colorScheme.onSurface
-                                                    )
-                                                    Spacer(modifier = Modifier.width(8.dp))
-                                                    Surface(
-                                                        shape = RoundedCornerShape(8.dp),
-                                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                                    ) {
-                                                        Text(
-                                                            text = "${sortedPlaylists.size}",
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            fontWeight = FontWeight.Bold,
-                                                            color = MaterialTheme.colorScheme.primary,
-                                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                                                                items(sortedPlaylists, key = { it.id }, contentType = { "playlist" }) { playlist ->
+                                        items(sortedPlaylists, key = { it.id }, contentType = { "playlist" }) { playlist ->
                                             val onPlaylistClickLambda = remember(playlist.id) { { onPlaylistClick(playlist.id) } }
                                             val onEditLambda = remember(playlist) { { showEditDialog = playlist } }
                                             val onPinToggleLambda = remember(playlist) { { viewModel.togglePin(playlist) } }
