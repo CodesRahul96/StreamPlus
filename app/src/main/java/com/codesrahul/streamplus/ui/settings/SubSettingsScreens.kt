@@ -406,23 +406,28 @@ private fun ThemeCard(
 
 @Composable
 fun ThemeModeDialog(currentMode: ThemeMode, onSelect: (ThemeMode) -> Unit, onDismiss: () -> Unit) {
+    val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
+    val isDark = isPitchBlack || (MaterialTheme.colorScheme.surface.red + MaterialTheme.colorScheme.surface.green + MaterialTheme.colorScheme.surface.blue) < 1.2f
+    val dialogBg = when {
+        isPitchBlack -> Color(0xFF0D0E15)
+        isDark -> Color(0xFF161B26)
+        else -> MaterialTheme.colorScheme.surface
+    }
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
-        Card(
+        Surface(
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-            border = null,
+            color = dialogBg,
+            shadowElevation = 24.dp,
+            border = BorderStroke(
+                1.dp,
+                if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f)
+            ),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .glassmorphic(cornerRadius = 24.dp)
+                .padding(horizontal = 8.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .background(
-                        if (MaterialTheme.colorScheme.surface == Color(0xFF000000)) MaterialTheme.colorScheme.surface
-                        else MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
-                    )
-                    .padding(24.dp)
+                modifier = Modifier.padding(24.dp)
             ) {
                 Text(
                     "Theme Mode", 
@@ -633,22 +638,28 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
     }
 
     if (showQrDialog) {
+        val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
+        val isDark = isPitchBlack || (MaterialTheme.colorScheme.surface.red + MaterialTheme.colorScheme.surface.green + MaterialTheme.colorScheme.surface.blue) < 1.2f
+        val dialogBg = when {
+            isPitchBlack -> Color(0xFF0D0E15)
+            isDark -> Color(0xFF161B26)
+            else -> MaterialTheme.colorScheme.surface
+        }
         androidx.compose.ui.window.Dialog(onDismissRequest = { showQrDialog = false; qrBitmap = null }) {
-            Card(
+            Surface(
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                border = null,
+                color = dialogBg,
+                shadowElevation = 24.dp,
+                border = BorderStroke(
+                    1.dp,
+                    if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f)
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .glassmorphic(cornerRadius = 24.dp)
+                    .padding(horizontal = 8.dp)
             ) {
                 Column(
                     modifier = Modifier
-                        .background(
-                            if (MaterialTheme.colorScheme.surface == Color(0xFF000000)) MaterialTheme.colorScheme.surface
-                            else MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
-                        )
                         .padding(24.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
@@ -746,23 +757,28 @@ fun PlaylistChannelSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
     }
 
     if (showExportImportDialog) {
+        val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
+        val isDark = isPitchBlack || (MaterialTheme.colorScheme.surface.red + MaterialTheme.colorScheme.surface.green + MaterialTheme.colorScheme.surface.blue) < 1.2f
+        val dialogBg = when {
+            isPitchBlack -> Color(0xFF0D0E15)
+            isDark -> Color(0xFF161B26)
+            else -> MaterialTheme.colorScheme.surface
+        }
         androidx.compose.ui.window.Dialog(onDismissRequest = { showExportImportDialog = false }) {
-            Card(
+            Surface(
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                border = null,
+                color = dialogBg,
+                shadowElevation = 24.dp,
+                border = BorderStroke(
+                    1.dp,
+                    if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f)
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .glassmorphic(cornerRadius = 24.dp)
+                    .padding(horizontal = 8.dp)
             ) {
                 Column(
-                    modifier = Modifier
-                        .background(
-                            if (MaterialTheme.colorScheme.surface == Color(0xFF000000)) MaterialTheme.colorScheme.surface
-                            else MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
-                        )
-                        .padding(24.dp)
+                    modifier = Modifier.padding(24.dp)
                 ) {
                     Text("Backup & Restore", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                     Spacer(modifier = Modifier.height(12.dp))
@@ -1338,23 +1354,28 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
     }
 
     if (showSubtitleTranscodeDialog) {
+        val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
+        val isDark = isPitchBlack || (MaterialTheme.colorScheme.surface.red + MaterialTheme.colorScheme.surface.green + MaterialTheme.colorScheme.surface.blue) < 1.2f
+        val dialogBg = when {
+            isPitchBlack -> Color(0xFF0D0E15)
+            isDark -> Color(0xFF161B26)
+            else -> MaterialTheme.colorScheme.surface
+        }
         androidx.compose.ui.window.Dialog(onDismissRequest = { showSubtitleTranscodeDialog = false }) {
-            Card(
+            Surface(
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                border = null,
+                color = dialogBg,
+                shadowElevation = 24.dp,
+                border = BorderStroke(
+                    1.dp,
+                    if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f)
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .glassmorphic(cornerRadius = 24.dp)
+                    .padding(horizontal = 8.dp)
             ) {
                 Column(
-                    modifier = Modifier
-                        .background(
-                            if (MaterialTheme.colorScheme.surface == Color(0xFF000000)) MaterialTheme.colorScheme.surface
-                            else MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
-                        )
-                        .padding(24.dp)
+                    modifier = Modifier.padding(24.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
@@ -1406,23 +1427,28 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
     }
 
     if (showAiHealingDialog) {
+        val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
+        val isDark = isPitchBlack || (MaterialTheme.colorScheme.surface.red + MaterialTheme.colorScheme.surface.green + MaterialTheme.colorScheme.surface.blue) < 1.2f
+        val dialogBg = when {
+            isPitchBlack -> Color(0xFF0D0E15)
+            isDark -> Color(0xFF161B26)
+            else -> MaterialTheme.colorScheme.surface
+        }
         androidx.compose.ui.window.Dialog(onDismissRequest = { showAiHealingDialog = false }) {
-            Card(
+            Surface(
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                border = null,
+                color = dialogBg,
+                shadowElevation = 24.dp,
+                border = BorderStroke(
+                    1.dp,
+                    if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f)
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .glassmorphic(cornerRadius = 24.dp)
+                    .padding(horizontal = 8.dp)
             ) {
                 Column(
-                    modifier = Modifier
-                        .background(
-                            if (MaterialTheme.colorScheme.surface == Color(0xFF000000)) MaterialTheme.colorScheme.surface
-                            else MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
-                        )
-                        .padding(24.dp)
+                    modifier = Modifier.padding(24.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(

@@ -628,15 +628,8 @@ fun PlayerScreen(
     val isLocalQueue = currentPlaylistUris != null && currentPlaylistUris!!.isNotEmpty()
     val canShowDrawer = if (isLocalOrDirectPlay) isLocalQueue else drawerChannels.isNotEmpty()
 
-    // Quick Channel Banner State
-    var showChannelBanner by remember { mutableStateOf(false) }
-
-    LaunchedEffect(currentStreamUrl) {
-        if (!isLocalOrDirectPlay) {
-            showChannelBanner = true
-            kotlinx.coroutines.delay(3500)
-            showChannelBanner = false
-        }
+    androidx.activity.compose.BackHandler {
+        activityContext?.finish()
     }
 
     LaunchedEffect(playlistId, currentStreamUrl) {
@@ -710,9 +703,10 @@ fun PlayerScreen(
     
     // Gesture State
     var showGestureOverlay by remember { mutableStateOf(false) }
+    var isGestureScrolling by remember { mutableStateOf(false) }
     var gestureIcon by remember { mutableStateOf<ImageVector?>(null) }
     var gestureText by remember { mutableStateOf("") }
-    var gestureLevel by remember { mutableStateOf(0f) }
+    var gestureLevel by remember { mutableFloatStateOf(0f) }
     var gestureTrigger by remember { mutableLongStateOf(0L) }
     var isTouching by remember { mutableStateOf(false) }
     
@@ -735,13 +729,10 @@ fun PlayerScreen(
     }
     
     // Debounced Auto-Hide for Gesture Overlay
-    LaunchedEffect(gestureTrigger) {
-        if (gestureTrigger > 0L) {
-            showGestureOverlay = true
+    LaunchedEffect(gestureTrigger, isTouching) {
+        if (showGestureOverlay && !isTouching && gestureTrigger > 0L) {
             kotlinx.coroutines.delay(1200)
-            if (!isTouching) {
-                showGestureOverlay = false
-            }
+            showGestureOverlay = false
         }
     }
     
@@ -1911,6 +1902,7 @@ fun PlayerScreen(
                 })
 
                 
+                val touchSlop = android.view.ViewConfiguration.get(context).scaledTouchSlop
                 val detector = android.view.GestureDetector(context, object : android.view.GestureDetector.SimpleOnGestureListener() {
                     val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
                     val window = activityContext?.window
@@ -1927,6 +1919,19 @@ fun PlayerScreen(
                         if (isLocked || e1 == null) return false
                         val width = playerView.width
                         val height = playerView.height
+                        if (width <= 0 || height <= 0) return false
+
+                        val totalDy = kotlin.math.abs(e2.y - e1.y)
+                        val totalDx = kotlin.math.abs(e2.x - e1.x)
+
+                        // Guard against micro-jitter/tap movement: only trigger when moving vertically beyond touch slop threshold
+                        if (!isGestureScrolling) {
+                            if (totalDy < touchSlop * 1.5f || totalDy <= totalDx * 1.5f) {
+                                return false
+                            }
+                            isGestureScrolling = true
+                        }
+
                         val isLeft = e1.x < width / 2
                         
                         // Vertical sensitivity
@@ -1943,7 +1948,6 @@ fun PlayerScreen(
                                     gestureText = "Brightness: ${(newVal * 100).toInt()}%"
                                     gestureIcon = Icons.Default.BrightnessMedium
                                     gestureLevel = newVal
-                                    gestureTrigger = System.currentTimeMillis()
                                     showGestureOverlay = true
                                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                                 }
@@ -1965,7 +1969,6 @@ fun PlayerScreen(
                                     gestureText = "Volume: ${(target * 100 / max)}%"
                                     gestureIcon = if (target == 0) Icons.Default.VolumeOff else Icons.Default.VolumeUp
                                     gestureLevel = target.toFloat() / max
-                                    gestureTrigger = System.currentTimeMillis()
                                     showGestureOverlay = true
                                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                                 }
@@ -2015,11 +2018,16 @@ fun PlayerScreen(
                     when (event.actionMasked) {
                         android.view.MotionEvent.ACTION_DOWN -> {
                             isTouching = true
+                            isGestureScrolling = false
+                            volumeAccumulator = 0f
                         }
                         android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
                             isTouching = false
                             volumeAccumulator = 0f
-                            gestureTrigger = System.currentTimeMillis()
+                            if (isGestureScrolling) {
+                                isGestureScrolling = false
+                                gestureTrigger = System.currentTimeMillis()
+                            }
                         }
                     }
                     detector.onTouchEvent(event)
@@ -2451,92 +2459,6 @@ fun PlayerScreen(
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
-                    }
-                }
-            }
-        }
-
-        // Top Sleek Channel Info Banner (TiviMate style)
-        AnimatedVisibility(
-            visible = showChannelBanner && !isInPip && !isControlsVisible && !showChannelDrawer,
-            enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
-            exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 28.dp, start = 32.dp, end = 32.dp)
-                .fillMaxWidth()
-        ) {
-            Surface(
-                color = Color(0xE60D111A),
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, Color(0xFF2E3852)),
-                shadowElevation = 12.dp
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (!currentChannelLogo.isNullOrBlank()) {
-                        coil.compose.AsyncImage(
-                            model = currentChannelLogo,
-                            contentDescription = currentStreamTitle,
-                            modifier = Modifier.size(48.dp).clip(CircleShape)
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF1E293B)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Tv, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                    }
-                    
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                currentStreamTitle,
-                                color = Color.White,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(Color(0xFFFF1744))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    if (currentIsVod) "CATCH-UP" else "LIVE",
-                                    color = Color.White,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                        
-                        val activeEpg = remember(currentStreamTitle, currentStreamUrl) {
-                            val ch = drawerChannels.find { it.url == currentStreamUrl }
-                            ch?.epgId?.let { epgManager.getCurrentProgram(it) }
-                        }
-                        if (activeEpg != null) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                "Now: ${activeEpg.title}",
-                                color = Color(0xFF64B5F6),
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
                     }
                 }
             }

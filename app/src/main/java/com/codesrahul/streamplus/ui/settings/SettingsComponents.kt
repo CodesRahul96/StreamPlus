@@ -1,5 +1,6 @@
 package com.codesrahul.streamplus.ui.settings
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -339,23 +340,29 @@ fun <T> PremiumSelectionDialog(
     descriptionProvider: ((T) -> String)? = null,
     iconProvider: (@Composable (T) -> Unit)? = null
 ) {
+    val isPitchBlack = MaterialTheme.colorScheme.surface == Color(0xFF000000)
+    val isDark = isPitchBlack || (MaterialTheme.colorScheme.surface.red + MaterialTheme.colorScheme.surface.green + MaterialTheme.colorScheme.surface.blue) < 1.2f
+    val dialogBg = when {
+        isPitchBlack -> Color(0xFF0D0E15)
+        isDark -> Color(0xFF161B26)
+        else -> MaterialTheme.colorScheme.surface
+    }
+
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
-        Card(
+        Surface(
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-            border = null,
+            color = dialogBg,
+            shadowElevation = 24.dp,
+            border = BorderStroke(
+                1.dp,
+                if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f)
+            ),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .glassmorphic(cornerRadius = 24.dp)
+                .padding(horizontal = 8.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .background(
-                        if (MaterialTheme.colorScheme.surface == Color(0xFF000000)) MaterialTheme.colorScheme.surface
-                        else MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
-                    )
-                    .padding(24.dp)
+                modifier = Modifier.padding(24.dp)
             ) {
                 Text(
                     text = title,
@@ -377,7 +384,7 @@ fun <T> PremiumSelectionDialog(
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier
-                        .heightIn(max = 300.dp)
+                        .heightIn(max = 340.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
                     options.forEach { option ->
@@ -386,20 +393,22 @@ fun <T> PremiumSelectionDialog(
                         Row(
                             Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(14.dp))
                                 .clickable {
                                     onOptionSelected(option)
                                     onDismiss()
                                 }
                                 .background(
-                                    if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
-                                    else Color.Transparent
+                                    if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+                                    else if (isDark) Color(0xFF1E2333)
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                                 )
                                 .border(
-                                    width = 1.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                                            else Color.White.copy(alpha = 0.05f),
-                                    shape = RoundedCornerShape(12.dp)
+                                    width = if (isSelected) 1.5.dp else 1.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary
+                                            else if (isDark) Color.White.copy(alpha = 0.08f)
+                                            else Color.Black.copy(alpha = 0.06f),
+                                    shape = RoundedCornerShape(14.dp)
                                 )
                                 .padding(horizontal = 16.dp, vertical = 14.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -407,11 +416,12 @@ fun <T> PremiumSelectionDialog(
                             if (iconProvider != null) {
                                 Box(
                                     modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(RoundedCornerShape(8.dp))
+                                        .size(36.dp)
+                                        .clip(RoundedCornerShape(10.dp))
                                         .background(
-                                            if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                            if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
+                                            else if (isDark) Color(0xFF262C3D)
+                                            else MaterialTheme.colorScheme.surfaceVariant
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {

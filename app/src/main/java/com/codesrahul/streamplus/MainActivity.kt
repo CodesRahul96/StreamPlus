@@ -19,6 +19,15 @@ import com.codesrahul.streamplus.ui.settings.SettingsViewModel
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    override fun onResume() {
+        super.onResume()
+        val isTv = packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK) ||
+                   (getSystemService(android.content.Context.UI_MODE_SERVICE) as? android.app.UiModeManager)?.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
+        if (!isTv && requestedOrientation != android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT) {
+            requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         com.codesrahul.streamplus.util.RefreshRateHelper.enableHighRefreshRate(this)
