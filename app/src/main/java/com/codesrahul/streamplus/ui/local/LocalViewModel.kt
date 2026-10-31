@@ -37,24 +37,33 @@ class LocalViewModel @Inject constructor(
     private val _mediaType = MutableStateFlow(MediaType.VIDEO)
     val mediaType = _mediaType.asStateFlow()
 
+    private val _filterSmallAudio = MutableStateFlow(true)
+    val filterSmallAudio = _filterSmallAudio.asStateFlow()
+
     val settings = settingsRepository.settings
 
     init {
         viewModelScope.launch {
-            combine(settings, _selectedFolder, _mediaType) { s, folder, type -> Triple(s, folder, type) }
-                .collect { (s, folder, type) ->
-                    refreshFolders(s, type)
-                    if (folder != null) {
-                        loadVideos(folder, s, type)
-                    }
+            combine(settings, _selectedFolder, _mediaType, _filterSmallAudio) { s, folder, type, filterAudio ->
+                Quadruple(s, folder, type, filterAudio)
+            }.collect { (s, folder, type, filterAudio) ->
+                refreshFolders(s, type, filterAudio)
+                if (folder != null) {
+                    loadVideos(folder, s, type, filterAudio)
                 }
+            }
         }
+    }
+
+    fun toggleFilterSmallAudio() {
+        _filterSmallAudio.value = !_filterSmallAudio.value
+        refreshAll()
     }
 
     fun refreshFolders() {
         viewModelScope.launch {
             val s = settings.first()
-            refreshFolders(s, _mediaType.value)
+            refreshFolders(s, _mediaType.value, _filterSmallAudio.value)
         }
     }
 
@@ -62,10 +71,11 @@ class LocalViewModel @Inject constructor(
         viewModelScope.launch {
             val s = settingsRepository.settings.first()
             val type = _mediaType.value
-            refreshFolders(s, type)
+            val filter = _filterSmallAudio.value
+            refreshFolders(s, type, filter)
             val currentFolder = _selectedFolder.value
             if (currentFolder != null) {
-                loadVideos(currentFolder, s, type)
+                loadVideos(currentFolder, s, type, filter)
             }
         }
     }
@@ -75,10 +85,10 @@ class LocalViewModel @Inject constructor(
         _mediaType.value = type
     }
 
-    private suspend fun refreshFolders(s: com.codesrahul.streamplus.data.settings.AppSettings, type: MediaType) {
+    private suspend fun refreshFolders(s: com.codesrahul.streamplus.data.settings.AppSettings, type: MediaType, filterSmallAudio: Boolean = true) {
         _isLoading.value = true
         val list = withContext(Dispatchers.IO) {
-            if (type == MediaType.VIDEO) getLocalFolders(context) else getAudioFolders(context)
+            if (type == MediaType.VIDEO) getLocalFolders(context) else getAudioFolders(context, filterSmallAudio)
         }
         
         val sortedList = when (s.folderSortField) {
@@ -97,12 +107,12 @@ class LocalViewModel @Inject constructor(
         _selectedFolder.value = folderName
     }
 
-    private fun loadVideos(folderName: String, s: com.codesrahul.streamplus.data.settings.AppSettings, type: MediaType) {
+    private fun loadVideos(folderName: String, s: com.codesrahul.streamplus.data.settings.AppSettings, type: MediaType, filterSmallAudio: Boolean = true) {
         viewModelScope.launch {
             _isLoading.value = true
             val list = withContext(Dispatchers.IO) {
                 if (type == MediaType.VIDEO) getVideosInFolder(context, folderName)
-                else getAudiosInFolder(context, folderName)
+                else getAudiosInFolder(context, folderName, filterSmallAudio)
             }
             
             val sortedList = when (s.videoSortField) {
@@ -117,6 +127,11 @@ class LocalViewModel @Inject constructor(
             _isLoading.value = false
         }
     }
-
-    // Removed setSortType as it's now handled by repository settings
 }
+
+data class Quadruple<A, B, C, D>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D
+)

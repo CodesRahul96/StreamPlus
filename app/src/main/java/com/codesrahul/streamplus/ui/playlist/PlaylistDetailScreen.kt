@@ -61,6 +61,7 @@ fun PlaylistDetailScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedGroup by viewModel.selectedGroup.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isInitialLoadDone by viewModel.isInitialLoadDone.collectAsState()
     val isBackgroundLoading by viewModel.isBackgroundLoading.collectAsState()
     val favoriteIdentities by viewModel.favoriteIdentities.collectAsState()
     val settingsState by hiltViewModel<SettingsViewModel>().settings.collectAsState(initial = AppSettings())
@@ -391,7 +392,7 @@ fun PlaylistDetailScreen(
                 val horizontalSpacing = if (isListView) 0.dp else 16.dp
 
                 when {
-                    isLoading && filteredChannels.isEmpty() -> {
+                    (!isInitialLoadDone || isLoading) && filteredChannels.isEmpty() -> {
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(gridColumns),
                             modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),

@@ -47,6 +47,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.request.videoFramePercent
+import coil.decode.VideoFrameDecoder
+import androidx.compose.ui.graphics.asImageBitmap
+import kotlinx.coroutines.Dispatchers
+import com.codesrahul.streamplus.ui.theme.NeonCyan
 import com.codesrahul.streamplus.ui.components.PermissionBox
 import com.codesrahul.streamplus.ui.components.PremiumBackground
 import com.codesrahul.streamplus.ui.util.glassmorphic
@@ -145,6 +151,41 @@ fun LocalScreen() {
                     onClick = { viewModel.setMediaType(MediaType.AUDIO) },
                     text = { Text(stringResource(R.string.tab_music), fontWeight = if (currentType == MediaType.AUDIO) FontWeight.Bold else FontWeight.Medium) }
                 )
+            }
+
+            val filterSmallAudio by viewModel.filterSmallAudio.collectAsState()
+            if (currentType == MediaType.AUDIO) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    FilterChip(
+                        selected = filterSmallAudio,
+                        onClick = { viewModel.toggleFilterSmallAudio() },
+                        label = {
+                            Text(
+                                if (filterSmallAudio) "Music Only (> 300 KB)" else "All Audio (Showing < 300 KB)",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                if (filterSmallAudio) Icons.Default.FilterAlt else Icons.Default.FilterAltOff,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                            selectedLabelColor = MaterialTheme.colorScheme.primary,
+                            selectedLeadingIconColor = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                }
             }
 
             if (selectedFolder != null) {
@@ -588,6 +629,90 @@ fun LocalMediaList(
 }
 
 @Composable
+fun LocalMediaThumbnail(
+    uri: Uri?,
+    mediaType: MediaType,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Crop,
+    iconSize: androidx.compose.ui.unit.Dp = 36.dp
+) {
+    val context = LocalContext.current
+    var bitmapThumbnail by remember(uri) { mutableStateOf<android.graphics.Bitmap?>(null) }
+    var loadFailed by remember(uri) { mutableStateOf(false) }
+
+    LaunchedEffect(uri, mediaType) {
+        if (uri == null) {
+            loadFailed = true
+            return@LaunchedEffect
+        }
+        if (mediaType == MediaType.AUDIO && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            kotlinx.coroutines.withContext(Dispatchers.IO) {
+                try {
+                    val bmp = context.contentResolver.loadThumbnail(uri, android.util.Size(320, 320), null)
+                    bitmapThumbnail = bmp
+                } catch (_: Exception) {
+                    loadFailed = true
+                }
+            }
+        }
+    }
+
+    val request = remember(uri) {
+        ImageRequest.Builder(context)
+            .data(uri)
+            .videoFramePercent(0.08)
+            .crossfade(true)
+            .build()
+    }
+
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        if (bitmapThumbnail != null) {
+            androidx.compose.foundation.Image(
+                bitmap = bitmapThumbnail!!.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = contentScale
+            )
+        } else if (uri != null && (!loadFailed || mediaType == MediaType.VIDEO)) {
+            AsyncImage(
+                model = request,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = contentScale,
+                onError = { loadFailed = true }
+            )
+        }
+
+        if (bitmapThumbnail == null && (uri == null || loadFailed)) {
+            val placeholderGradient = if (mediaType == MediaType.VIDEO) {
+                Brush.linearGradient(listOf(Color(0xFF1E2638), Color(0xFF121622)))
+            } else {
+                Brush.linearGradient(listOf(Color(0xFF281E38), Color(0xFF161222)))
+            }
+            val placeholderIcon = if (mediaType == MediaType.VIDEO) Icons.Filled.VideoLibrary else Icons.Filled.MusicNote
+            val iconTint = if (mediaType == MediaType.VIDEO) NeonCyan.copy(alpha = 0.7f) else Color(0xFFFF2D55).copy(alpha = 0.7f)
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(placeholderGradient),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    placeholderIcon,
+                    contentDescription = null,
+                    modifier = Modifier.size(iconSize),
+                    tint = iconTint
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun VideoPosterItem(
     video: LocalMedia,
     settings: com.codesrahul.streamplus.data.settings.AppSettings,
@@ -615,11 +740,11 @@ fun VideoPosterItem(
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     if (settings.showVideoThumbnail) {
-                        AsyncImage(
-                            model = video.uri,
-                            contentDescription = null,
+                        LocalMediaThumbnail(
+                            uri = video.uri,
+                            mediaType = video.mediaType,
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
+                            iconSize = 44.dp
                         )
                     } else {
                         val placeholderIcon = if (video.mediaType == MediaType.VIDEO) Icons.Default.VideoFile else Icons.Default.MusicNote
@@ -721,6 +846,20 @@ fun VideoPosterItem(
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                     )
                 }
+                if (video.mediaType == MediaType.AUDIO && video.size < 307200) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            "< 300 KB",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                    }
+                }
             }
         }
     } else {
@@ -748,11 +887,11 @@ fun VideoPosterItem(
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     if (settings.showVideoThumbnail) {
-                        AsyncImage(
-                            model = video.uri,
-                            contentDescription = null,
+                        LocalMediaThumbnail(
+                            uri = video.uri,
+                            mediaType = video.mediaType,
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
+                            iconSize = 28.dp
                         )
                     } else {
                         val placeholderIcon = if (video.mediaType == MediaType.VIDEO) Icons.Default.VideoFile else Icons.Default.MusicNote
@@ -801,6 +940,21 @@ fun VideoPosterItem(
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                        }
+
+                        if (video.mediaType == MediaType.AUDIO && video.size < 307200) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            ) {
+                                Text(
+                                    "< 300 KB",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                )
+                            }
                         }
                         
                         if (settings.showVideoSize && settings.showVideoResolution && video.mediaType == MediaType.VIDEO) {
@@ -869,27 +1023,27 @@ fun LocalFolderItem(
                         .fillMaxWidth()
                         .aspectRatio(1.1f)
                 ) {
-                    if (folder.firstMediaUri != null) {
-                        AsyncImage(
-                            model = folder.firstMediaUri,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
+                    LocalMediaThumbnail(
+                        uri = folder.firstMediaUri,
+                        mediaType = folder.mediaType,
+                        modifier = Modifier.fillMaxSize(),
+                        iconSize = 48.dp
+                    )
+
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(8.dp),
+                        color = Color.Black.copy(alpha = 0.55f),
+                        shape = CircleShape
+                    ) {
                         val folderIcon = if (folder.mediaType == MediaType.VIDEO) Icons.Filled.Folder else Icons.Filled.LibraryMusic
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f))
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(folderIcon, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
-                        }
+                        Icon(
+                            folderIcon,
+                            contentDescription = null,
+                            modifier = Modifier.padding(5.dp).size(14.dp),
+                            tint = Color.White
+                        )
                     }
 
                     // Item count badge
@@ -975,12 +1129,12 @@ fun LocalFolderItem(
                         .background(MaterialTheme.colorScheme.primary.copy(0.1f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (folder.firstMediaUri != null) {
-                        AsyncImage(model = folder.firstMediaUri, contentDescription = null, contentScale = ContentScale.Crop)
-                    } else {
-                        val folderIcon = if (folder.mediaType == MediaType.VIDEO) Icons.Default.Folder else Icons.Default.LibraryMusic
-                        Icon(folderIcon, null, tint = MaterialTheme.colorScheme.primary)
-                    }
+                    LocalMediaThumbnail(
+                        uri = folder.firstMediaUri,
+                        mediaType = folder.mediaType,
+                        modifier = Modifier.fillMaxSize(),
+                        iconSize = 28.dp
+                    )
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -1223,9 +1377,13 @@ fun formatSize(bytes: Long): String {
     }
 }
 
-fun getAudiosInFolder(context: Context, folderName: String): List<LocalMedia> {
+fun getAudiosInFolder(context: Context, folderName: String, filterSmallAudio: Boolean = true): List<LocalMedia> {
     val audios = mutableListOf<LocalMedia>()
-    val selection = if (folderName == "All Music") null else "${MediaStore.Audio.Media.BUCKET_DISPLAY_NAME} = ?"
+    val baseSelection = if (folderName == "All Music") null else "${MediaStore.Audio.Media.BUCKET_DISPLAY_NAME} = ?"
+    val selection = if (filterSmallAudio) {
+        if (baseSelection != null) "$baseSelection AND ${MediaStore.Audio.Media.SIZE} >= 307200"
+        else "${MediaStore.Audio.Media.SIZE} >= 307200"
+    } else baseSelection
     val selectionArgs = if (folderName == "All Music") null else arrayOf(folderName)
 
     try {
@@ -1275,7 +1433,7 @@ fun getAudiosInFolder(context: Context, folderName: String): List<LocalMedia> {
     return audios
 }
 
-fun getAudioFolders(context: Context): List<LocalFolder> {
+fun getAudioFolders(context: Context, filterSmallAudio: Boolean = true): List<LocalFolder> {
     val folderMap = mutableMapOf<String, MutableList<Long>>()
     val sizeMap = mutableMapOf<String, Long>()
     val projection = arrayOf(
@@ -1283,12 +1441,13 @@ fun getAudioFolders(context: Context): List<LocalFolder> {
         MediaStore.Audio.Media._ID,
         MediaStore.Audio.Media.SIZE
     )
+    val selection = if (filterSmallAudio) "${MediaStore.Audio.Media.SIZE} >= 307200" else null
     
     try {
         context.contentResolver.query(
             MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
             projection,
-            null, null, null
+            selection, null, null
         )?.use { cursor ->
             val bucketCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.BUCKET_DISPLAY_NAME)
             val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)

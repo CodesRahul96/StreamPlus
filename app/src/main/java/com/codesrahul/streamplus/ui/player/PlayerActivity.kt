@@ -399,18 +399,22 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun finish() {
+        try {
+            // Restore portrait orientation to match MainActivity and avoid surface tear
+            requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        } catch (_: Exception) {}
         super.finish()
         if (android.os.Build.VERSION.SDK_INT >= 34) {
             overrideActivityTransition(
                 android.app.Activity.OVERRIDE_TRANSITION_CLOSE,
-                com.codesrahul.streamplus.R.anim.player_pop_enter,
-                com.codesrahul.streamplus.R.anim.player_pop_exit
+                android.R.anim.fade_in,
+                android.R.anim.fade_out
             )
         } else {
             @Suppress("DEPRECATION")
             overridePendingTransition(
-                com.codesrahul.streamplus.R.anim.player_pop_enter,
-                com.codesrahul.streamplus.R.anim.player_pop_exit
+                android.R.anim.fade_in,
+                android.R.anim.fade_out
             )
         }
     }
@@ -709,6 +713,8 @@ fun PlayerScreen(
     var gestureIcon by remember { mutableStateOf<ImageVector?>(null) }
     var gestureText by remember { mutableStateOf("") }
     var gestureLevel by remember { mutableStateOf(0f) }
+    var gestureTrigger by remember { mutableLongStateOf(0L) }
+    var isTouching by remember { mutableStateOf(false) }
     
     // Seek Overlay State
     var showSeekOverlay by remember { mutableStateOf(false) }
@@ -728,11 +734,14 @@ fun PlayerScreen(
         sessionResizeMode = null
     }
     
-    // Helper to dim overlays after delay
-    LaunchedEffect(showGestureOverlay) {
-        if (showGestureOverlay) {
-            kotlinx.coroutines.delay(2000)
-            showGestureOverlay = false
+    // Debounced Auto-Hide for Gesture Overlay
+    LaunchedEffect(gestureTrigger) {
+        if (gestureTrigger > 0L) {
+            showGestureOverlay = true
+            kotlinx.coroutines.delay(1200)
+            if (!isTouching) {
+                showGestureOverlay = false
+            }
         }
     }
     
@@ -1139,11 +1148,11 @@ fun PlayerScreen(
                     return
                 }
 
-                // AI Stream Intelligence Self-Healing Analysis
+                // Smart Stream Self-Healing Analysis
                 val healing = streamIntelligenceEngine.evaluatePlaybackError(error, currentStreamUrl, currentHeaders)
                 when (healing) {
                     is com.codesrahul.streamplus.data.network.HealingAction.UpdateHeaders -> {
-                        android.widget.Toast.makeText(context, "AI Self-Healing: ${healing.reason}", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(context, "Smart Recovery: ${healing.reason}", android.widget.Toast.LENGTH_SHORT).show()
                         currentHeaders = healing.newHeaders
                         if (!isLikelyVod) player.seekToDefaultPosition()
                         player.prepare()
@@ -1152,13 +1161,13 @@ fun PlayerScreen(
                     }
                     is com.codesrahul.streamplus.data.network.HealingAction.FallbackDecoder -> {
                         if (activeDecoderMode != 1) {
-                            android.widget.Toast.makeText(context, "AI Self-Healing: ${healing.reason}", android.widget.Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(context, "Smart Recovery: ${healing.reason}", android.widget.Toast.LENGTH_SHORT).show()
                             activeDecoderMode = 1
                             return
                         }
                     }
                     is com.codesrahul.streamplus.data.network.HealingAction.RestartLiveWindow -> {
-                        android.widget.Toast.makeText(context, "AI Self-Healing: Aligning live stream edge", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(context, "Auto-Sync: Aligning live stream edge", android.widget.Toast.LENGTH_SHORT).show()
                         player.seekToDefaultPosition()
                         player.prepare()
                         player.play()
@@ -1934,6 +1943,7 @@ fun PlayerScreen(
                                     gestureText = "Brightness: ${(newVal * 100).toInt()}%"
                                     gestureIcon = Icons.Default.BrightnessMedium
                                     gestureLevel = newVal
+                                    gestureTrigger = System.currentTimeMillis()
                                     showGestureOverlay = true
                                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                                 }
@@ -1955,6 +1965,7 @@ fun PlayerScreen(
                                     gestureText = "Volume: ${(target * 100 / max)}%"
                                     gestureIcon = if (target == 0) Icons.Default.VolumeOff else Icons.Default.VolumeUp
                                     gestureLevel = target.toFloat() / max
+                                    gestureTrigger = System.currentTimeMillis()
                                     showGestureOverlay = true
                                     haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                                 }
@@ -2001,6 +2012,16 @@ fun PlayerScreen(
                 })
 
                 playerView.setOnTouchListener { _, event ->
+                    when (event.actionMasked) {
+                        android.view.MotionEvent.ACTION_DOWN -> {
+                            isTouching = true
+                        }
+                        android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                            isTouching = false
+                            volumeAccumulator = 0f
+                            gestureTrigger = System.currentTimeMillis()
+                        }
+                    }
                     detector.onTouchEvent(event)
                     true 
                 }

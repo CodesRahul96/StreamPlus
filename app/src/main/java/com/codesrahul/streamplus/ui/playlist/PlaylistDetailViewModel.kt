@@ -40,8 +40,11 @@ class PlaylistDetailViewModel @Inject constructor(
     private val _channels = MutableStateFlow<List<M3UItem>>(emptyList())
     val channels = _channels.asStateFlow()
 
-    private val _isLoading = MutableStateFlow(false)
+    private val _isLoading = MutableStateFlow(true)
     val isLoading = _isLoading.asStateFlow()
+
+    private val _isInitialLoadDone = MutableStateFlow(false)
+    val isInitialLoadDone = _isInitialLoadDone.asStateFlow()
 
     private val _isBackgroundLoading = MutableStateFlow(false)
     val isBackgroundLoading = _isBackgroundLoading.asStateFlow()
@@ -197,6 +200,7 @@ class PlaylistDetailViewModel @Inject constructor(
                 e.printStackTrace()
                 _error.emit(e.message ?: "Failed to refresh playlist: Network error")
             } finally {
+                _isInitialLoadDone.value = true
                 _isLoading.value = false
                 _isBackgroundLoading.value = false
             }

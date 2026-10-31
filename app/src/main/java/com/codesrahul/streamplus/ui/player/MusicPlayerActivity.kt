@@ -193,14 +193,14 @@ class MusicPlayerActivity : AppCompatActivity() {
         if (android.os.Build.VERSION.SDK_INT >= 34) {
             overrideActivityTransition(
                 android.app.Activity.OVERRIDE_TRANSITION_CLOSE,
-                com.codesrahul.streamplus.R.anim.player_pop_enter,
-                com.codesrahul.streamplus.R.anim.player_pop_exit
+                android.R.anim.fade_in,
+                android.R.anim.fade_out
             )
         } else {
             @Suppress("DEPRECATION")
             overridePendingTransition(
-                com.codesrahul.streamplus.R.anim.player_pop_enter,
-                com.codesrahul.streamplus.R.anim.player_pop_exit
+                android.R.anim.fade_in,
+                android.R.anim.fade_out
             )
         }
     }

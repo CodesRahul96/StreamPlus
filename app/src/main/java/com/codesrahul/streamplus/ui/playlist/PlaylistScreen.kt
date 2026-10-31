@@ -930,13 +930,13 @@ fun PlaylistItem(
     val cardBg = if (isLight) Color(0xF5FFFFFF) else Color(0xF0121624)
 
     val typeLabel = when {
-        playlist.isXtream -> "Xtream API"
-        playlist.url.startsWith("file://") || playlist.url.startsWith("/storage/") -> "Local"
-        else -> "M3U Stream"
+        playlist.isXtream -> "Xtream"
+        playlist.url.startsWith("file://") || playlist.url.startsWith("/storage/") || playlist.url.startsWith("content://") -> "Local"
+        else -> null
     }
     val typeBadgeColor = when {
         playlist.isXtream -> Color(0xFF00E5FF)
-        playlist.url.startsWith("file://") || playlist.url.startsWith("/storage/") -> Color(0xFFF59E0B)
+        playlist.url.startsWith("file://") || playlist.url.startsWith("/storage/") || playlist.url.startsWith("content://") -> Color(0xFFF59E0B)
         else -> MaterialTheme.colorScheme.primary
     }
 
@@ -1023,32 +1023,47 @@ fun PlaylistItem(
                         modifier = Modifier.weight(1f, fill = false).basicMarquee(),
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = typeBadgeColor.copy(alpha = 0.14f),
-                        border = BorderStroke(0.5.dp, typeBadgeColor.copy(alpha = 0.35f))
-                    ) {
-                        Text(
-                            text = typeLabel,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = typeBadgeColor,
-                            fontSize = 10.sp,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
+                    if (typeLabel != null) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = typeBadgeColor.copy(alpha = 0.14f),
+                            border = BorderStroke(0.5.dp, typeBadgeColor.copy(alpha = 0.35f))
+                        ) {
+                            Text(
+                                text = typeLabel,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = typeBadgeColor,
+                                fontSize = 10.sp,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                 }
                 if (!hideUri) {
                     Spacer(modifier = Modifier.height(3.dp))
-                    val displayUrl = playlist.url.removePrefix("http://").removePrefix("https://").substringBefore("?")
+                    val displaySubtitle = when {
+                        playlist.isXtream -> {
+                            val host = playlist.serverUrl?.removePrefix("http://")?.removePrefix("https://")?.substringBefore("/") ?: "Xtream Service"
+                            "Xtream • $host"
+                        }
+                        playlist.url.startsWith("file://") || playlist.url.startsWith("/storage/") || playlist.url.startsWith("content://") -> {
+                            val filename = playlist.url.substringAfterLast("/")
+                            "Local • $filename"
+                        }
+                        else -> {
+                            val domain = playlist.url.removePrefix("http://").removePrefix("https://").substringBefore("/").substringBefore("?")
+                            domain.ifBlank { playlist.url }
+                        }
+                    }
                     Text(
-                        text = displayUrl,
+                        text = displaySubtitle,
                         style = MaterialTheme.typography.bodySmall,
                         maxLines = 1,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
                         overflow = TextOverflow.Ellipsis,
-                        fontSize = 11.5.sp
+                        fontSize = 12.sp
                     )
                 }
             }
@@ -1399,7 +1414,7 @@ fun PlaylistDialog(
                     )
                 )
 
-                // AI Protocol Detection Badge
+                // Smart Protocol Detection Badge
                 if (detectedProtocol != null) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Surface(
@@ -1415,7 +1430,7 @@ fun PlaylistDialog(
                             Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                "AI Detected: $detectedProtocol",
+                                "Auto Detected: $detectedProtocol",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = NeonCyan

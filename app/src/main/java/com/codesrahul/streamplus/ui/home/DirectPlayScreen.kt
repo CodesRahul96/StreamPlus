@@ -473,7 +473,7 @@ fun DirectPlayScreen(
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            "AI Stream Auto-Detect",
+                                            "Smart Stream Inspector",
                                             style = MaterialTheme.typography.labelLarge,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.primary

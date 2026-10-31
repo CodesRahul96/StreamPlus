@@ -156,7 +156,7 @@ class StreamIntelligenceEngine @Inject constructor(
             }
         }
 
-        // 6. Generate AI Diagnostic Summary
+        // 6. Generate Diagnostic Summary
         val drmInfo = when (drmScheme?.lowercase()) {
             "widevine" -> "Widevine Modular DRM"
             "clearkey" -> "ClearKey Hex Decryption"
@@ -223,7 +223,7 @@ class StreamIntelligenceEngine @Inject constructor(
                 return@withContext fastProfile.copy(
                     protocol = resolvedProtocol,
                     containerFormat = format,
-                    aiDiagnosticSummary = "${resolvedProtocol.displayName} • $format • AI Verified"
+                    aiDiagnosticSummary = "${resolvedProtocol.displayName} • $format • Smart Verified"
                 )
             }
         } catch (_: Exception) {

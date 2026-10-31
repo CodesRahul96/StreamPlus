@@ -999,8 +999,8 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
             ) {
-                // ── Universal Codec & AI Engine ───────────────────────────
-                SettingsSectionHeader("Universal Engine & AI")
+                // ── Universal Codec & Stream Intelligence ───────────────────
+                SettingsSectionHeader("Universal Engine & Intelligence")
                 SettingsCard {
                     SettingsClickableItem(
                         title = "Universal Codec & Container Suite",
@@ -1023,7 +1023,7 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         showDivider = true
                     )
                     SettingsClickableItem(
-                        title = "AI Stream Inspector & Self-Healing",
+                        title = "Smart Stream Inspector & Auto-Recovery",
                         subtitle = "Anti-hotlink spoofing, automatic HTTP 403 bypass & live recovery",
                         icon = Icons.Default.AutoAwesome,
                         iconColor = ElectricIndigo,
@@ -1437,7 +1437,7 @@ fun AdvanceVideoSettings(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "AI Stream Inspector",
+                                text = "Smart Stream Inspector",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
