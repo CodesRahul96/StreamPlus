@@ -48,7 +48,10 @@ data class NavigationItem(
 )
 
 @Composable
-fun MainScreen(initialTab: String? = null) {
+fun MainScreen(
+    initialTab: String? = null,
+    playlistViewModel: com.codesrahul.streamplus.ui.playlist.PlaylistViewModel = hiltViewModel()
+) {
     val settingsViewModel: SettingsViewModel = hiltViewModel()
     val navController = rememberNavController()
     val settingsState by settingsViewModel.settings.collectAsState(initial = com.codesrahul.streamplus.data.settings.AppSettings())
@@ -58,8 +61,20 @@ fun MainScreen(initialTab: String? = null) {
     var lastBackPressTime by remember { mutableLongStateOf(0L) }
 
     androidx.activity.compose.BackHandler(enabled = true) {
-        val popped = navController.popBackStack()
-        if (!popped) {
+        val currentRoute = navController.currentBackStackEntry?.destination?.route
+        val isAtRoot = currentRoute == null || currentRoute == "playlist"
+
+        if (!isAtRoot) {
+            val popped = navController.popBackStack()
+            if (!popped) {
+                navController.navigate("playlist") {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        inclusive = false
+                    }
+                    launchSingleTop = true
+                }
+            }
+        } else {
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastBackPressTime < 2000) {
                 var currentContext = context
@@ -248,6 +263,7 @@ fun MainScreen(initialTab: String? = null) {
                 composable("playlist") {
                     val context = androidx.compose.ui.platform.LocalContext.current
                     PlaylistScreen(
+                        viewModel = playlistViewModel,
                         onPlaylistClick = { playlistId ->
                             navController.navigate("playlist_detail/$playlistId")
                         },
@@ -280,19 +296,40 @@ fun MainScreen(initialTab: String? = null) {
                 composable("local") { LocalScreen() }
                 composable("direct_play") {
                     com.codesrahul.streamplus.ui.home.DirectPlayScreen(
-                        onBack = { navController.popBackStack() },
+                        onBack = {
+                            if (!navController.popBackStack()) {
+                                navController.navigate("playlist") {
+                                    popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
+                                    launchSingleTop = true
+                                }
+                            }
+                        },
                         onNavigateToHistory = { navController.navigate("history") }
                     )
                 }
                 composable("history") {
-                    com.codesrahul.streamplus.ui.home.HistoryScreen(onBack = { navController.popBackStack() })
+                    com.codesrahul.streamplus.ui.home.HistoryScreen(onBack = {
+                        if (!navController.popBackStack()) {
+                            navController.navigate("playlist") {
+                                popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    })
                 }
                 composable(
                     route = "playlist_detail/{playlistId}",
                     arguments = listOf(androidx.navigation.navArgument("playlistId") { type = androidx.navigation.NavType.StringType })
                 ) {
                     com.codesrahul.streamplus.ui.playlist.PlaylistDetailScreen(
-                        onBack = { navController.popBackStack() },
+                        onBack = {
+                            if (!navController.popBackStack()) {
+                                navController.navigate("playlist") {
+                                    popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
+                                    launchSingleTop = true
+                                }
+                            }
+                        },
                         onNavigate = { route -> navController.navigate(route) },
                         sharedTransitionScope = this@SharedTransitionLayout,
                         animatedVisibilityScope = this@composable
@@ -307,7 +344,14 @@ fun MainScreen(initialTab: String? = null) {
                     )
                 ) {
                     com.codesrahul.streamplus.ui.playlist.PlaylistDetailScreen(
-                        onBack = { navController.popBackStack() },
+                        onBack = {
+                            if (!navController.popBackStack()) {
+                                navController.navigate("playlist") {
+                                    popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
+                                    launchSingleTop = true
+                                }
+                            }
+                        },
                         onNavigate = { route -> navController.navigate(route) },
                         sharedTransitionScope = this@SharedTransitionLayout,
                         animatedVisibilityScope = this@composable
@@ -328,13 +372,27 @@ fun MainScreen(initialTab: String? = null) {
                         playlistId = pid,
                         seriesId = sid,
                         seriesName = java.net.URLDecoder.decode(name, "UTF-8"),
-                        onBack = { navController.popBackStack() },
+                        onBack = {
+                            if (!navController.popBackStack()) {
+                                navController.navigate("playlist") {
+                                    popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
+                                    launchSingleTop = true
+                                }
+                            }
+                        },
                         sharedTransitionScope = this@SharedTransitionLayout,
                         animatedVisibilityScope = this@composable
                     )
                 }
                 composable("settings") {
-                    SettingsScreen(onBack = { navController.popBackStack() })
+                    SettingsScreen(onBack = {
+                        if (!navController.popBackStack()) {
+                            navController.navigate("playlist") {
+                                popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    })
                 }
             }
         }

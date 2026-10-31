@@ -96,6 +96,14 @@ fun PlaylistScreen(
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
     var selectedTab by remember { mutableIntStateOf(0) }
 
+    androidx.activity.compose.BackHandler(enabled = selectedTab != 0 || searchQuery.isNotBlank()) {
+        if (searchQuery.isNotBlank()) {
+            viewModel.setSearchQuery("")
+        } else if (selectedTab != 0) {
+            selectedTab = 0
+        }
+    }
+
     PremiumBackground {
         Scaffold(
             modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),

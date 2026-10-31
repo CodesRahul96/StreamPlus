@@ -52,6 +52,10 @@ fun SeriesDetailScreen(
 
     var selectedSeason by remember { mutableStateOf(1) }
 
+    androidx.activity.compose.BackHandler(enabled = true) {
+        onBack()
+    }
+
     LaunchedEffect(playlistId, seriesId) {
         viewModel.loadSeriesInfo(playlistId, seriesId)
     }

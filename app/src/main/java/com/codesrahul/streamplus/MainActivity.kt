@@ -71,7 +71,10 @@ class MainActivity : ComponentActivity() {
                                  androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize())
                              } else {
                                  val startTab = intent.getStringExtra("START_TAB")
-                                 com.codesrahul.streamplus.ui.main.MainScreen(initialTab = startTab)
+                                 com.codesrahul.streamplus.ui.main.MainScreen(
+                                     initialTab = startTab,
+                                     playlistViewModel = playlistViewModel
+                                 )
                              }
                          }
                      }

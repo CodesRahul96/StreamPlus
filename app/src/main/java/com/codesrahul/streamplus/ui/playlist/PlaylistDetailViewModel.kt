@@ -91,7 +91,7 @@ class PlaylistDetailViewModel @Inject constructor(
         }
     }
         .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val groups = combine(_channels, _selectedStreamType, _isXtreamPlaylist) { channels, streamType, isXtream ->
         kotlinx.coroutines.withContext(Dispatchers.Default) {
@@ -103,11 +103,23 @@ class PlaylistDetailViewModel @Inject constructor(
         }
     }
         .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.Lazily, listOf("All"))
+        .stateIn(viewModelScope, SharingStarted.Eagerly, listOf("All"))
 
     init {
+        val id = playlistId.toIntOrNull()
+        if (id != null) {
+            // Immediate pre-fetch from cache so UI never flashes empty
+            viewModelScope.launch(Dispatchers.IO) {
+                val cached = repository.loadPlaylist(url = "", userAgent = null, forceRefresh = false, playlistId = id)
+                if (cached.isNotEmpty()) {
+                    _channels.value = cached
+                    _isLoading.value = false
+                    _isInitialLoadDone.value = true
+                }
+            }
+        }
+
         viewModelScope.launch {
-            val id = playlistId.toIntOrNull()
             if (id != null) {
                 repository.getPlaylist(id).collect { entity ->
                     if (entity != null) {
@@ -178,12 +190,14 @@ class PlaylistDetailViewModel @Inject constructor(
     private fun loadChannels(url: String, userAgent: String?, forceRefresh: Boolean = false, playlistId: Int = -1) {
         loadChannelsJob?.cancel()
         loadChannelsJob = viewModelScope.launch {
-            _isLoading.value = true
+            if (_channels.value.isEmpty()) {
+                _isLoading.value = true
+            }
             _isBackgroundLoading.value = forceRefresh
             try {
                 // If forceRefresh is requested, first quickly load from cache (forceRefresh = false)
                 // so the user doesn't see a blank shimmer screen while waiting for the network
-                if (forceRefresh) {
+                if (forceRefresh && _channels.value.isEmpty()) {
                     val cached = repository.loadPlaylist(url, userAgent, forceRefresh = false, playlistId)
                     if (cached.isNotEmpty()) {
                         _channels.value = cached
@@ -192,7 +206,9 @@ class PlaylistDetailViewModel @Inject constructor(
                 }
                 
                 val freshChannels = repository.loadPlaylist(url, userAgent, forceRefresh, playlistId)
-                _channels.value = freshChannels
+                if (freshChannels.isNotEmpty() || _channels.value.isEmpty()) {
+                    _channels.value = freshChannels
+                }
                 if (playlistId != -1) {
                     repository.startBackgroundDiagnostics(playlistId, freshChannels)
                 }

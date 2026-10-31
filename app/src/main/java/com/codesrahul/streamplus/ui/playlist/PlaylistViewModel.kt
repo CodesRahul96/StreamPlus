@@ -110,6 +110,8 @@ class PlaylistViewModel @Inject constructor(
         _searchQuery.value = query
     }
 
+    fun setSearchQuery(query: String) = onSearchQueryChange(query)
+
     fun addPlaylist(name: String, url: String, userAgent: String, icon: String = "default", color: Int = -16777216, epgUrl: String? = null) {
         viewModelScope.launch {
             repository.insertPlaylist(

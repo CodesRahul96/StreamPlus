@@ -56,6 +56,7 @@ fun PlaylistDetailScreen(
     animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     val playlist by viewModel.playlist.collectAsState()
+    val channels by viewModel.channels.collectAsState()
     val filteredChannels by viewModel.filteredChannels.collectAsState()
     val groups by viewModel.groups.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -67,6 +68,15 @@ fun PlaylistDetailScreen(
     val settingsState by hiltViewModel<SettingsViewModel>().settings.collectAsState(initial = AppSettings())
     val isXtreamPlaylist by viewModel.isXtreamPlaylist.collectAsState()
     val selectedStreamType by viewModel.selectedStreamType.collectAsState()
+
+    androidx.activity.compose.BackHandler(enabled = true) {
+        when {
+            searchQuery.isNotBlank() -> viewModel.setSearchQuery("")
+            selectedGroup != "All" -> viewModel.setSelectedGroup("All")
+            isXtreamPlaylist && selectedStreamType != "live" -> viewModel.setSelectedStreamType("live")
+            else -> onBack()
+        }
+    }
     
     val snackbarHostState = remember { SnackbarHostState() }
     var showGroupSelectionSheet by remember { mutableStateOf(false) }
@@ -267,7 +277,14 @@ fun PlaylistDetailScreen(
                             scrollBehavior = scrollBehavior,
                             windowInsets = WindowInsets(0.dp),
                             navigationIcon = {
-                                IconButton(onClick = onBack) {
+                                IconButton(onClick = {
+                                    when {
+                                        searchQuery.isNotBlank() -> viewModel.setSearchQuery("")
+                                        selectedGroup != "All" -> viewModel.setSelectedGroup("All")
+                                        isXtreamPlaylist && selectedStreamType != "live" -> viewModel.setSelectedStreamType("live")
+                                        else -> onBack()
+                                    }
+                                }) {
                                     Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                                 }
                             },
@@ -391,8 +408,11 @@ fun PlaylistDetailScreen(
                 val verticalSpacing = if (isListView) 8.dp else 16.dp
                 val horizontalSpacing = if (isListView) 0.dp else 16.dp
 
+                val isActivelyLoading = (!isInitialLoadDone || isLoading) || (channels.isEmpty() && isBackgroundLoading)
+                val isAwaitingFiltering = channels.isNotEmpty() && filteredChannels.isEmpty() && searchQuery.isBlank() && selectedGroup == "All"
+
                 when {
-                    (!isInitialLoadDone || isLoading) && filteredChannels.isEmpty() -> {
+                    (isActivelyLoading || isAwaitingFiltering) && filteredChannels.isEmpty() -> {
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(gridColumns),
                             modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
