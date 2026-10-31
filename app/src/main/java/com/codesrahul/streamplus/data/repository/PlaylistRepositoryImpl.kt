@@ -401,7 +401,7 @@ class PlaylistRepositoryImpl @Inject constructor(
             if (actualPlaylistId != -1) {
                 channelDao.deleteChannelsByPlaylist(actualPlaylistId)
                 val entities = items.map { it.toEntity(actualPlaylistId) }
-                val ids = channelDao.insertChannels(entities)
+                val ids = channelDao.insertChannelsChunked(entities, chunkSize = 500)
                 finalItems = items.mapIndexed { index, m3uItem ->
                     m3uItem.copy(id = ids.getOrNull(index)?.toInt() ?: 0)
                 }

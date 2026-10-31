@@ -69,6 +69,9 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 }
 
@@ -123,7 +126,7 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-hls:$media3Version")
     implementation("androidx.media3:media3-exoplayer-rtsp:$media3Version")
     implementation("androidx.media3:media3-exoplayer-smoothstreaming:$media3Version")
-    implementation("androidx.media3:media3-datasource-rtmp:$media3Version")
+    // implementation("androidx.media3:media3-datasource-rtmp:$media3Version")
     implementation("androidx.media3:media3-cast:$media3Version")
     implementation("androidx.media3:media3-session:$media3Version")
     implementation("com.google.android.gms:play-services-cast-framework:21.5.0")

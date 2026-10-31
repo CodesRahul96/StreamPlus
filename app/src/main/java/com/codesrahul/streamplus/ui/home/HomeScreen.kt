@@ -232,14 +232,14 @@ fun HomeDashboardCard(
                 // Trailing action indicator
                 Surface(
                     shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.06f),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (isLight) 0.06f else 0.10f),
                     modifier = Modifier.size(34.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                         Icon(
                             imageVector = Icons.Default.ChevronRight,
                             contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.6f),
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (isLight) 0.6f else 0.75f),
                             modifier = Modifier.size(18.dp)
                         )
                     }
