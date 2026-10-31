@@ -105,25 +105,47 @@ flowchart TD
 * **Audio Boost**: High-gain audio processing using ExoPlayer's `SonicAudioProcessor` and software volume expansion for quiet broadcast channels.
 * **Live Edge Alignment**: Automatically realigns HLS/DASH live stream edges when buffer underrun or broadcast delays accumulate.
 
+### 4.3 Single-Pass Pre-Warmed Playback Initialization
+* **Problem Solved**: Historically, `PlayerScreen` initialized with default `AppSettings()` while DataStore was still reading preferences asynchronously. When DataStore finished reading 40ms later, updated values (e.g., `enableTunneling`, `skipSslVerification`) caused Compose to recreate `ExoPlayer`, destroying the initial buffer and loading the stream twice.
+* **Architecture Solution**: `PlayerActivity.onCreate` retrieves both `freshChannel` metadata and `initialSettings = settingsRepository.settings.first()` concurrently on `Dispatchers.IO` before `setContent` is invoked. Both `StreamPlusTheme` and `PlayerScreen` mount with the exact user configuration from frame 0, ensuring `ExoPlayer` is created, prepared, and buffered strictly once.
+
 ---
 
-## 5. Persistence & Data Modeling
+## 5. Theme & Color System Architecture
 
-### 5.1 Room Database Schema
+StreamPlus features a customizable Material 3 theming engine:
+* **Default Theme**: Deep Dark / Pitch Black with **Ocean Blue** (`AccentColor.BLUE`, primary `#2563EB`) as the default accent color.
+* **Accent Palette (`com.codesrahul.streamplus.ui.theme.AccentColor`)**:
+  * `BLUE` (Ocean Blue - Default, `#2563EB`)
+  * `VIOLET` (Electric Violet, `#7C3AED`)
+  * `EMERALD` (Vibrant Emerald, `#059669`)
+  * `CRIMSON` (Imperial Crimson, `#DC2626`)
+  * `AMBER` (Golden Amber, `#D97706`)
+  * `CYAN` (Neon Cyan, `#0891B2`)
+  * `ROSE` (Vivid Rose, `#E11D48`)
+* **Dynamic Generation**: `StreamPlusTheme` dynamically synthesizes Material 3 `ColorScheme` palettes (primary, container, surface tints, borders) derived from the selected accent color and theme mode (`DARK`, `LIGHT`, `PITCH_BLACK`, `SYSTEM`).
+* **Interactive Selector**: Settings provides real-time accent color swatches with instant DataStore persistence and animated selection rings.
+
+---
+
+## 6. Persistence & Data Modeling
+
+### 6.1 Room Database Schema
 * **`PlaylistEntity`**: Stores playlist metadata (title, target URL, server credentials, EPG URL, custom User-Agent, color, pin status, sorting weight).
 * **`ChannelEntity`**: Stores indexed channel information (playlist reference, name, stream URL, logo URL, group title, EPG ID, DRM license scheme, custom HTTP headers map, VOD vs Live indicator).
 * **`FavoriteEntity`**: High-performance channel bookmark index with cross-playlist identification.
 * **`HistoryEntity`**: Playback history tracking last played position, watch duration, and access timestamp.
 
-### 5.2 16 KB Page Alignment & Android 15 Compatibility
+### 6.2 16 KB Page Alignment & Android 15 Compatibility
 All native binary shared libraries (`.so`) are packaged uncompressed (`packaging.jniLibs.useLegacyPackaging = false`) and page-aligned to 16,384-byte boundaries (`data_offset % 16384 == 0`), ensuring zero-copy memory mapping (`mmap`) compatibility on Android 15 and 16 KB hardware architectures.
 
 ---
 
-## 6. UI & State Management (MVI / UDF Pattern)
+## 7. UI & State Management (MVI / UDF Pattern)
 
 Each screen operates under Unidirectional Data Flow:
 1. **State**: Represented by immutable data classes exposed as `StateFlow<UiState>`.
 2. **Intent/Event**: User actions (click, scroll, search, delete) are dispatched as methods to the ViewModel.
 3. **Reduction**: ViewModel interacts with Repositories inside `viewModelScope`, applying mutations to internal `MutableStateFlow` instances.
 4. **Render**: Jetpack Compose observes state via `collectAsState()` and recomposes only the affected UI nodes.
+5. **Cache Hoisting & Prefill**: ViewModels pre-fill state from Room sync queries on `init` to prevent empty screen flashes while background filters run.

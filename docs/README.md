@@ -10,6 +10,8 @@ Welcome to the comprehensive technical documentation for **StreamPlus**, an ente
    * High-level layered architecture (MVVM, Clean Architecture, Unidirectional Data Flow).
    * Core architectural pillars: Presentation, Domain, Data, Media Engine.
    * Dagger Hilt dependency injection graph.
+   * Single-pass pre-warmed playback initialization (eliminating asynchronous double-load).
+   * Dynamic Theme & Color Accent system (7 vibrant palettes, Ocean Blue default).
    * AndroidX Media3 (ExoPlayer) playback architecture & Widevine DRM pipeline.
    * Persistence strategy (Room SQLite, DataStore Preferences).
    * Android 15 16 KB page-size compatibility and native memory alignment.
@@ -17,13 +19,11 @@ Welcome to the comprehensive technical documentation for **StreamPlus**, an ente
 2. [**System Workflows (`WORKFLOW.md`)**](WORKFLOW.md)
    * End-to-end Playlist Ingestion & Chunked Room Persistence workflow.
    * Video & Live Stream Playback Lifecycle with DRM resolution sequence.
-   * Touch Gesture & HUD Controls state machine (volume, brightness, touch-slop thresholds).
+   * Touch Gesture & Opposite-Side HUD Controls state machine (volume, brightness, touch-slop thresholds).
+   * Navigation & Back-Button Hierarchy unwinding sequence (zero accidental app exits).
    * Local media filtering workflow (video frame extraction, audio files > 300 KB management).
    * Return-from-player orientation locking sequence.
 
 3. [**Codebase Audit & Improvement Roadmap (`IMPROVEMENTS.md`)**](IMPROVEMENTS.md)
-   * Deep technical analysis of the codebase.
-   * Recommendations for decomposing `PlayerActivity.kt` into dedicated controllers.
-   * Playback pre-warming and player instance pooling opportunities.
-   * EPG XMLTV streaming parsing optimizations.
-   * UI accessibility and CI/CD verification recommendations.
+   * Recently resolved and verified technical improvements.
+   * **Tomorrow's Working Agenda**: Prioritized action plan for decomposing `PlayerActivity.kt`, ExoPlayer pooling, streaming EPG parsers, and CI/CD checks.
