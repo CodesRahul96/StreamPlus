@@ -27,6 +27,8 @@ class M3UStreamParser : StreamParser {
         var currentName = ""
         var currentLogo = ""
         var currentGroup = ""
+        var currentGroupLogo = ""
+        val groupLogoCache = mutableMapOf<String, String>()
         var currentDrmHeaders = mutableMapOf<String, String>()
         var currentHeaders = mutableMapOf<String, String>()
         var currentDrmScheme: String? = null
@@ -60,11 +62,17 @@ class M3UStreamParser : StreamParser {
 
             val sanitizedName = finalName.take(300).trim()
             val sanitizedGroup = (if (currentGroup.isBlank()) "Uncategorized" else currentGroup).take(100).trim()
+            val sanitizedGroupLogo = currentGroupLogo.trim()
+            if (sanitizedGroupLogo.isNotBlank() && sanitizedGroup.isNotBlank()) {
+                groupLogoCache[sanitizedGroup] = sanitizedGroupLogo
+            }
+            val finalGroupLogo = sanitizedGroupLogo.ifBlank { groupLogoCache[sanitizedGroup] ?: "" }
 
             items.add(M3UItem(
                 name = sanitizedName,
                 url = finalUrl,
                 group = sanitizedGroup,
+                groupLogo = finalGroupLogo,
                 logoUrl = currentLogo,
                 status = StreamStatus.UNKNOWN,
                 headers = mergedHeaders,
@@ -125,6 +133,7 @@ class M3UStreamParser : StreamParser {
                                 }
                                 "tvg-logo", "logo" -> currentLogo = v
                                 "group-title", "group" -> currentGroup = v
+                                "group-logo", "group_logo", "group-icon", "group_icon", "tvg-group-logo", "tvg-group-icon" -> currentGroupLogo = v
                                 "user-agent", "http-user-agent" -> currentHeaders["User-Agent"] = v
                                 "referer", "http-referrer" -> currentHeaders["Referer"] = v
                                 "origin", "http-origin" -> currentHeaders["Origin"] = v
@@ -136,7 +145,19 @@ class M3UStreamParser : StreamParser {
                         currentName = info.trim()
                     }
                 } else if (trimmed.startsWith("#EXTGRP:")) {
-                    currentGroup = trimmed.substringAfter("#EXTGRP:").trim()
+                    val grpPart = trimmed.substringAfter("#EXTGRP:").trim()
+                    if (grpPart.contains("logo=", ignoreCase = true) || grpPart.contains("icon=", ignoreCase = true)) {
+                        parseProps(grpPart) { k, v ->
+                            when (k.lowercase()) {
+                                "group-logo", "group_logo", "logo", "icon" -> currentGroupLogo = v
+                            }
+                        }
+                        currentGroup = grpPart.substringBefore(",").substringBefore(" ").trim()
+                    } else {
+                        currentGroup = grpPart
+                    }
+                } else if (trimmed.startsWith("#EXTGRP-LOGO:") || trimmed.startsWith("#EXTIMG:") || trimmed.startsWith("#EXTGRP-ICON:")) {
+                    currentGroupLogo = trimmed.substringAfter(":").trim().trim('"')
                 } else if (trimmed.startsWith("#EXTVLCOPT:") || trimmed.startsWith("# EXTVLCOPT:")) {
                     val opt = trimmed.substringAfter("VLCOPT:")
                     parseOption(opt, currentHeaders, currentDrmHeaders) { scheme, license ->
@@ -226,6 +247,7 @@ class M3UStreamParser : StreamParser {
                     // Reset per-item state
                     currentName = ""
                     currentLogo = ""
+                    currentGroupLogo = ""
                     currentDrmScheme = null
                     currentDrmLicense = null
                     currentDrmHeaders = mutableMapOf()
@@ -236,6 +258,18 @@ class M3UStreamParser : StreamParser {
                     currentOrigin = ""
                     currentEpgId = null
                     currentDuration = -1
+                }
+            }
+        }
+        
+        if (groupLogoCache.isNotEmpty()) {
+            for (idx in items.indices) {
+                val item = items[idx]
+                if (item.groupLogo.isBlank()) {
+                    val cached = groupLogoCache[item.group]
+                    if (!cached.isNullOrBlank()) {
+                        items[idx] = item.copy(groupLogo = cached)
+                    }
                 }
             }
         }

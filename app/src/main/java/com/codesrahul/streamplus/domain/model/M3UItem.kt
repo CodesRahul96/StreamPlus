@@ -6,6 +6,7 @@ data class M3UItem(
     val name: String,
     val url: String,
     val group: String = "",
+    val groupLogo: String = "",
     val logoUrl: String = "",
     val playlistId: Int = -1,
     val status: StreamStatus = StreamStatus.UNKNOWN,

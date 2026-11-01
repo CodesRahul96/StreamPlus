@@ -73,12 +73,22 @@ object DatabaseModule {
                 }
             }
         }
+
+        val MIGRATION_19_20 = object : androidx.room.migration.Migration(19, 20) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                try {
+                    db.execSQL("ALTER TABLE channels ADD COLUMN groupLogo TEXT NOT NULL DEFAULT ''")
+                } catch (e: Exception) {
+                    android.util.Log.e("DatabaseModule", "Error applying migration 19->20", e)
+                }
+            }
+        }
         
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             "stream_doctor_db"
-        ).addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
+        ).addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_19_20)
             .fallbackToDestructiveMigration()
             .build()
     }

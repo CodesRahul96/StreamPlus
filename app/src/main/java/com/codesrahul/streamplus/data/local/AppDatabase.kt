@@ -5,7 +5,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [PlaylistEntity::class, HistoryEntity::class, FavoriteEntity::class, ChannelEntity::class],
-    version = 19,
+    version = 20,
     exportSchema = true
 )
 @androidx.room.TypeConverters(MapTypeConverter::class)

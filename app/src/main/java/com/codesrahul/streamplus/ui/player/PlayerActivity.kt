@@ -2806,13 +2806,25 @@ fun PlayerScreen(
                                                     )
                                                 } else if (ch.group.isNotBlank()) {
                                                     Spacer(modifier = Modifier.height(2.dp))
-                                                    Text(
-                                                        ch.group,
-                                                        color = Color(0xFF64748B),
-                                                        fontSize = 11.sp,
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis
-                                                    )
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                    ) {
+                                                        if (ch.groupLogo.isNotBlank()) {
+                                                            coil.compose.AsyncImage(
+                                                                model = ch.groupLogo,
+                                                                contentDescription = null,
+                                                                modifier = Modifier.size(11.dp).clip(CircleShape)
+                                                            )
+                                                        }
+                                                        Text(
+                                                            ch.group,
+                                                            color = Color(0xFF64748B),
+                                                            fontSize = 11.sp,
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis
+                                                        )
+                                                    }
                                                 }
                                             }
                                             if (isCurrent) {

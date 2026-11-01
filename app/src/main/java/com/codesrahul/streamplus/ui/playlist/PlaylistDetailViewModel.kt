@@ -105,6 +105,16 @@ class PlaylistDetailViewModel @Inject constructor(
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, listOf("All"))
 
+    val groupLogos = _channels.map { channels ->
+        kotlinx.coroutines.withContext(Dispatchers.Default) {
+            channels
+                .filter { it.group.isNotBlank() && it.groupLogo.isNotBlank() }
+                .associate { it.group.take(100).trim() to it.groupLogo }
+        }
+    }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
     init {
         val id = playlistId.toIntOrNull()
         if (id != null) {

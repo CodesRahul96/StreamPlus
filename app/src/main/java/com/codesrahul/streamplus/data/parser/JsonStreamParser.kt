@@ -88,6 +88,10 @@ class JsonStreamParser : StreamParser {
             .mapNotNull { key -> obj.optString(key).takeIf { it.isNotBlank() } }
             .firstOrNull() ?: fallbackGroup
 
+        val groupLogo = listOf("group_logo", "grouplogo", "group-logo", "category_logo", "category_icon", "group_icon", "group-icon")
+            .mapNotNull { key -> obj.optString(key).takeIf { it.isNotBlank() } }
+            .firstOrNull() ?: ""
+
         val headers = mutableMapOf<String, String>()
         listOf("user-agent", "useragent", "ua").forEach { key ->
             val v = obj.optString(key)
@@ -147,6 +151,7 @@ class JsonStreamParser : StreamParser {
             name = name.take(300).trim(),
             url = url,
             group = group.take(100).trim(),
+            groupLogo = groupLogo,
             logoUrl = logo,
             status = StreamStatus.UNKNOWN,
             headers = headers,

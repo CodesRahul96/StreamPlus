@@ -59,6 +59,7 @@ fun PlaylistDetailScreen(
     val channels by viewModel.channels.collectAsState()
     val filteredChannels by viewModel.filteredChannels.collectAsState()
     val groups by viewModel.groups.collectAsState()
+    val groupLogos by viewModel.groupLogos.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedGroup by viewModel.selectedGroup.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -172,13 +173,30 @@ fun PlaylistDetailScreen(
                                     .padding(horizontal = 16.dp, vertical = 8.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    text = group,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary 
-                                            else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    val logo = groupLogos[group]
+                                    if (!logo.isNullOrBlank()) {
+                                        coil.compose.AsyncImage(
+                                            model = logo,
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .size(16.dp)
+                                                .clip(CircleShape),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                    }
+                                    Text(
+                                        text = group,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary 
+                                                else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }
@@ -253,6 +271,18 @@ fun PlaylistDetailScreen(
                                             fontWeight = FontWeight.Bold
                                         )
                                         Row(verticalAlignment = Alignment.CenterVertically) {
+                                            val activeGroupLogo = groupLogos[selectedGroup]
+                                            if (!activeGroupLogo.isNullOrBlank()) {
+                                                coil.compose.AsyncImage(
+                                                    model = activeGroupLogo,
+                                                    contentDescription = null,
+                                                    modifier = Modifier
+                                                        .size(13.dp)
+                                                        .clip(CircleShape),
+                                                    contentScale = ContentScale.Crop
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                            }
                                             Text(
                                                 selectedGroup,
                                                 style = MaterialTheme.typography.labelSmall,
@@ -353,9 +383,20 @@ fun PlaylistDetailScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 items(groups) { group ->
+                                    val chipLogo = groupLogos[group]
                                     FilterChip(
                                         selected = selectedGroup == group,
                                         onClick = { viewModel.setSelectedGroup(group) },
+                                        leadingIcon = if (!chipLogo.isNullOrBlank()) {
+                                            {
+                                                coil.compose.AsyncImage(
+                                                    model = chipLogo,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(16.dp).clip(CircleShape),
+                                                    contentScale = ContentScale.Crop
+                                                )
+                                            }
+                                        } else null,
                                         label = { Text(group, style = MaterialTheme.typography.labelMedium) },
                                         shape = CircleShape
                                     )
@@ -617,13 +658,25 @@ fun PlaylistDetailScreen(
                                     .padding(horizontal = 16.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Folder,
-                                    contentDescription = null,
-                                    tint = if (isSelected) MaterialTheme.colorScheme.primary 
-                                           else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(24.dp)
-                                )
+                                val grpLogo = groupLogos[group]
+                                if (!grpLogo.isNullOrBlank()) {
+                                    coil.compose.AsyncImage(
+                                        model = grpLogo,
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clip(RoundedCornerShape(6.dp)),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = if (group == "All") Icons.Default.Category else Icons.Default.Folder,
+                                        contentDescription = null,
+                                        tint = if (isSelected) MaterialTheme.colorScheme.primary 
+                                               else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Text(
                                     text = group,
@@ -887,14 +940,29 @@ fun VodPosterItem(
                     fontSize = 13.sp
                 )
                 val groupSubtitle = if (channel.group.isNotBlank() && channel.group != "0") channel.group else if (isSeries) "Series" else "Movie"
-                Text(
-                    text = groupSubtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF94A3B8),
-                    fontSize = 10.5.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    if (channel.groupLogo.isNotBlank()) {
+                        coil.compose.AsyncImage(
+                            model = channel.groupLogo,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(11.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                    Text(
+                        text = groupSubtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF94A3B8),
+                        fontSize = 10.5.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }
@@ -1167,14 +1235,29 @@ fun LiveChannelItem(
                     }
                 } else {
                     val groupText = if (channel.group.isNotBlank() && channel.group != "0") channel.group else "Broadcast"
-                    Text(
-                        text = groupText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (isLight) Color(0xFF64748B) else Color(0xFF94A3B8),
-                        fontSize = 11.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (channel.groupLogo.isNotBlank()) {
+                            coil.compose.AsyncImage(
+                                model = channel.groupLogo,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(11.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                        Text(
+                            text = groupText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (isLight) Color(0xFF64748B) else Color(0xFF94A3B8),
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }
@@ -1350,24 +1433,50 @@ fun ChannelListItem(
                         channel.group.isNotBlank() && channel.group != "0" -> channel.group
                         else -> "Movie"
                     }
-                    Text(
-                        text = subText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (isLight) Color(0xFF64748B) else Color(0xFF94A3B8),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (channel.groupLogo.isNotBlank()) {
+                            coil.compose.AsyncImage(
+                                model = channel.groupLogo,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                        }
+                        Text(
+                            text = subText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (isLight) Color(0xFF64748B) else Color(0xFF94A3B8),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 } else {
                     val programText = currentProgram ?: channel.group.ifBlank { "Live Broadcast" }
-                    Text(
-                        text = programText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (currentProgram != null) (if (isLight) Color(0xFF0284C7) else Color(0xFF38BDF8)) else (if (isLight) Color(0xFF64748B) else Color(0xFF94A3B8)),
-                        fontWeight = if (currentProgram != null) FontWeight.Medium else FontWeight.Normal,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = if (currentProgram != null) Modifier.basicMarquee() else Modifier
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (currentProgram == null && channel.groupLogo.isNotBlank()) {
+                            coil.compose.AsyncImage(
+                                model = channel.groupLogo,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                        }
+                        Text(
+                            text = programText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (currentProgram != null) (if (isLight) Color(0xFF0284C7) else Color(0xFF38BDF8)) else (if (isLight) Color(0xFF64748B) else Color(0xFF94A3B8)),
+                            fontWeight = if (currentProgram != null) FontWeight.Medium else FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = if (currentProgram != null) Modifier.basicMarquee() else Modifier
+                        )
+                    }
                 }
             }
 

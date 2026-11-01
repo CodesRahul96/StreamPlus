@@ -39,6 +39,13 @@ This document tracks completed optimizations, architectural audits, and the stra
 * **Issue**: `CastOptionsProvider` existed in code but missed its `<meta-data>` entry in `AndroidManifest.xml`.
 * **Resolution**: Added `com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME` metadata tag into `AndroidManifest.xml`.
 
+### 1.8 Playlist Group Logo Support & Room Migration 20 (Resolved)
+* **Requirement**: Support group logos for playlists that specify them, showing them in the UI without breaking any existing playback, search, or database schema.
+* **Resolution**:
+  * **Parser**: Added parsing of `#EXTINF` attributes (`group-logo`, `group_logo`, `group-icon`, `tvg-group-logo`), `#EXTGRP` tags (`#EXTGRP:Name,logo="..."`, `#EXTGRP-LOGO:`, `#EXTIMG:`), and JSON playlist category logos (`group_logo`, `category_logo`). Added a group logo cache with retroactive backfilling across channels sharing the same group.
+  * **Room Schema & Migration**: Added non-destructive `MIGRATION_19_20` with `ALTER TABLE channels ADD COLUMN groupLogo TEXT NOT NULL DEFAULT ''` and updated schema to version 20 (`20.json`).
+  * **UI Integration**: Surfaced group logos with rounded clipping and clean fallback to folder icons in the Category Selection Bottom Sheet, Category Chips LazyRow, TopAppBar active category dropdown, Channel list/grid items, and `PlayerActivity` quick channel drawer.
+
 ---
 
 ## 2. Tomorrow's Working Agenda & Action Items
